@@ -53,18 +53,18 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
           type="monotone"
           dataKey="totalIncome"
           name="総支給額"
-          stroke="#059669"
+          stroke="#5b8fa8"
           strokeWidth={2}
-          dot={{ fill: '#059669', r: 3 }}
+          dot={{ fill: '#5b8fa8', r: 3 }}
           strokeDasharray="5 3"
         />
         <Line
           type="monotone"
           dataKey="netPay"
           name="総手取り"
-          stroke="#7c3aed"
+          stroke="#5fad9b"
           strokeWidth={2.5}
-          dot={{ fill: '#7c3aed', r: 4 }}
+          dot={{ fill: '#5fad9b', r: 4 }}
           activeDot={{ r: 6 }}
         />
         {showMonthlyLine && (
@@ -72,9 +72,9 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
             type="monotone"
             dataKey="monthlyTotalIncome"
             name="給与のみ総支給額"
-            stroke="#6ee7b7"
+            stroke="#4a7a93"
             strokeWidth={2}
-            dot={{ fill: '#6ee7b7', r: 3 }}
+            dot={{ fill: '#4a7a93', r: 3 }}
             strokeDasharray="5 3"
           />
         )}
@@ -83,9 +83,9 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
             type="monotone"
             dataKey="monthlyNetPay"
             name="給与のみ手取り"
-            stroke="#6d28d9"
+            stroke="#2d8a7a"
             strokeWidth={2}
-            dot={{ fill: '#6d28d9', r: 3 }}
+            dot={{ fill: '#2d8a7a', r: 3 }}
             strokeDasharray="3 2"
           />
         )}
