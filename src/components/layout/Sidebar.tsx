@@ -56,9 +56,9 @@ const navItems = [
 
 export default function Sidebar() {
   return (
-    <aside className="fixed inset-y-0 left-0 w-56 bg-brand-800 flex flex-col z-20">
-      <div className="px-4 py-5 border-b border-brand-700">
-        <h1 className="text-white font-bold text-base leading-tight">給与明細<br />ダッシュボード</h1>
+    <aside className="fixed inset-y-0 left-0 w-56 bg-white border-r border-brand-200 flex flex-col z-20">
+      <div className="px-4 py-5 border-b border-brand-100">
+        <h1 className="text-brand-700 font-bold text-base leading-tight">給与明細<br />ダッシュボード</h1>
       </div>
       <nav className="flex-1 px-2 py-4 space-y-1">
         {navItems.map((item) => (
@@ -69,8 +69,8 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-brand-600 text-white'
-                  : 'text-brand-200 hover:bg-brand-700 hover:text-white'
+                  ? 'bg-brand-100 text-brand-700'
+                  : 'text-gray-500 hover:bg-brand-50 hover:text-brand-700'
               }`
             }
           >
@@ -79,8 +79,8 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
-      <div className="px-4 py-3 border-t border-brand-700">
-        <p className="text-brand-400 text-xs">データはブラウザ内にのみ保存されます</p>
+      <div className="px-4 py-3 border-t border-brand-100">
+        <p className="text-gray-400 text-xs">データはブラウザ内にのみ保存されます</p>
       </div>
     </aside>
   )

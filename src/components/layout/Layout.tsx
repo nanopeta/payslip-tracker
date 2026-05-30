@@ -4,7 +4,7 @@ import BottomNav from './BottomNav'
 
 export default function Layout() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Desktop sidebar */}
       <div className="hidden md:block">
         <Sidebar />
