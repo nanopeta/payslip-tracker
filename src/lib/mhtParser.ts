@@ -136,30 +136,40 @@ export async function parseMHTFile(file: File): Promise<ParseResult> {
   const text = await file.text()
   const html = extractHTML(text)
 
-  // 年月
+  // 年月: 右上に表示されている targetPaymentTime 要素から取得（最優先）
   let year = 0, month = 0
-  const selectedOpt = html.match(/<option[^>]*selected[^>]*>([^<]+)<\/option>/)
-  if (selectedOpt) {
-    const ym = selectedOpt[1].match(/(\d{4})年\s*(\d{1,2})月/)
+  const payTimeDiv = html.match(/<div[^>]*class="[^"]*targetPaymentTime[^"]*"[^>]*>\s*<h>([^<]+)<\/h>/)
+  if (payTimeDiv) {
+    const ym = payTimeDiv[1].match(/(\d{4})年\s*(\d{1,2})月/)
     if (ym) { year = parseInt(ym[1]); month = parseInt(ym[2]) }
   }
+  // フォールバック: ドロップダウンの selected option
   if (!year) {
-    const ym = html.match(/(\d{4})年\s*(\d{1,2})月分/)
+    const selectedOpt = html.match(/<option[^>]*selected[^>]*>([^<]+)<\/option>/)
+    if (selectedOpt) {
+      const ym = selectedOpt[1].match(/(\d{4})年\s*(\d{1,2})月/)
+      if (ym) { year = parseInt(ym[1]); month = parseInt(ym[2]) }
+    }
+  }
+  // フォールバック2: ページ内の最初の YYYY年MM月分 パターン（給与のみ対象）
+  if (!year) {
+    const ym = html.match(/(\d{4})年\s*(\d{1,2})月分\s*給与/)
     if (ym) { year = parseInt(ym[1]); month = parseInt(ym[2]) }
   }
 
-  // 氏名
+  // 会社名: companyName--expand クラスの h タグ
+  let companyName: string | undefined
+  const companyDiv = html.match(/<div[^>]*class="[^"]*companyName[^"]*"[^>]*>\s*<h>([^<]+)<\/h>/)
+  if (companyDiv) companyName = companyDiv[1].replace(/　/g, '').trim() || undefined
+
+  // 氏名: 氏名ラベルの直後のデータセル
   let employeeName: string | undefined
-  const nameRow = html.match(/<td[^>]*itemData[^>]*>\s*([぀-ヿ一-鿿][^\d<,]+?)\s*<\/td>/)
-  // より確実に: 氏名ラベルの直後のデータセル
-  const nameHeaderIdx = html.indexOf('itemHeader')
   const nameIdx = html.search(/氏[　\s]*名/)
   if (nameIdx >= 0) {
     const after = html.slice(nameIdx, nameIdx + 300)
     const nm = after.match(/<td[^>]*itemData[^>]*>\s*([^\d<,]{2,20}?)\s*<\/td>/)
     if (nm) employeeName = nm[1].replace(/　/g, ' ').trim() || undefined
   }
-  void nameRow; void nameHeaderIdx
 
   // セクション境界を特定
   const posAtt = html.indexOf('勤怠他')
@@ -269,6 +279,7 @@ export async function parseMHTFile(file: File): Promise<ParseResult> {
     id: uuidv4(),
     year, month,
     employeeName,
+    companyName,
     income,
     deductions,
     attendance,
