@@ -83,7 +83,7 @@ export default function PayslipDetailView({ payslip }: Props) {
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: '出勤日数', value: attendance.workDays, display: `${attendance.workDays}日` },
-              { label: '有休取得', value: attendance.paidLeave, display: `${attendance.paidLeave}日` },
+              { label: '有休', value: attendance.paidLeave, display: `${attendance.paidLeave}日` },
               { label: '有休残', value: attendance.paidLeaveRemaining, display: `${attendance.paidLeaveRemaining}日` },
               { label: '欠勤日数', value: attendance.absenceDays, display: `${attendance.absenceDays}日` },
               { label: '出勤時間', value: attendance.workHours, display: formatHoursMinutes(attendance.workHours) },

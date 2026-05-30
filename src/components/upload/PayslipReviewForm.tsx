@@ -143,8 +143,8 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">勤怠</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <NumInput label="出勤日数" value={attendance.workDays} onChange={(v) => patchAtt('workDays', v)} />
-          <NumInput label="有休取得日数" value={attendance.paidLeave} onChange={(v) => patchAtt('paidLeave', v)} />
-          <NumInput label="有休残日数" value={attendance.paidLeaveRemaining} onChange={(v) => patchAtt('paidLeaveRemaining', v)} />
+          <NumInput label="有休" value={attendance.paidLeave} onChange={(v) => patchAtt('paidLeave', v)} />
+          <NumInput label="有休残" value={attendance.paidLeaveRemaining} onChange={(v) => patchAtt('paidLeaveRemaining', v)} />
           <TimeInput label="出勤時間" value={attendance.workHours} onChange={(v) => patchAtt('workHours', v)} />
           <TimeInput label="残業時間" value={attendance.overtimeHours} onChange={(v) => patchAtt('overtimeHours', v)} />
         </div>
