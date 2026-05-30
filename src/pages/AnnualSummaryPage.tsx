@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import WithholdingCard from '../components/withholding/WithholdingCard'
-import PayslipCard from '../components/payslip/PayslipCard'
+import AnnualDetailView from '../components/payslip/AnnualDetailView'
 import { annualTotals, uniqueYears } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
@@ -157,19 +157,10 @@ export default function AnnualSummaryPage() {
                     </div>
                   )}
 
-                  {/* Monthly detail — expanded */}
+                  {/* Annual detail — expanded */}
                   {isExpanded && (
-                    <div className="border-t border-gray-100 pt-3">
-                      <p className="text-xs text-gray-400 mb-3">月別明細</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {yearSlips.map((p, i) => (
-                          <PayslipCard
-                            key={p.id}
-                            payslip={p}
-                            prevNetPay={yearSlips[i - 1]?.summary.netPay}
-                          />
-                        ))}
-                      </div>
+                    <div className="border-t border-gray-100 pt-4">
+                      <AnnualDetailView year={year} payslips={yearSlips} />
                     </div>
                   )}
                 </div>
