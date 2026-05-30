@@ -4,16 +4,24 @@ import StatCard from '../components/ui/StatCard'
 import NetPayTrendChart from '../components/charts/NetPayTrendChart'
 import IncomeDeductionChart from '../components/charts/IncomeDeductionChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestPayslip, previousPayslip } from '../lib/aggregations'
+import { netPayTrend, latestPayslip, previousPayslip, calcOvertimeGain } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 export default function DashboardPage() {
   const payslips = useStore((s) => s.payslips)
+  const settings = useStore((s) => s.overtimeSettings)
   const sorted = [...payslips].sort((a, b) => b.year * 100 + b.month - (a.year * 100 + a.month))
   const latest = latestPayslip(payslips)
   const prev = latest ? previousPayslip(payslips, latest) : null
   const trend = netPayTrend(payslips)
   const recent = sorted.slice(0, 5)
+
+  const latestGain = latest ? calcOvertimeGain(latest, settings) : null
+  const prevGain = prev ? calcOvertimeGain(prev, settings) : null
+  const gainRows = sorted
+    .filter((p) => p.year === latest?.year)
+    .map((p) => ({ label: `${p.year}/${String(p.month).padStart(2, '0')}`, gain: calcOvertimeGain(p, settings) }))
+  const showGainSection = gainRows.some((r) => r.gain !== 0)
 
   if (payslips.length === 0) {
     return (
@@ -62,6 +70,50 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+
+      {/* Overtime gain */}
+      {showGainSection && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
+              <p className="text-xs text-gray-400">{settings.deemedLabel} − {settings.actualLabel}</p>
+            </div>
+            <Link to="/settings" className="text-xs text-brand-500 hover:text-brand-700">設定 →</Link>
+          </div>
+          {latestGain !== null && (
+            <div className="flex items-baseline gap-2 mb-3">
+              <span className={`text-2xl font-bold tabular-nums ${latestGain >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                {latestGain >= 0 ? '+' : ''}{formatYen(latestGain)}
+              </span>
+              <span className="text-xs text-gray-400">
+                {latest?.year}年{latest?.month}月
+                {prevGain !== null && (
+                  <span className="ml-1">
+                    （前月 {prevGain >= 0 ? '+' : ''}{formatYen(prevGain)}）
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            {gainRows.map((r) => (
+              <div key={r.label} className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 w-16 tabular-nums">{r.label}</span>
+                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-2 rounded-full ${r.gain >= 0 ? 'bg-emerald-400' : 'bg-red-400'}`}
+                    style={{ width: `${Math.min(100, Math.abs(r.gain) / Math.max(...gainRows.map((x) => Math.abs(x.gain)), 1) * 100)}%` }}
+                  />
+                </div>
+                <span className={`text-xs tabular-nums w-24 text-right ${r.gain >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {r.gain >= 0 ? '+' : ''}{formatYen(r.gain)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Charts */}
       <div className="space-y-4">

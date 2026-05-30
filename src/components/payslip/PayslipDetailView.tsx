@@ -1,5 +1,7 @@
 import type { Payslip } from '../../types/payslip'
 import { formatYen, formatYearMonth, formatHoursMinutes } from '../../lib/formatters'
+import { getIncomeValueByLabel } from '../../lib/aggregations'
+import useStore from '../../store/useStore'
 
 interface RowProps {
   label: string
@@ -44,11 +46,17 @@ function calcDeductionSum(deductions: Payslip['deductions']): number {
 
 export default function PayslipDetailView({ payslip }: Props) {
   const { income, deductions, attendance, summary } = payslip
+  const settings = useStore((s) => s.overtimeSettings)
 
   const incomeSum = calcIncomeSum(income)
   const dedSum = calcDeductionSum(deductions)
   const incomeWarning = income.total > 0 && incomeSum !== income.total
   const dedWarning = deductions.total > 0 && dedSum !== deductions.total
+
+  const deemedAmt = getIncomeValueByLabel(income, settings.deemedLabel)
+  const actualAmt = getIncomeValueByLabel(income, settings.actualLabel)
+  const gain = deemedAmt - actualAmt
+  const showGain = deemedAmt > 0 || actualAmt > 0
 
   return (
     <div className="space-y-4">
@@ -97,6 +105,27 @@ export default function PayslipDetailView({ payslip }: Props) {
           </div>
         )}
       </div>
+
+      {/* Overtime gain */}
+      {showGain && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">みなし残業 効率</p>
+          <div className="flex justify-between py-1.5">
+            <span className="text-sm text-gray-600">{settings.deemedLabel}</span>
+            <span className="text-sm tabular-nums text-gray-900">{formatYen(deemedAmt)}</span>
+          </div>
+          <div className="flex justify-between py-1.5">
+            <span className="text-sm text-gray-600">{settings.actualLabel}</span>
+            <span className="text-sm tabular-nums text-gray-900">{formatYen(actualAmt)}</span>
+          </div>
+          <div className={`flex justify-between pt-2 mt-1 border-t border-gray-100 font-bold`}>
+            <span className="text-sm text-gray-700">差額</span>
+            <span className={`text-base tabular-nums ${gain >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              {gain >= 0 ? '+' : ''}{formatYen(gain)}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Deductions */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">

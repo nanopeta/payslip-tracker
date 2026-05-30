@@ -7,6 +7,32 @@ export interface StorageState {
   version: number
 }
 
+export interface OvertimeSettings {
+  deemedLabel: string
+  actualLabel: string
+}
+
+const SETTINGS_KEY = 'payslip_tracker_settings'
+
+export const DEFAULT_OVERTIME_SETTINGS: OvertimeSettings = {
+  deemedLabel: 'みなし残業',
+  actualLabel: '普通残業①',
+}
+
+export function loadSettings(): OvertimeSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return { ...DEFAULT_OVERTIME_SETTINGS }
+    return { ...DEFAULT_OVERTIME_SETTINGS, ...JSON.parse(raw) }
+  } catch {
+    return { ...DEFAULT_OVERTIME_SETTINGS }
+  }
+}
+
+export function saveSettings(s: OvertimeSettings): void {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s))
+}
+
 const STORAGE_KEY = 'payslip_tracker_v1'
 const CURRENT_VERSION = 1
 
