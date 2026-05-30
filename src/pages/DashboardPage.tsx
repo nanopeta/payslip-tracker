@@ -44,6 +44,7 @@ export default function DashboardPage() {
       label: `${p.year}/${String(p.month).padStart(2, '0')}`,
       gain: calcOvertimeGain(p, settings),
     }))
+    .reverse()
   const showGainSection = gainRows.some((r) => r.gain !== 0)
 
   // みなし残業 詳細計算
@@ -172,25 +173,25 @@ export default function DashboardPage() {
           {gainRows.length > 1 && (
             <div className="border-t border-gray-100 pt-3">
               <p className="text-xs text-gray-400 mb-2">月次推移</p>
-              <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={gainRows} margin={{ top: 4, right: 8, left: 8, bottom: 20 }}>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={gainRows} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 10, fill: '#6b7280' }}
+                    tick={{ fontSize: 11, fill: '#6b7280' }}
                     interval={0}
                     angle={-30}
                     textAnchor="end"
-                    height={40}
+                    height={48}
                   />
                   <YAxis
-                    tickFormatter={(v: number) => `${v >= 0 ? '+' : ''}¥${Math.round(Math.abs(v) / 1000)}k`}
-                    tick={{ fontSize: 10, fill: '#6b7280' }}
-                    width={48}
+                    tickFormatter={(v: number) => `${v >= 0 ? '+' : '-'}¥${(Math.abs(v) / 10000).toFixed(1)}万`}
+                    tick={{ fontSize: 11, fill: '#6b7280' }}
+                    width={62}
                   />
                   <Tooltip
                     formatter={(v: number) => [`${v >= 0 ? '+' : ''}${v.toLocaleString('ja-JP')}円`, '差額']}
-                    contentStyle={{ fontSize: 11, borderRadius: '8px' }}
+                    contentStyle={{ fontSize: 12, borderRadius: '8px' }}
                   />
                   <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="3 3" />
                   <Line
