@@ -63,6 +63,17 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
         {showMonthlyLine && (
           <Line
             type="monotone"
+            dataKey="monthlyTotalIncome"
+            name="給与のみ総支給額"
+            stroke="#0891b2"
+            strokeWidth={2}
+            dot={{ fill: '#0891b2', r: 3 }}
+            strokeDasharray="5 3"
+          />
+        )}
+        {showMonthlyLine && (
+          <Line
+            type="monotone"
             dataKey="monthlyNetPay"
             name="給与のみ手取り"
             stroke="#2563eb"
