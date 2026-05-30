@@ -1,5 +1,5 @@
 import type { Payslip } from '../../types/payslip'
-import { formatYen, formatYearMonth } from '../../lib/formatters'
+import { formatYen, formatYearMonth, formatHoursMinutes } from '../../lib/formatters'
 
 interface RowProps {
   label: string
@@ -82,18 +82,19 @@ export default function PayslipDetailView({ payslip }: Props) {
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">勤怠</p>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: '出勤日数', value: attendance.workDays, unit: '日' },
-              { label: '有休取得', value: attendance.paidLeave, unit: '日' },
-              { label: '有休残', value: attendance.paidLeaveRemaining, unit: '日' },
-              { label: '欠勤日数', value: attendance.absenceDays, unit: '日' },
-              { label: '出勤時間', value: attendance.workHours, unit: 'h' },
-              { label: '残業時間', value: attendance.overtimeHours, unit: 'h' },
+              { label: '出勤日数', value: attendance.workDays, display: `${attendance.workDays}日` },
+              { label: '有休取得', value: attendance.paidLeave, display: `${attendance.paidLeave}日` },
+              { label: '有休残', value: attendance.paidLeaveRemaining, display: `${attendance.paidLeaveRemaining}日` },
+              { label: '欠勤日数', value: attendance.absenceDays, display: `${attendance.absenceDays}日` },
+              { label: '出勤時間', value: attendance.workHours, display: formatHoursMinutes(attendance.workHours) },
+              { label: '残業時間', value: attendance.overtimeHours, display: formatHoursMinutes(attendance.overtimeHours) },
+              { label: '遅早時間', value: attendance.lateEarlyHours, display: formatHoursMinutes(attendance.lateEarlyHours) },
             ].map((item) =>
               item.value > 0 ? (
                 <div key={item.label} className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500">{item.label}</p>
                   <p className="text-base font-semibold tabular-nums text-gray-900 mt-0.5">
-                    {item.value.toFixed(item.unit === '日' ? 0 : 1)}{item.unit}
+                    {item.display}
                   </p>
                 </div>
               ) : null
