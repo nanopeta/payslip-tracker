@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts'
 import useStore from '../store/useStore'
 import StatCard from '../components/ui/StatCard'
 import TrendSummaryChart from '../components/charts/TrendSummaryChart'
@@ -115,7 +116,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Overtime gain — latest month detail */}
+      {/* Overtime gain — unified card */}
       {showGainSection && latestMonthly && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
@@ -133,65 +134,77 @@ export default function DashboardPage() {
             <span className="text-xs text-gray-400">差額</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-400 mb-1">みなし残業（{DEEMED_HOURS}h）</p>
+          <div className="grid grid-cols-4 gap-x-4 gap-y-3 mb-3">
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">みなし（{DEEMED_HOURS}h）</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(deemedAmtLatest)}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-400 mb-1">実残業代</p>
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">実残業代</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(actualAmtLatest)}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-400 mb-1">残業時間 / 使用率</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">
-                {overtimeHoursLatest.toFixed(1)}h
-                <span className="text-xs font-normal text-gray-500 ml-1">/ {usagePercent.toFixed(0)}%</span>
-              </p>
-              <div className="mt-1.5 bg-gray-200 rounded-full h-1 overflow-hidden">
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">残業時間</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{overtimeHoursLatest.toFixed(1)}h</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">使用率</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{usagePercent.toFixed(0)}%</p>
+              <div className="mt-1 bg-gray-200 rounded-full h-1 overflow-hidden">
                 <div className="h-1 rounded-full" style={{
                   width: `${Math.min(100, usagePercent)}%`,
                   backgroundColor: usagePercent > 100 ? '#d06868' : '#5fad9b',
                 }} />
               </div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-400 mb-1">残業時給</p>
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">残業時給</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900">¥{overtimeHourlyRate.toLocaleString('ja-JP')}/h</p>
             </div>
             {basicHourlyRate > 0 && (
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-400 mb-1">基本時給</p>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">基本時給</p>
                 <p className="text-sm font-semibold tabular-nums text-gray-900">¥{basicHourlyRate.toLocaleString('ja-JP')}/h</p>
               </div>
             )}
           </div>
-        </div>
-      )}
 
-      {/* Overtime gain — monthly trend */}
-      {gainRows.length > 1 && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">みなし残業 月次推移</p>
-          <div className="space-y-1.5">
-            {gainRows.map((r) => (
-              <div key={r.label} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-16 tabular-nums">{r.label}</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="h-2 rounded-full"
-                    style={{
-                      backgroundColor: r.gain >= 0 ? '#5fad9b' : '#d06868',
-                      width: `${Math.min(100, Math.abs(r.gain) / Math.max(...gainRows.map((x) => Math.abs(x.gain)), 1) * 100)}%`,
-                    }}
+          {gainRows.length > 1 && (
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-xs text-gray-400 mb-2">月次推移</p>
+              <ResponsiveContainer width="100%" height={140}>
+                <LineChart data={gainRows} margin={{ top: 4, right: 8, left: 8, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: '#6b7280' }}
+                    interval={0}
+                    angle={-30}
+                    textAnchor="end"
+                    height={40}
                   />
-                </div>
-                <span className="text-xs tabular-nums w-24 text-right" style={{ color: r.gain >= 0 ? '#5fad9b' : '#d06868' }}>
-                  {r.gain >= 0 ? '+' : ''}{formatYen(r.gain)}
-                </span>
-              </div>
-            ))}
-          </div>
+                  <YAxis
+                    tickFormatter={(v: number) => `${v >= 0 ? '+' : ''}¥${Math.round(Math.abs(v) / 1000)}k`}
+                    tick={{ fontSize: 10, fill: '#6b7280' }}
+                    width={48}
+                  />
+                  <Tooltip
+                    formatter={(v: number) => [`${v >= 0 ? '+' : ''}${v.toLocaleString('ja-JP')}円`, '差額']}
+                    contentStyle={{ fontSize: 11, borderRadius: '8px' }}
+                  />
+                  <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="3 3" />
+                  <Line
+                    type="monotone"
+                    dataKey="gain"
+                    stroke="#5fad9b"
+                    strokeWidth={2}
+                    dot={{ fill: '#5fad9b', r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       )}
 
