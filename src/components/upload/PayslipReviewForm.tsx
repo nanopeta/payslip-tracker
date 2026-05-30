@@ -139,22 +139,29 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
       {/* Year/Month */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-3">対象月</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-0.5">
-            <label className="text-xs text-gray-500">年</label>
-            <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+        {year > 0 && month > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold text-gray-800 tabular-nums">{year}年{month}月</span>
+            <span className="text-xs text-gray-400">（ファイルから自動取得）</span>
           </div>
-          <div className="flex flex-col gap-0.5">
-            <label className="text-xs text-gray-500">月</label>
-            <select value={month} onChange={(e) => setMonth(Number(e.target.value))}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m}>{m}月</option>
-              ))}
-            </select>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-xs text-gray-500">年</label>
+              <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))}
+                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-xs text-gray-500">月</label>
+              <select value={month} onChange={(e) => setMonth(Number(e.target.value))}
+                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>{m}月</option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Income */}
