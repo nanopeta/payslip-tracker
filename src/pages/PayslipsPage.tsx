@@ -10,6 +10,18 @@ export default function PayslipsPage() {
 
   const [selecting, setSelecting] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [filterYear, setFilterYear] = useState<number | 'all'>('all')
+  const [filterType, setFilterType] = useState<'all' | 'monthly' | 'bonus'>('all')
+
+  const years = [...new Set(payslips.map((p) => p.year))].sort((a, b) => b - a)
+  const hasBonusData = payslips.some((p) => p.payslipType === 'bonus')
+
+  const filtered = sorted.filter((p) => {
+    if (filterYear !== 'all' && p.year !== filterYear) return false
+    if (filterType === 'monthly' && p.payslipType === 'bonus') return false
+    if (filterType === 'bonus' && p.payslipType !== 'bonus') return false
+    return true
+  })
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -37,7 +49,7 @@ export default function PayslipsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">給与明細</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{payslips.length}件</p>
+          <p className="text-gray-500 text-sm mt-0.5">{filtered.length === payslips.length ? `${payslips.length}件` : `${filtered.length} / ${payslips.length}件`}</p>
         </div>
         <div className="flex items-center gap-2">
           {selecting ? (
@@ -81,14 +93,49 @@ export default function PayslipsPage() {
         </div>
       </div>
 
-      {sorted.length === 0 ? (
+      {/* Filters */}
+      {payslips.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <select
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
+          >
+            <option value="all">すべての年</option>
+            {years.map((y) => (
+              <option key={y} value={y}>{y}年</option>
+            ))}
+          </select>
+          {hasBonusData && (
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+              {(['all', 'monthly', 'bonus'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setFilterType(t)}
+                  className={`px-3 py-1.5 transition-colors ${filterType === t ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {t === 'all' ? 'すべて' : t === 'monthly' ? '給与' : '賞与'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
-          <p>給与明細がありません</p>
-          <p className="text-sm mt-1">MHTをアップロードして追加してください</p>
+          {payslips.length === 0 ? (
+            <>
+              <p>給与明細がありません</p>
+              <p className="text-sm mt-1">MHTをアップロードして追加してください</p>
+            </>
+          ) : (
+            <p>条件に一致する明細がありません</p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {sorted.map((p, i) => (
+          {filtered.map((p, i) => (
             <div key={p.id} className="relative">
               {selecting && (
                 <button
