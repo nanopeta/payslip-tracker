@@ -48,7 +48,7 @@ export interface PayslipAttendance {
 export interface PayslipSummary {
   netPay: number
   bankTransfer: number
-  childSupportPayment?: number
+  extras?: Record<string, number>
 }
 
 export interface Payslip {

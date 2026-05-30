@@ -10,6 +10,7 @@ interface AppStore {
   addPayslip: (p: Payslip) => void
   updatePayslip: (id: string, updates: Partial<Payslip>) => void
   deletePayslip: (id: string) => void
+  deletePayslips: (ids: string[]) => void
   addWithholdingCert: (w: WithholdingTaxCertificate) => void
   updateWithholdingCert: (id: string, updates: Partial<WithholdingTaxCertificate>) => void
   deleteWithholdingCert: (id: string) => void
@@ -35,6 +36,12 @@ const useStore = create<AppStore>((set, get) => {
     },
     deletePayslip: (id) => {
       const payslips = get().payslips.filter((p) => p.id !== id)
+      set({ payslips })
+      save({ ...load(), payslips })
+    },
+    deletePayslips: (ids) => {
+      const idSet = new Set(ids)
+      const payslips = get().payslips.filter((p) => !idSet.has(p.id))
       set({ payslips })
       save({ ...load(), payslips })
     },
