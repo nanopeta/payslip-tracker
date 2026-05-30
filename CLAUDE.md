@@ -82,12 +82,19 @@ src/
 ├── components/
 │   ├── layout/             # Sidebar（PC）、BottomNav（スマホ）、Layout
 │   ├── ui/                 # StatCard
-│   ├── charts/             # NetPayTrendChart（折れ線）、IncomeDeductionChart（棒）
-│   ├── payslip/            # PayslipCard、PayslipDetailView
+│   ├── charts/
+│   │   ├── TrendSummaryChart.tsx      # 支給・手取りの推移（折れ線）★メイン
+│   │   ├── PaidLeaveTrendChart.tsx    # 有給残日数の推移（折れ線）
+│   │   ├── NetPayTrendChart.tsx       # 旧・未使用
+│   │   └── IncomeDeductionChart.tsx   # 旧・未使用
+│   ├── payslip/
+│   │   ├── PayslipCard.tsx            # 明細一覧のカード
+│   │   ├── PayslipDetailView.tsx      # 1件の明細詳細
+│   │   └── AnnualDetailView.tsx       # 年間集計詳細（PayslipDetailView スタイル）
 │   ├── withholding/        # WithholdingCard
 │   └── upload/             # DropZone、PayslipReviewForm、WithholdingReviewForm
 └── pages/
-    ├── DashboardPage.tsx   # ダッシュボード（月次集計・チャート）
+    ├── DashboardPage.tsx   # ダッシュボード（月次集計・チャート・みなし残業）
     ├── PayslipsPage.tsx    # 給与明細一覧（一括削除機能あり）
     ├── PayslipDetailPage.tsx
     ├── AnnualSummaryPage.tsx
@@ -223,6 +230,123 @@ OBC 給与システム（hromssp.obc.jp）から「名前を付けて保存（MH
 
 ---
 
+## UI デザイン仕様
+
+### 配色（資産管理ダッシュボードと統一）
+
+```css
+/* tailwind.config.cjs の brand パレット */
+brand-50:  #f0f7fb
+brand-100: #e6f0f5
+brand-200: #c8dfe9
+brand-300: #a0c8d8
+brand-400: #7aafc5
+brand-500: #6a9fb8
+brand-600: #5b8fa8   /* ← メインカラー */
+brand-700: #4a7a93
+brand-800: #3a6078
+brand-900: #2a4a5e
+
+/* セマンティックカラー（インラインstyleで使用） */
+--success: #5fad9b   /* プラス・手取り */
+--danger:  #d06868   /* マイナス・控除 */
+
+/* body */
+background: #eef4f8
+color:      #243447
+```
+
+- サイドバー: `bg-white border-r border-brand-200`、アクティブ: `bg-brand-100 text-brand-700`
+- Tailwind クラスで brand-xxx を使うか、インライン `style={{ color: '#5fad9b' }}` で指定
+
+### StatCard
+
+```typescript
+// highlight=true のときのグラデーション
+background: 'linear-gradient(135deg, #2a5068 0%, #3d7490 50%, #4e8fa6 100%)'
+
+// デルタ表示（前月比）
+delta >= 0 → '+¥XX,XXX' (color: #5fad9b)
+delta < 0  → '-¥XX,XXX' (color: #d06868)
+```
+
+Props: `title`, `value`, `sub?`, `delta?`（数値、¥付きで自動フォーマット）, `deltaText?`（文字列、`deltaPositive?` で色制御）, `highlight?`
+
+### formatYen（formatters.ts）
+
+```typescript
+// ¥ プレフィックス形式（円マークは ¥ を使う）
+formatYen(n) → '¥1,234,567'
+```
+
+### Recharts チャートの標準仕様
+
+`TrendSummaryChart.tsx` を基準とした標準設定:
+
+```typescript
+<LineChart margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
+  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+  <XAxis
+    dataKey="label"
+    tick={{ fontSize: 11, fill: '#6b7280' }}
+    interval={0}      // ← ラベルが飛ぶのを防ぐ（必須）
+    angle={-30}
+    textAnchor="end"
+    height={48}
+  />
+  <YAxis
+    tickFormatter={(v) => `¥${(v / 10000).toFixed(1)}万`}
+    tick={{ fontSize: 11, fill: '#6b7280' }}
+    width={62}
+  />
+  <Tooltip contentStyle={{ fontSize: 12, borderRadius: '8px' }} />
+  <Legend wrapperStyle={{ fontSize: 12 }} />
+```
+
+- チャートデータは **左が古い・右が最新** の時系列順にソートして渡す
+- Y軸の単位は `万` を使う（`k` は使わない）
+- 複数の折れ線: 色は `#5b8fa8`（支給）、`#5fad9b`（手取り）、`#4a7a93`（給与のみ支給）、`#2d8a7a`（給与のみ手取り）
+
+### 期間フィルターパターン
+
+ダッシュボードの推移グラフで使っている共通パターン（`DashboardPage.tsx` 参照）:
+
+```typescript
+type PeriodFilter = 'all' | 'year' | '6m' | '12m'
+
+// フィルター関数: label フィールドが "YYYY/MM" 形式であること
+function applyPeriodFilter<T extends { label: string }>(
+  rows: T[], filter: PeriodFilter, latestLabel: string
+): T[]
+```
+
+> **注意**: `TrendPoint.yearMonth` は `"2026年5月"` 形式で、フィルターには使えない。
+> フィルターには `"YYYY/MM"` 形式の `label` フィールドを使うこと。
+
+フィルターUIは `PERIOD_FILTERS` 配列 + pill ボタン（選択中: `bg-brand-600 text-white`、未選択: `bg-gray-100 text-gray-500`）。
+
+---
+
+## みなし残業の計算仕様
+
+```
+DEEMED_HOURS = 45  // みなし残業時間（固定値）
+
+みなし残業金額    = getIncomeValueByLabel(income, settings.deemedLabel)
+実残業代合計      = settings.actualLabels の各ラベル金額の合算
+差額（gain）      = みなし残業金額 − 実残業代合計
+
+残業時給          = みなし残業金額 ÷ DEEMED_HOURS  （円/h、端数切捨て）
+基本時給          = 残業時給 ÷ 1.25               （割増率 1.25 の逆算）
+使用率            = 実残業時間 ÷ DEEMED_HOURS × 100 （%）
+```
+
+- `gain > 0`: みなし残業が余っている（お得）→ `#5fad9b`
+- `gain < 0`: みなし残業を超過している（損）→ `#d06868`
+- 基本時給は `overtimeHourlyRate > 0` のときのみ表示
+
+---
+
 ## ダッシュボード集計ロジック（aggregations.ts）
 
 ### netPayTrend（月次集計）
@@ -325,6 +449,28 @@ OBC 給与システム（hromssp.obc.jp）から「名前を付けて保存（MH
 **原因**: `npm install tailwindcss` で最新版（v4）が入ると設定形式が変わり壊れる。
 
 **対処**: `package.json` で `"tailwindcss": "3.4.19"` に固定されているため通常は発生しない。壊れた場合は `npm install tailwindcss@3.4.19` で戻す。
+
+---
+
+### TrendPoint.yearMonth でフィルターが効かない
+
+**原因**: `TrendPoint.yearMonth` は `"2026年5月"` 形式で格納されており、`"YYYY/MM"` を期待するフィルターロジックと形式が合わない。
+
+**対処**: 期間フィルターには `label` フィールド（`"2026/05"` 形式）を使う。`applyPeriodFilter` のジェネリクスは `{ label: string }` で制約する。
+
+---
+
+### PR マージ時に conflicts が発生する
+
+**原因**: squash merge で取り込まれた後、ブランチに残った元コミットが rebase 時に重複扱いになる。
+
+**対処**:
+```bash
+git fetch origin main
+git rebase origin/main   # skipped commits の警告が出ても正常
+git push --force-with-lease origin <branch>
+# → その後 GitHub で再マージ
+```
 
 ---
 
