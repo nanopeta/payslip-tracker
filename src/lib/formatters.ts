@@ -1,5 +1,5 @@
 export function formatYen(n: number): string {
-  return n.toLocaleString('ja-JP') + '円'
+  return '¥' + n.toLocaleString('ja-JP')
 }
 
 export function formatYenNoSuffix(n: number): string {

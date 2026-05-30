@@ -172,7 +172,7 @@ export default function AnnualDetailView({ year, payslips }: Props) {
           )}
           <div className="flex justify-between pt-2 mt-1 border-t border-gray-100 font-bold">
             <span className="text-sm text-gray-700">年間差額</span>
-            <span className={`text-base tabular-nums ${gain >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            <span className="text-base tabular-nums" style={{ color: gain >= 0 ? '#5fad9b' : '#d06868' }}>
               {gain >= 0 ? '+' : ''}{formatYen(gain)}
             </span>
           </div>

@@ -16,7 +16,7 @@ interface Props {
 }
 
 function formatYen(v: number) {
-  return `${(v / 10000).toFixed(1)}万円`
+  return `¥${(v / 10000).toFixed(1)}万`
 }
 
 export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
