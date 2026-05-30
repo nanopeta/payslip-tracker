@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const latestMonthly = latestPayslip(monthlyPayslips)
   const latestGain = latestMonthly ? calcOvertimeGain(latestMonthly, settings) : null
   const gainRows = sorted
-    .filter((p) => (!p.payslipType || p.payslipType === 'monthly') && p.year === latestMonthly?.year)
+    .filter((p) => !p.payslipType || p.payslipType === 'monthly')
     .map((p) => ({
       label: `${p.year}/${String(p.month).padStart(2, '0')}`,
       gain: calcOvertimeGain(p, settings),
