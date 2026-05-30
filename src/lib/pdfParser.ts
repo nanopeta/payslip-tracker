@@ -97,14 +97,21 @@ function mergeRow(items: PosItem[]): PosItem[] {
   const isLabel = (s: string) => !/[\d,，.:]/.test(s)
   const out: PosItem[] = []
   let cur = { ...items[0] }
+  let lastX = items[0].x
+  let lastWidth = items[0].text.length * 14
   for (let i = 1; i < items.length; i++) {
     const nxt = items[i]
-    const gap = nxt.x - cur.x - cur.text.length * 14
+    // 直前の個別文字の右端からの隙間で判定（長い結合済みテキストでズレない）
+    const gap = nxt.x - lastX - lastWidth
     if (isLabel(cur.text) && isLabel(nxt.text) && gap < 30) {
       cur = { text: cur.text + nxt.text, x: cur.x, y: cur.y }
+      lastX = nxt.x
+      lastWidth = nxt.text.length * 14
     } else {
       out.push(cur)
       cur = { ...nxt }
+      lastX = nxt.x
+      lastWidth = nxt.text.length * 14
     }
   }
   out.push(cur)
@@ -220,6 +227,8 @@ function discoverAllPairs(rows: PosItem[][]): LabelValue[] {
 const INCOME_LABELS: Record<string, string> = {
   '基本給': 'basicSalary',
   'ワークライフバランス手当': 'wlbAllowance',
+  'ﾜｰｸﾗｲﾌﾊﾞﾗﾝｽ手当': 'wlbAllowance',
+  'ｻﾝｷｭｰ手当': 'thankYouAllowance',
   'みなし残業': 'deemedOvertime',
   'ライフプラン手当': 'lifePlanAllowance',
   '通勤費調整': 'commuteAdjustment',
