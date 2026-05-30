@@ -61,7 +61,16 @@ export default function PayslipDetailView({ payslip }: Props) {
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-brand-700 text-white rounded-xl px-5 py-5">
-        <p className="text-brand-200 text-sm">{formatYearMonth(payslip.year, payslip.month)}分 給与明細</p>
+        <div className="flex items-center gap-2">
+          <p className="text-brand-200 text-sm">
+            {formatYearMonth(payslip.year, payslip.month)}分 支給明細
+          </p>
+          {payslip.payslipType === 'bonus' && (
+            <span className="text-xs font-bold bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">
+              {payslip.payslipLabel ?? '賞与'}
+            </span>
+          )}
+        </div>
         {payslip.companyName && <p className="text-brand-300 text-xs mt-0.5">{payslip.companyName}</p>}
         <p className="text-3xl font-bold mt-2 tabular-nums">{formatYen(summary.netPay)}</p>
         <p className="text-brand-200 text-xs mt-0.5">差引支給額</p>

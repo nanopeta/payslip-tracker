@@ -118,6 +118,8 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
       id: initial.id ?? uuidv4(),
       year,
       month,
+      payslipType: initial.payslipType,
+      payslipLabel: initial.payslipLabel,
       employeeName: initial.employeeName,
       companyName: initial.companyName,
       income: finalIncome,
@@ -142,6 +144,11 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
         {year > 0 && month > 0 ? (
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-gray-800 tabular-nums">{year}年{month}月</span>
+            {initial.payslipType === 'bonus' && (
+              <span className="text-sm font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                {initial.payslipLabel ?? '賞与'}
+              </span>
+            )}
             <span className="text-xs text-gray-400">（ファイルから自動取得）</span>
           </div>
         ) : (

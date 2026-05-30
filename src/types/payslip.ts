@@ -55,6 +55,8 @@ export interface Payslip {
   id: string
   year: number
   month: number
+  payslipType?: 'monthly' | 'bonus'
+  payslipLabel?: string
   employeeName?: string
   companyName?: string
   income: PayslipIncome
