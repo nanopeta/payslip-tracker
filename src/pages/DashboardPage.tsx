@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts'
 import useStore from '../store/useStore'
@@ -8,12 +9,36 @@ import PayslipCard from '../components/payslip/PayslipCard'
 import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, getIncomeValueByLabel } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
+type PeriodFilter = 'all' | 'year' | '6m' | '12m'
+const PERIOD_FILTERS: { key: PeriodFilter; label: string }[] = [
+  { key: 'all', label: '全表示' },
+  { key: 'year', label: '今年' },
+  { key: '6m', label: '6ヶ月' },
+  { key: '12m', label: '12ヶ月' },
+]
+
+function applyPeriodFilter<T extends { yearMonth: string }>(rows: T[], filter: PeriodFilter, latestYM: string): T[] {
+  if (filter === 'all' || !latestYM) return rows
+  const [ly, lm] = latestYM.split('/').map(Number)
+  if (filter === 'year') return rows.filter((r) => r.yearMonth.startsWith(`${ly}/`))
+  const latestAbs = ly * 12 + lm
+  const months = filter === '6m' ? 5 : 11
+  return rows.filter((r) => {
+    const [ry, rm] = r.yearMonth.split('/').map(Number)
+    return ry * 12 + rm >= latestAbs - months
+  })
+}
+
 export default function DashboardPage() {
   const payslips = useStore((s) => s.payslips)
   const settings = useStore((s) => s.overtimeSettings)
   const sorted = [...payslips].sort((a, b) => b.year * 100 + b.month - (a.year * 100 + a.month))
+  const [gainFilter, setGainFilter] = useState<PeriodFilter>('all')
+  const [trendFilter, setTrendFilter] = useState<PeriodFilter>('all')
 
   const trend = netPayTrend(payslips)
+  const latestTrendYM = trend.length > 0 ? trend[trend.length - 1]!.yearMonth : ''
+  const filteredTrend = applyPeriodFilter(trend, trendFilter, latestTrendYM)
   const latestMonth = latestMonthStats(payslips)
   const prevMonth = latestMonth ? prevMonthStats(payslips, latestMonth) : null
 
@@ -42,10 +67,13 @@ export default function DashboardPage() {
     .filter((p) => !p.payslipType || p.payslipType === 'monthly')
     .map((p) => ({
       label: `${p.year}/${String(p.month).padStart(2, '0')}`,
+      yearMonth: `${p.year}/${String(p.month).padStart(2, '0')}`,
       gain: calcOvertimeGain(p, settings),
     }))
     .reverse()
   const showGainSection = gainRows.some((r) => r.gain !== 0)
+  const latestGainYM = gainRows.length > 0 ? gainRows[gainRows.length - 1]!.yearMonth : ''
+  const filteredGainRows = applyPeriodFilter(gainRows, gainFilter, latestGainYM)
 
   // みなし残業 詳細計算
   const DEEMED_HOURS = 45
@@ -172,9 +200,22 @@ export default function DashboardPage() {
 
           {gainRows.length > 1 && (
             <div className="border-t border-gray-100 pt-3">
-              <p className="text-xs text-gray-400 mb-2">月次推移</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-400">月次推移</p>
+                <div className="flex gap-1">
+                  {PERIOD_FILTERS.map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setGainFilter(f.key)}
+                      className={`text-xs px-2 py-0.5 rounded-full transition-colors ${gainFilter === f.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={gainRows} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
+                <LineChart data={filteredGainRows} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis
                     dataKey="label"
@@ -212,8 +253,21 @@ export default function DashboardPage() {
       {/* Charts */}
       <div className="space-y-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">支給・手取りの推移</p>
-          <TrendSummaryChart data={trend} showMonthlyLine={hasBonusData} />
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-700">支給・手取りの推移</p>
+            <div className="flex gap-1">
+              {PERIOD_FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setTrendFilter(f.key)}
+                  className={`text-xs px-2 py-0.5 rounded-full transition-colors ${trendFilter === f.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <TrendSummaryChart data={filteredTrend} showMonthlyLine={hasBonusData} />
         </div>
 
         {leaveTrend.length > 1 && (
