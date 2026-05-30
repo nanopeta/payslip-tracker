@@ -73,8 +73,7 @@ npm run preview # ビルド結果をローカルで確認
 PM・Dev・Reviewer の3 Claude エージェントがスプリント方式で協調して、このアプリを自律的に改善します。
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... npm run agent-team
-# または
+npm run agent-team                     # API キー不要（Claude Code CLI を使用）
 npm run agent-team -- --sprint-size=3  # 1スプリント 3件
 ```
 
@@ -93,7 +92,7 @@ npm run agent-team -- --sprint-size=3  # 1スプリント 3件
 - **状態管理**: Zustand v5
 - **ストレージ**: localStorage（バックエンド不要）
 - **ルーティング**: React Router v6
-- **AI エージェント**: Anthropic Claude API（`@anthropic-ai/sdk`）
+- **AI エージェント**: Claude Code CLI（API キー不要）
 - **デプロイ**: GitHub Pages（GitHub Actions）
 
 ## デプロイ
