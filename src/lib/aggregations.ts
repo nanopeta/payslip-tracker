@@ -41,6 +41,7 @@ export interface TrendPoint {
   monthlyNetPay: number
   bonusNetPay: number
   totalIncome: number
+  monthlyTotalIncome: number
   totalDeductions: number
 }
 
@@ -67,7 +68,10 @@ export function netPayTrend(payslips: Payslip[]): TrendPoint[] {
       existing.totalIncome += p.income.total
       existing.totalDeductions += p.deductions.total
       if (isBonus) existing.bonusNetPay += p.summary.netPay
-      else existing.monthlyNetPay += p.summary.netPay
+      else {
+        existing.monthlyNetPay += p.summary.netPay
+        existing.monthlyTotalIncome += p.income.total
+      }
     } else {
       map.set(key, {
         label: key,
@@ -76,6 +80,7 @@ export function netPayTrend(payslips: Payslip[]): TrendPoint[] {
         monthlyNetPay: isBonus ? 0 : p.summary.netPay,
         bonusNetPay: isBonus ? p.summary.netPay : 0,
         totalIncome: p.income.total,
+        monthlyTotalIncome: isBonus ? 0 : p.income.total,
         totalDeductions: p.deductions.total,
       })
     }
