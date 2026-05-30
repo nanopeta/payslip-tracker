@@ -286,7 +286,7 @@ function parsePayslip(items: PosItem[]): Partial<Payslip> {
   const summary: PayslipSummary = { netPay: 0, bankTransfer: 0 }
 
   // 合計・差引支給額は個別に取得（行が離れている可能性あり）
-  income.total = findRight(rows, '総支給金額', isMoneyToken, parseMoney)
+  income.total = findRight(rows, '総支給金額', isMoneyToken, parseMoney, 25)
   deductions.total = findRight(rows, '控除合計額', isMoneyToken, parseMoney)
   summary.netPay = findRight(rows, '差引支給額', isMoneyToken, parseMoney, 25)
   summary.bankTransfer = findRight(rows, '銀行１振込額', isMoneyToken, parseMoney, 25)
@@ -311,6 +311,12 @@ function parsePayslip(items: PosItem[]): Partial<Payslip> {
       } else if (!['控除合計額'].includes(pair.label)) {
         // 未知の控除項目
         deductions.otherDeductions[pair.label] = pair.value
+      }
+    } else if (pair.column === '計算') {
+      // 計算欄にある支給項目（普通残業①、ライフプラン支援など）を支給に取り込む
+      const key = INCOME_LABELS[pair.label]
+      if (key && (income as unknown as Record<string, number>)[key] === 0) {
+        (income as unknown as Record<string, number>)[key] = pair.value
       }
     } else if (pair.column === '勤怠') {
       if (ATTENDANCE_DAY_LABELS.has(pair.label)) {
