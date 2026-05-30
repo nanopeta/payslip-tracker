@@ -17,14 +17,14 @@ const PERIOD_FILTERS: { key: PeriodFilter; label: string }[] = [
   { key: '12m', label: '12ヶ月' },
 ]
 
-function applyPeriodFilter<T extends { yearMonth: string }>(rows: T[], filter: PeriodFilter, latestYM: string): T[] {
-  if (filter === 'all' || !latestYM) return rows
-  const [ly, lm] = latestYM.split('/').map(Number)
-  if (filter === 'year') return rows.filter((r) => r.yearMonth.startsWith(`${ly}/`))
+function applyPeriodFilter<T extends { label: string }>(rows: T[], filter: PeriodFilter, latestLabel: string): T[] {
+  if (filter === 'all' || !latestLabel) return rows
+  const [ly, lm] = latestLabel.split('/').map(Number)
+  if (filter === 'year') return rows.filter((r) => r.label.startsWith(`${ly}/`))
   const latestAbs = ly * 12 + lm
   const months = filter === '6m' ? 5 : 11
   return rows.filter((r) => {
-    const [ry, rm] = r.yearMonth.split('/').map(Number)
+    const [ry, rm] = r.label.split('/').map(Number)
     return ry * 12 + rm >= latestAbs - months
   })
 }
@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const [trendFilter, setTrendFilter] = useState<PeriodFilter>('all')
 
   const trend = netPayTrend(payslips)
-  const latestTrendYM = trend.length > 0 ? trend[trend.length - 1]!.yearMonth : ''
+  const latestTrendYM = trend.length > 0 ? trend[trend.length - 1]!.label : ''
   const filteredTrend = applyPeriodFilter(trend, trendFilter, latestTrendYM)
   const latestMonth = latestMonthStats(payslips)
   const prevMonth = latestMonth ? prevMonthStats(payslips, latestMonth) : null
