@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Payslip, PayslipIncome, PayslipDeductions, PayslipAttendance } from '../../types/payslip'
 import { emptyIncome, emptyDeductions, emptyAttendance } from '../../types/payslip'
+import { formatHoursMinutes, parseHoursMinutes } from '../../lib/formatters'
 
 interface Props {
   initial: Partial<Payslip>
@@ -17,6 +18,23 @@ function NumInput({ label, value, onChange }: { label: string; value: number; on
         type="number"
         value={value || ''}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
+        className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-400"
+      />
+    </div>
+  )
+}
+
+function TimeInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  const [text, setText] = useState(value > 0 ? formatHoursMinutes(value) : '')
+  return (
+    <div className="flex flex-col gap-0.5">
+      <label className="text-xs text-gray-500">{label}</label>
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={(e) => onChange(parseHoursMinutes(e.target.value))}
+        placeholder="0:00"
         className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-400"
       />
     </div>
@@ -127,8 +145,8 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
           <NumInput label="出勤日数" value={attendance.workDays} onChange={(v) => patchAtt('workDays', v)} />
           <NumInput label="有休取得日数" value={attendance.paidLeave} onChange={(v) => patchAtt('paidLeave', v)} />
           <NumInput label="有休残日数" value={attendance.paidLeaveRemaining} onChange={(v) => patchAtt('paidLeaveRemaining', v)} />
-          <NumInput label="出勤時間（h）" value={attendance.workHours} onChange={(v) => patchAtt('workHours', v)} />
-          <NumInput label="残業時間（h）" value={attendance.overtimeHours} onChange={(v) => patchAtt('overtimeHours', v)} />
+          <TimeInput label="出勤時間" value={attendance.workHours} onChange={(v) => patchAtt('workHours', v)} />
+          <TimeInput label="残業時間" value={attendance.overtimeHours} onChange={(v) => patchAtt('overtimeHours', v)} />
         </div>
       </div>
 

@@ -305,11 +305,17 @@ function parsePayslip(items: PosItem[]): Partial<Payslip> {
       }
     } else if (pair.column === '勤怠') {
       if (ATTENDANCE_DAY_LABELS.has(pair.label)) {
-        const key = ATT_KEY_MAP[pair.label]
-        if (key) (attendance as unknown as Record<string, number>)[key] = pair.value
+        // カンマなし（金額ではなく日数）のみ受け付ける
+        if (!pair.rawValue.includes(',')) {
+          const key = ATT_KEY_MAP[pair.label]
+          if (key) (attendance as unknown as Record<string, number>)[key] = pair.value
+        }
       } else if (ATTENDANCE_TIME_LABELS.has(pair.label)) {
-        const key = ATT_KEY_MAP[pair.label]
-        if (key) (attendance as unknown as Record<string, number>)[key] = pair.value
+        // HH:MM形式のみ受け付ける
+        if (isTimeToken(pair.rawValue)) {
+          const key = ATT_KEY_MAP[pair.label]
+          if (key) (attendance as unknown as Record<string, number>)[key] = pair.value
+        }
       }
     }
   }
