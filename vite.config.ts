@@ -9,6 +9,7 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  base: '/payslip-tracker/',
   build: {
     rollupOptions: {
       output: {
