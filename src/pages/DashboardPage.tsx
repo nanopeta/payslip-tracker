@@ -4,7 +4,7 @@ import StatCard from '../components/ui/StatCard'
 import TrendSummaryChart from '../components/charts/TrendSummaryChart'
 import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, getIncomeValueByLabel } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 export default function DashboardPage() {
@@ -44,6 +44,24 @@ export default function DashboardPage() {
       gain: calcOvertimeGain(p, settings),
     }))
   const showGainSection = gainRows.some((r) => r.gain !== 0)
+
+  // みなし残業 詳細計算
+  const DEEMED_HOURS = 45
+  const deemedAmtLatest = latestMonthly ? getIncomeValueByLabel(latestMonthly.income, settings.deemedLabel) : 0
+  const actualAmtLatest = latestMonthly
+    ? settings.actualLabels.reduce((s, l) => s + getIncomeValueByLabel(latestMonthly.income, l), 0)
+    : 0
+  const overtimeHoursLatest = latestMonthly?.attendance.overtimeHours ?? 0
+  const usagePercent = (overtimeHoursLatest / DEEMED_HOURS) * 100
+  const overtimeHourlyRate = deemedAmtLatest > 0 ? Math.round(deemedAmtLatest / DEEMED_HOURS) : 0
+  const stdHours = latestMonthly
+    ? (latestMonthly.attendance.workHours > 0
+        ? latestMonthly.attendance.workHours - overtimeHoursLatest
+        : latestMonthly.attendance.workDays * 8)
+    : 0
+  const basicHourlyRate = stdHours > 0 && latestMonthly
+    ? Math.round(latestMonthly.income.basicSalary / stdHours)
+    : 0
 
   const recent = sorted.slice(0, 5)
 
@@ -104,28 +122,64 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Overtime gain */}
-      {showGainSection && (
+      {/* Overtime gain — latest month detail */}
+      {showGainSection && latestMonthly && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
-              <p className="text-xs text-gray-400">
-                {settings.deemedLabel} − ({settings.actualLabels.join(' ＋ ')})
-              </p>
+              <p className="text-xs text-gray-400">{latestMonthly.year}年{latestMonthly.month}月</p>
             </div>
             <Link to="/settings" className="text-xs text-brand-500 hover:text-brand-700">設定 →</Link>
           </div>
-          {latestGain !== null && (
-            <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-2xl font-bold tabular-nums" style={{ color: latestGain >= 0 ? '#5fad9b' : '#d06868' }}>
-                {latestGain >= 0 ? '+' : ''}{formatYen(latestGain)}
-              </span>
-              <span className="text-xs text-gray-400">
-                {latestMonthly?.year}年{latestMonthly?.month}月
-              </span>
+
+          <div className="flex items-baseline gap-2 mb-4">
+            <span className="text-2xl font-bold tabular-nums" style={{ color: (latestGain ?? 0) >= 0 ? '#5fad9b' : '#d06868' }}>
+              {(latestGain ?? 0) >= 0 ? '+' : ''}{formatYen(latestGain ?? 0)}
+            </span>
+            <span className="text-xs text-gray-400">差額</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-400 mb-1">みなし残業（{DEEMED_HOURS}h）</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(deemedAmtLatest)}</p>
             </div>
-          )}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-400 mb-1">実残業代</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(actualAmtLatest)}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-400 mb-1">残業時間 / 使用率</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">
+                {overtimeHoursLatest.toFixed(1)}h
+                <span className="text-xs font-normal text-gray-500 ml-1">/ {usagePercent.toFixed(0)}%</span>
+              </p>
+              <div className="mt-1.5 bg-gray-200 rounded-full h-1 overflow-hidden">
+                <div className="h-1 rounded-full" style={{
+                  width: `${Math.min(100, usagePercent)}%`,
+                  backgroundColor: usagePercent > 100 ? '#d06868' : '#5fad9b',
+                }} />
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-400 mb-1">残業時給</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">¥{overtimeHourlyRate.toLocaleString('ja-JP')}/h</p>
+            </div>
+            {basicHourlyRate > 0 && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-400 mb-1">基本時給</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-900">¥{basicHourlyRate.toLocaleString('ja-JP')}/h</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Overtime gain — monthly trend */}
+      {gainRows.length > 1 && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <p className="text-sm font-semibold text-gray-700 mb-3">みなし残業 月次推移</p>
           <div className="space-y-1.5">
             {gainRows.map((r) => (
               <div key={r.label} className="flex items-center gap-2">
