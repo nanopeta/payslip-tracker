@@ -28,9 +28,8 @@ function calcIncomeSum(income: Payslip['income']): number {
   return (
     income.basicSalary + income.wlbAllowance + income.deemedOvertime + income.lifePlanAllowance +
     income.commuteAdjustment + income.thankYouAllowance + income.zoomAllowance + income.adjustmentSalary +
-    income.commuteAllowance + income.taxableCommuteAllowance + income.overtime + income.lifePlanSupport +
+    income.commuteAllowance + income.taxableCommuteAllowance +
     Object.values(income.otherIncome).reduce((s, v) => s + v, 0)
-    // detailIncome は総支給金額より下の詳細項目なので合計に含めない
   )
 }
 
@@ -89,8 +88,6 @@ export default function PayslipDetailView({ payslip }: Props) {
         <Row label="調整給" value={income.adjustmentSalary} />
         <Row label="通勤手当" value={income.commuteAllowance} />
         <Row label="課税通勤手当" value={income.taxableCommuteAllowance} />
-        <Row label="普通残業①" value={income.overtime} />
-        <Row label="ライフプラン支援" value={income.lifePlanSupport} />
         {Object.entries(income.otherIncome).map(([k, v]) => <Row key={k} label={k} value={v} />)}
         <Row label="総支給金額" value={income.total} bold accent="text-brand-700" />
         {Object.keys(income.detailIncome ?? {}).length > 0 && (

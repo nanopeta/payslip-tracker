@@ -51,7 +51,7 @@ function sumIncomeItems(inc: PayslipIncome, others: OtherItem[]): number {
   return (
     inc.basicSalary + inc.wlbAllowance + inc.deemedOvertime + inc.lifePlanAllowance +
     inc.commuteAdjustment + inc.thankYouAllowance + inc.zoomAllowance + inc.adjustmentSalary +
-    inc.commuteAllowance + inc.taxableCommuteAllowance + inc.overtime + inc.lifePlanSupport +
+    inc.commuteAllowance + inc.taxableCommuteAllowance +
     others.filter((o) => o.category === '支給').reduce((s, o) => s + o.value, 0)
   )
 }
@@ -175,8 +175,6 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
           <NumInput label="ZOOM手当" value={income.zoomAllowance} onChange={(v) => patchIncome('zoomAllowance', v)} />
           <NumInput label="調整給" value={income.adjustmentSalary} onChange={(v) => patchIncome('adjustmentSalary', v)} />
           <NumInput label="通勤手当" value={income.commuteAllowance} onChange={(v) => patchIncome('commuteAllowance', v)} />
-          <NumInput label="普通残業①" value={income.overtime} onChange={(v) => patchIncome('overtime', v)} />
-          <NumInput label="ライフプラン支援" value={income.lifePlanSupport} onChange={(v) => patchIncome('lifePlanSupport', v)} />
           <NumInput label="総支給金額" value={income.total} onChange={(v) => patchIncome('total', v)} />
         </div>
       </div>

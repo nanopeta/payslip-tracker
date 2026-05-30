@@ -135,7 +135,10 @@ function findRight(
 
     // 同じ行グループ（Y ± yTol 以内）の全行からも右側を探す
     const allSameArea = rows
-      .filter((r) => Math.abs(r[0].y - labelItem.y) <= yTol)
+      .filter((r) => {
+        const dy = labelItem.y - r[0].y  // positive = r is below label in PDF coords
+        return dy >= -5 && dy <= yTol    // same row (up to 5px above) or within yTol below
+      })
       .flatMap((r) => mergeRow(r))
       .filter((item) => item.x > labelItem.x)
       .sort((a, b) => a.x - b.x)
