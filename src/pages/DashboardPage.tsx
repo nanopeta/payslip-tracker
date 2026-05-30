@@ -118,7 +118,7 @@ export default function DashboardPage() {
           </div>
           {latestGain !== null && (
             <div className="flex items-baseline gap-2 mb-3">
-              <span className={`text-2xl font-bold tabular-nums ${latestGain >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              <span className="text-2xl font-bold tabular-nums" style={{ color: latestGain >= 0 ? '#5fad9b' : '#d06868' }}>
                 {latestGain >= 0 ? '+' : ''}{formatYen(latestGain)}
               </span>
               <span className="text-xs text-gray-400">
@@ -132,11 +132,14 @@ export default function DashboardPage() {
                 <span className="text-xs text-gray-500 w-16 tabular-nums">{r.label}</span>
                 <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
                   <div
-                    className={`h-2 rounded-full ${r.gain >= 0 ? 'bg-emerald-400' : 'bg-red-400'}`}
-                    style={{ width: `${Math.min(100, Math.abs(r.gain) / Math.max(...gainRows.map((x) => Math.abs(x.gain)), 1) * 100)}%` }}
+                    className="h-2 rounded-full"
+                    style={{
+                      backgroundColor: r.gain >= 0 ? '#5fad9b' : '#d06868',
+                      width: `${Math.min(100, Math.abs(r.gain) / Math.max(...gainRows.map((x) => Math.abs(x.gain)), 1) * 100)}%`,
+                    }}
                   />
                 </div>
-                <span className={`text-xs tabular-nums w-24 text-right ${r.gain >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                <span className="text-xs tabular-nums w-24 text-right" style={{ color: r.gain >= 0 ? '#5fad9b' : '#d06868' }}>
                   {r.gain >= 0 ? '+' : ''}{formatYen(r.gain)}
                 </span>
               </div>

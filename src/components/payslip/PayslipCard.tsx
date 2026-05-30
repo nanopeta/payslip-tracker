@@ -37,11 +37,11 @@ export default function PayslipCard({ payslip, prevNetPay }: Props) {
           </div>
           <div>
             <p className="text-xs text-gray-400">控除合計</p>
-            <p className="text-sm font-medium tabular-nums text-red-500">{formatYen(payslip.deductions.total)}</p>
+            <p className="text-sm font-medium tabular-nums" style={{ color: '#d06868' }}>{formatYen(payslip.deductions.total)}</p>
           </div>
           {delta !== undefined && (
-            <p className={`text-xs font-medium ${delta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toLocaleString('ja-JP')}円
+            <p className="text-xs font-medium" style={{ color: delta >= 0 ? '#5fad9b' : '#d06868' }}>
+              {delta >= 0 ? '+' : '-'}¥{Math.abs(delta).toLocaleString('ja-JP')}
             </p>
           )}
         </div>
