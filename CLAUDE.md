@@ -42,6 +42,10 @@
 npm run dev      # 開発サーバー起動 (http://localhost:5173/payslip-tracker/)
 npm run build    # 本番ビルド（tsc -b && vite build）
 npm run preview  # ビルド結果をローカルでプレビュー
+
+# エージェントチーム（AI 自律改善）
+ANTHROPIC_API_KEY=sk-ant-... npm run agent-team             # Ctrl+C まで無限改善
+npm run agent-team -- --sprint-size=3  # 1スプリント 3件で改善
 ```
 
 ---
@@ -59,6 +63,8 @@ npm run preview  # ビルド結果をローカルでプレビュー
 | React Router | 6.28.0 | ルーティング |
 | pdfjs-dist | 5.2.133 | PDF解析（現在ほぼ未使用） |
 | uuid | 11.1.0 | ID生成 |
+| @anthropic-ai/sdk | 0.39+ | エージェントチーム（devDep） |
+| tsx | 4.19+ | TypeScript スクリプト実行（devDep） |
 
 > **注意**: Tailwind は `3.4.19` に固定。`npm install tailwindcss` で最新版（v4）に上がると設定が壊れる。
 
@@ -67,6 +73,9 @@ npm run preview  # ビルド結果をローカルでプレビュー
 ## ディレクトリ構成
 
 ```
+scripts/
+└── agent-team/
+    └── index.ts            # エージェントチーム CLI（PM/Dev/Reviewer）
 src/
 ├── types/
 │   ├── payslip.ts          # Payslip, PayslipIncome/Deductions/Attendance/Summary 型定義
@@ -84,7 +93,9 @@ src/
 │   ├── ui/                 # StatCard
 │   ├── charts/
 │   │   ├── TrendSummaryChart.tsx      # 支給・手取りの推移（折れ線）★メイン
-│   │   ├── PaidLeaveTrendChart.tsx    # 有給残日数の推移（折れ線）
+│   │   ├── PaidLeaveTrendChart.tsx    # 有給残日数の推移（棒グラフ）
+│   │   ├── DeductionDonutChart.tsx    # 控除内訳ドーナツチャート（最新月）
+│   │   ├── OvertimeHoursChart.tsx     # 残業時間推移（棒グラフ・45h参照線付き）
 │   │   ├── NetPayTrendChart.tsx       # 旧・未使用
 │   │   └── IncomeDeductionChart.tsx   # 旧・未使用
 │   ├── payslip/
@@ -92,13 +103,13 @@ src/
 │   │   ├── PayslipDetailView.tsx      # 1件の明細詳細
 │   │   └── AnnualDetailView.tsx       # 年間集計詳細（PayslipDetailView スタイル）
 │   ├── withholding/        # WithholdingCard
-│   └── upload/             # DropZone、PayslipReviewForm、WithholdingReviewForm
+│   └── upload/             # DropZone、PayslipReviewForm（重複検出付き）、WithholdingReviewForm
 └── pages/
-    ├── DashboardPage.tsx   # ダッシュボード（月次集計・チャート・みなし残業）
+    ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳）
     ├── PayslipsPage.tsx    # 給与明細一覧（一括削除機能あり）
     ├── PayslipDetailPage.tsx
     ├── AnnualSummaryPage.tsx
-    ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応）
+    ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定
 ```
 
@@ -562,7 +573,46 @@ const INCOME_LABELS: Record<string, string> = {
 1. `src/lib/aggregations.ts` に集計関数を追加
 2. `src/pages/DashboardPage.tsx` で呼び出して `<StatCard>` または新しいセクションで表示
 
+### ダッシュボードのセクション構成（DashboardPage.tsx）
+
+上から順に:
+1. **StatCards** — 最新月の差引支給額・総支給・控除合計・手取り率（前月比付き）
+2. **今年の累計（YTD）** — `annualTotals(payslips, currentYear)` で計算。当年データがない場合は非表示
+3. **みなし残業効率カード** — 差額・詳細数値・残業時間推移チャート（`OvertimeHoursChart`）・月次差額推移
+4. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
+5. **有給残日数の推移** — `PaidLeaveTrendChart`（2件以上ある場合のみ）
+6. **控除内訳ドーナツチャート** — `DeductionDonutChart`（最新給与月のデータ）
+7. **最近の給与明細** — 直近5件のカードリスト
+
 ### localStorage のデータをリセットしたいとき（開発中）
 
 ブラウザの DevTools > Application > Local Storage で `payslip_tracker_v1` を削除。
 設定だけリセットしたい場合は `payslip_tracker_settings` を削除。
+
+---
+
+## エージェントチーム（自律改善システム）
+
+`scripts/agent-team/index.ts` — PM・Dev・Reviewer の3エージェントが協調して payslip-tracker を自律的に改善するCLIツール。
+
+### 起動方法
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... npm run agent-team
+npm run agent-team -- --sprint-size=3  # 1スプリントあたり3件
+```
+
+### 動作フロー（スプリント方式）
+
+1. **PM（スプリント計画）**: `git log` と最新 `CLAUDE.md` を読んで未実装の改善を N 件バックログ化
+2. **Dev（実装）**: 各タスクを `read_file` → `write_file` → `npm run build` で実装・検証
+3. **Reviewer（レビュー）**: `git diff HEAD` で変更を確認し LGTM or 修正指示
+4. Dev が修正（最大1回）→ タスクごとに **自動コミット**
+5. スプリント後に **CLAUDE.md を自動更新**（新コンポーネント・パターンを追記）
+6. `Ctrl+C` で停止 → ブランチをプッシュして終了
+
+### 制約
+
+- `git commit/push/add` などはスクリプト側が制御（エージェントは実行不可）
+- `types/payslip.ts`, `lib/storage.ts`, `lib/mhtParser.ts` は変更対象外
+- PM は毎スプリントで最新の `CLAUDE.md` と `git log` を参照して実装済み改善をスキップ
