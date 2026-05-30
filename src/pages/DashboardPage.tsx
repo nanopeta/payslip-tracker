@@ -34,20 +34,6 @@ export default function DashboardPage() {
   // 有給残日数推移
   const leaveTrend = paidLeaveTrend(payslips)
 
-  // 手取り率
-  const takeHomeRate = latestMonth && latestMonth.totalIncome > 0
-    ? (latestMonth.netPay / latestMonth.totalIncome) * 100
-    : null
-  const prevTakeHomeRate = prevMonth && prevMonth.totalIncome > 0
-    ? (prevMonth.netPay / prevMonth.totalIncome) * 100
-    : null
-  const rateChange = takeHomeRate !== null && prevTakeHomeRate !== null
-    ? takeHomeRate - prevTakeHomeRate
-    : null
-
-  // 有給残日数推移
-  const leaveTrend = paidLeaveTrend(payslips)
-
   // みなし残業効率（給与明細のみ対象）
   const monthlyPayslips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
   const latestMonthly = latestPayslip(monthlyPayslips)
