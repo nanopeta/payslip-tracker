@@ -10,6 +10,12 @@ interface Props {
   onCancel: () => void
 }
 
+interface OtherItem {
+  label: string
+  value: number
+  category: '支給' | '控除'
+}
+
 function NumInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -41,6 +47,25 @@ function TimeInput({ label, value, onChange }: { label: string; value: number; o
   )
 }
 
+function sumIncomeItems(inc: PayslipIncome, others: OtherItem[]): number {
+  return (
+    inc.basicSalary + inc.wlbAllowance + inc.deemedOvertime + inc.lifePlanAllowance +
+    inc.commuteAdjustment + inc.thankYouAllowance + inc.zoomAllowance + inc.adjustmentSalary +
+    inc.commuteAllowance + inc.taxableCommuteAllowance + inc.overtime + inc.lifePlanSupport +
+    others.filter((o) => o.category === '支給').reduce((s, o) => s + o.value, 0)
+  )
+}
+
+function sumDeductionItems(ded: PayslipDeductions, others: OtherItem[]): number {
+  return (
+    ded.healthInsurance + ded.longTermCareInsurance + ded.pensionInsurance +
+    ded.employmentInsurance + ded.incomeTax + ded.residentTax + ded.deposit +
+    ded.taxRefund + ded.expenseReimbursement + ded.healthInsuranceBenefit +
+    ded.temporaryChildcare + ded.advance +
+    others.filter((o) => o.category === '控除').reduce((s, o) => s + o.value, 0)
+  )
+}
+
 export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) {
   const [year, setYear] = useState(initial.year ?? new Date().getFullYear())
   const [month, setMonth] = useState(initial.month ?? new Date().getMonth() + 1)
@@ -49,6 +74,15 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
   const [attendance, setAttendance] = useState<PayslipAttendance>({ ...emptyAttendance(), ...initial.attendance })
   const [netPay, setNetPay] = useState(initial.summary?.netPay ?? 0)
   const [childSupport, setChildSupport] = useState(initial.summary?.childSupportPayment ?? 0)
+
+  const [otherItems, setOtherItems] = useState<OtherItem[]>(() => [
+    ...Object.entries(initial.income?.otherIncome ?? {}).map(([label, value]) => ({
+      label, value, category: '控除' as const,
+    })),
+    ...Object.entries(initial.deductions?.otherDeductions ?? {}).map(([label, value]) => ({
+      label, value, category: '控除' as const,
+    })),
+  ])
 
   function patchIncome<K extends keyof PayslipIncome>(k: K, v: PayslipIncome[K]) {
     setIncome((prev) => ({ ...prev, [k]: v }))
@@ -59,16 +93,31 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
   function patchAtt<K extends keyof PayslipAttendance>(k: K, v: PayslipAttendance[K]) {
     setAttendance((prev) => ({ ...prev, [k]: v }))
   }
+  function patchOther(idx: number, patch: Partial<OtherItem>) {
+    setOtherItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
+  }
+
+  const incomeSum = sumIncomeItems(income, otherItems)
+  const dedSum = sumDeductionItems(deductions, otherItems)
+  const incomeWarning = income.total > 0 && incomeSum !== income.total
+  const dedWarning = deductions.total > 0 && dedSum !== deductions.total
 
   function handleSave() {
+    const finalIncome: PayslipIncome = { ...income, otherIncome: {} }
+    const finalDeductions: PayslipDeductions = { ...deductions, otherDeductions: {} }
+    for (const item of otherItems) {
+      if (item.value <= 0) continue
+      if (item.category === '支給') finalIncome.otherIncome[item.label] = item.value
+      else finalDeductions.otherDeductions[item.label] = item.value
+    }
     const payslip: Payslip = {
       id: initial.id ?? uuidv4(),
       year,
       month,
       employeeName: initial.employeeName,
       companyName: initial.companyName,
-      income,
-      deductions,
+      income: finalIncome,
+      deductions: finalDeductions,
       attendance,
       summary: {
         netPay,
@@ -107,6 +156,11 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
       {/* Income */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-3">支給</p>
+        {incomeWarning && (
+          <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+            内訳の合計（{incomeSum.toLocaleString()}円）が総支給金額（{income.total.toLocaleString()}円）と一致しません
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <NumInput label="基本給" value={income.basicSalary} onChange={(v) => patchIncome('basicSalary', v)} />
           <NumInput label="ワークライフバランス手当" value={income.wlbAllowance} onChange={(v) => patchIncome('wlbAllowance', v)} />
@@ -126,6 +180,11 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
       {/* Deductions */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <p className="text-xs font-semibold text-red-500 uppercase tracking-wider mb-3">控除</p>
+        {dedWarning && (
+          <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+            内訳の合計（{dedSum.toLocaleString()}円）が控除合計額（{deductions.total.toLocaleString()}円）と一致しません
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <NumInput label="健康保険料" value={deductions.healthInsurance} onChange={(v) => patchDed('healthInsurance', v)} />
           <NumInput label="介護保険料" value={deductions.longTermCareInsurance} onChange={(v) => patchDed('longTermCareInsurance', v)} />
@@ -137,6 +196,35 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
           <NumInput label="控除合計額" value={deductions.total} onChange={(v) => patchDed('total', v)} />
         </div>
       </div>
+
+      {/* Other items */}
+      {otherItems.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">その他の項目</p>
+          <p className="text-xs text-gray-400 mb-3">支給・控除どちらに分類するか選択してください</p>
+          <div className="space-y-2">
+            {otherItems.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{item.label}</span>
+                <input
+                  type="number"
+                  value={item.value || ''}
+                  onChange={(e) => patchOther(idx, { value: Number(e.target.value) || 0 })}
+                  className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-400"
+                />
+                <select
+                  value={item.category}
+                  onChange={(e) => patchOther(idx, { category: e.target.value as '支給' | '控除' })}
+                  className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                >
+                  <option value="支給">支給</option>
+                  <option value="控除">控除</option>
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Attendance */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">

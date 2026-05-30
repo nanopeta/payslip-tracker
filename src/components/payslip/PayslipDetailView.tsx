@@ -22,8 +22,32 @@ interface Props {
   payslip: Payslip
 }
 
+function calcIncomeSum(income: Payslip['income']): number {
+  return (
+    income.basicSalary + income.wlbAllowance + income.deemedOvertime + income.lifePlanAllowance +
+    income.commuteAdjustment + income.thankYouAllowance + income.zoomAllowance + income.adjustmentSalary +
+    income.commuteAllowance + income.taxableCommuteAllowance + income.overtime + income.lifePlanSupport +
+    Object.values(income.otherIncome).reduce((s, v) => s + v, 0)
+  )
+}
+
+function calcDeductionSum(deductions: Payslip['deductions']): number {
+  return (
+    deductions.healthInsurance + deductions.longTermCareInsurance + deductions.pensionInsurance +
+    deductions.employmentInsurance + deductions.incomeTax + deductions.residentTax + deductions.deposit +
+    deductions.taxRefund + deductions.expenseReimbursement + deductions.healthInsuranceBenefit +
+    deductions.temporaryChildcare + deductions.advance +
+    Object.values(deductions.otherDeductions).reduce((s, v) => s + v, 0)
+  )
+}
+
 export default function PayslipDetailView({ payslip }: Props) {
   const { income, deductions, attendance, summary } = payslip
+
+  const incomeSum = calcIncomeSum(income)
+  const dedSum = calcDeductionSum(deductions)
+  const incomeWarning = income.total > 0 && incomeSum !== income.total
+  const dedWarning = deductions.total > 0 && dedSum !== deductions.total
 
   return (
     <div className="space-y-4">
@@ -41,6 +65,11 @@ export default function PayslipDetailView({ payslip }: Props) {
       {/* Income */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-brand-600 mb-2">支給</p>
+        {incomeWarning && (
+          <div className="mb-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+            内訳合計 {formatYen(incomeSum)} ≠ 総支給金額 {formatYen(income.total)}
+          </div>
+        )}
         <Row label="基本給" value={income.basicSalary} />
         <Row label="ワークライフバランス手当" value={income.wlbAllowance} />
         <Row label="みなし残業" value={income.deemedOvertime} />
@@ -60,6 +89,11 @@ export default function PayslipDetailView({ payslip }: Props) {
       {/* Deductions */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-red-500 mb-2">控除</p>
+        {dedWarning && (
+          <div className="mb-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+            内訳合計 {formatYen(dedSum)} ≠ 控除合計額 {formatYen(deductions.total)}
+          </div>
+        )}
         <Row label="健康保険料" value={deductions.healthInsurance} />
         <Row label="介護保険料" value={deductions.longTermCareInsurance} />
         <Row label="厚生年金保険" value={deductions.pensionInsurance} />
