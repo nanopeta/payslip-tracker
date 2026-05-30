@@ -13,7 +13,7 @@ import {
 } from '../types/payslip'
 import type { WithholdingTaxCertificate, DocumentType, ParseResult } from '../types/withholding'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${import.meta.env.BASE_URL}pdf.worker.min.mjs`
 
 function normalizeNumber(s: string): number {
   const normalized = s
