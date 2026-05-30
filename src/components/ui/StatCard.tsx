@@ -3,10 +3,12 @@ interface StatCardProps {
   value: string
   sub?: string
   delta?: number
+  deltaText?: string
+  deltaPositive?: boolean
   highlight?: boolean
 }
 
-export default function StatCard({ title, value, sub, delta, highlight }: StatCardProps) {
+export default function StatCard({ title, value, sub, delta, deltaText, deltaPositive, highlight }: StatCardProps) {
   return (
     <div className={`rounded-xl border p-5 ${highlight ? 'bg-brand-600 border-brand-500' : 'bg-white border-gray-100 shadow-sm'}`}>
       <p className={`text-sm font-medium ${highlight ? 'text-brand-200' : 'text-gray-500'}`}>{title}</p>
@@ -15,6 +17,12 @@ export default function StatCard({ title, value, sub, delta, highlight }: StatCa
       {delta !== undefined && (
         <p className={`text-xs mt-1 font-medium ${delta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
           {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toLocaleString('ja-JP')}円
+          <span className="text-gray-400 font-normal ml-1">前月比</span>
+        </p>
+      )}
+      {deltaText !== undefined && (
+        <p className={`text-xs mt-1 font-medium ${deltaPositive ? 'text-green-500' : 'text-red-500'}`}>
+          {deltaText}
           <span className="text-gray-400 font-normal ml-1">前月比</span>
         </p>
       )}

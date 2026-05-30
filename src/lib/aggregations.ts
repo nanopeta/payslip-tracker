@@ -142,3 +142,18 @@ export function previousPayslip(payslips: Payslip[], current: Payslip): Payslip 
 export function uniqueYears(payslips: Payslip[]): number[] {
   return [...new Set(payslips.map((p) => p.year))].sort((a, b) => b - a)
 }
+
+export interface LeaveTrendPoint {
+  label: string
+  remaining: number
+}
+
+export function paidLeaveTrend(payslips: Payslip[]): LeaveTrendPoint[] {
+  return [...payslips]
+    .filter((p) => (!p.payslipType || p.payslipType === 'monthly') && p.attendance.paidLeaveRemaining > 0)
+    .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
+    .map((p) => ({
+      label: `${p.year}/${String(p.month).padStart(2, '0')}`,
+      remaining: p.attendance.paidLeaveRemaining,
+    }))
+}

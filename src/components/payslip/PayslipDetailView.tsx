@@ -183,6 +183,8 @@ export default function PayslipDetailView({ payslip }: Props) {
               { label: '出勤時間', value: attendance.workHours, display: formatHoursMinutes(attendance.workHours) },
               { label: '残業時間', value: attendance.overtimeHours, display: formatHoursMinutes(attendance.overtimeHours) },
               { label: '遅早時間', value: attendance.lateEarlyHours, display: formatHoursMinutes(attendance.lateEarlyHours) },
+              { label: '休日出勤日数', value: attendance.holidayWorkDays, display: `${attendance.holidayWorkDays}日` },
+              { label: '特別休暇', value: attendance.specialLeave, display: `${attendance.specialLeave}日` },
             ].map((item) =>
               item.value > 0 ? (
                 <div key={item.label} className="bg-gray-50 rounded-lg p-3">

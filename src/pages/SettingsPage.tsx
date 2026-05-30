@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import useStore from '../store/useStore'
 import { DEFAULT_OVERTIME_SETTINGS } from '../lib/storage'
+import { exportJSON, exportCSV } from '../lib/exporters'
 
 export default function SettingsPage() {
   const settings = useStore((s) => s.overtimeSettings)
   const setOvertimeSettings = useStore((s) => s.setOvertimeSettings)
+  const payslips = useStore((s) => s.payslips)
+  const withholdingCerts = useStore((s) => s.withholdingCerts)
 
   const [deemedLabel, setDeemedLabel] = useState(settings.deemedLabel)
   const [actualLabels, setActualLabels] = useState<string[]>(settings.actualLabels)
@@ -15,6 +18,14 @@ export default function SettingsPage() {
     setOvertimeSettings({ deemedLabel, actualLabels: labels.length > 0 ? labels : DEFAULT_OVERTIME_SETTINGS.actualLabels })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  function handleExportJSON() {
+    exportJSON({ version: 1, payslips, withholdingCerts })
+  }
+
+  function handleExportCSV() {
+    exportCSV(payslips)
   }
 
   function handleReset() {
@@ -116,6 +127,29 @@ export default function SettingsPage() {
             className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors"
           >
             {saved ? '保存しました ✓' : '保存する'}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-gray-700">データ管理</p>
+          <p className="text-xs text-gray-400 mt-0.5">データはすべてブラウザ内のみに保存されています</p>
+        </div>
+        <div className="space-y-2">
+          <button
+            onClick={handleExportJSON}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <span>JSONでバックアップ</span>
+            <span className="text-xs text-gray-400">全データ・完全復元可</span>
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <span>CSVでエクスポート</span>
+            <span className="text-xs text-gray-400">Excel・スプレッドシート用</span>
           </button>
         </div>
       </div>
