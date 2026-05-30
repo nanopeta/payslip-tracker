@@ -54,14 +54,7 @@ export default function DashboardPage() {
   const overtimeHoursLatest = latestMonthly?.attendance.overtimeHours ?? 0
   const usagePercent = (overtimeHoursLatest / DEEMED_HOURS) * 100
   const overtimeHourlyRate = deemedAmtLatest > 0 ? Math.round(deemedAmtLatest / DEEMED_HOURS) : 0
-  const stdHours = latestMonthly
-    ? (latestMonthly.attendance.workHours > 0
-        ? latestMonthly.attendance.workHours - overtimeHoursLatest
-        : latestMonthly.attendance.workDays * 8)
-    : 0
-  const basicHourlyRate = stdHours > 0 && latestMonthly
-    ? Math.round(latestMonthly.income.basicSalary / stdHours)
-    : 0
+  const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
 
   const recent = sorted.slice(0, 5)
 
