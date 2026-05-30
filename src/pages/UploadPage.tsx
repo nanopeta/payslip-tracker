@@ -156,6 +156,7 @@ export default function UploadPage() {
           )}
           {currentResult.type === 'payslip' && currentResult.payslip && (
             <PayslipReviewForm
+              key={reviewIndex}
               initial={currentResult.payslip}
               onSave={handleSavePayslip}
               onCancel={handleCancel}
@@ -163,6 +164,7 @@ export default function UploadPage() {
           )}
           {currentResult.type === 'withholding' && currentResult.withholding && (
             <WithholdingReviewForm
+              key={reviewIndex}
               initial={currentResult.withholding}
               onSave={handleSaveWithholding}
               onCancel={handleCancel}
