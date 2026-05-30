@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import WithholdingCard from '../components/withholding/WithholdingCard'
+import PayslipCard from '../components/payslip/PayslipCard'
 import { annualTotals, uniqueYears } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
@@ -159,24 +160,14 @@ export default function AnnualSummaryPage() {
                   {/* Monthly detail — expanded */}
                   {isExpanded && (
                     <div className="border-t border-gray-100 pt-3">
-                      <p className="text-xs text-gray-400 mb-2">月別明細</p>
-                      <div className="space-y-1">
-                        {yearSlips.map((p) => (
-                          <div key={p.id} className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0">
-                            <span className="text-sm tabular-nums text-gray-600 w-14 shrink-0">
-                              {p.year}/{String(p.month).padStart(2, '0')}
-                            </span>
-                            {p.payslipType === 'bonus' && (
-                              <span className="text-xs font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded shrink-0">
-                                {p.payslipLabel ?? '賞与'}
-                              </span>
-                            )}
-                            <span className="flex-1" />
-                            <span className="text-xs text-gray-400">総支給</span>
-                            <span className="text-sm tabular-nums text-gray-700 w-24 text-right">{formatYen(p.income.total)}</span>
-                            <span className="text-xs text-gray-400">手取り</span>
-                            <span className="text-sm tabular-nums font-medium text-brand-700 w-24 text-right">{formatYen(p.summary.netPay)}</span>
-                          </div>
+                      <p className="text-xs text-gray-400 mb-3">月別明細</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {yearSlips.map((p, i) => (
+                          <PayslipCard
+                            key={p.id}
+                            payslip={p}
+                            prevNetPay={yearSlips[i - 1]?.summary.netPay}
+                          />
                         ))}
                       </div>
                     </div>
