@@ -10,6 +10,19 @@
     <title>給与・源泉徴収票ダッシュボード</title>
   </head>
   <body>
+    <script>
+      // GitHub Pages SPA redirect: 404.html から受け取ったパスを復元
+      (function () {
+        var p = new URLSearchParams(window.location.search).get('p');
+        var h = new URLSearchParams(window.location.search).get('h');
+        if (p) {
+          window.history.replaceState(
+            null, null,
+            '/payslip-tracker' + decodeURIComponent(p) + (h ? decodeURIComponent(h) : '')
+          );
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
