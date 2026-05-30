@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import WithholdingCard from '../components/withholding/WithholdingCard'
@@ -9,8 +10,18 @@ export default function AnnualSummaryPage() {
   const withholdingCerts = useStore((s) => s.withholdingCerts)
   const deleteWithholdingCert = useStore((s) => s.deleteWithholdingCert)
   const years = uniqueYears(payslips)
+  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set())
 
   const hasData = payslips.length > 0 || withholdingCerts.length > 0
+
+  function toggleYear(year: number) {
+    setExpandedYears((prev) => {
+      const next = new Set(prev)
+      if (next.has(year)) next.delete(year)
+      else next.add(year)
+      return next
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -61,67 +72,116 @@ export default function AnnualSummaryPage() {
           <p className="text-sm font-semibold text-gray-700">給与明細から集計した年次合計</p>
           {years.map((year) => {
             const totals = annualTotals(payslips, year)
-            const monthlySlips = payslips.filter((p) => p.year === year && (!p.payslipType || p.payslipType === 'monthly'))
-            const bonusSlips = payslips.filter((p) => p.year === year && p.payslipType === 'bonus')
+            const yearSlips = payslips
+              .filter((p) => p.year === year)
+              .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
+            const monthlySlips = yearSlips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
+            const bonusSlips = yearSlips.filter((p) => p.payslipType === 'bonus')
             const hasBonus = bonusSlips.length > 0
+            const monthlyCount = new Set(monthlySlips.map((p) => p.month)).size
             const monthlyIncome = monthlySlips.reduce((s, p) => s + p.income.total, 0)
             const monthlyNetPay = monthlySlips.reduce((s, p) => s + p.summary.netPay, 0)
             const bonusIncome = bonusSlips.reduce((s, p) => s + p.income.total, 0)
             const bonusNetPay = bonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+            const isExpanded = expandedYears.has(year)
+
             return (
-              <div key={year} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <p className="font-bold text-gray-900">{year}年（{totals.monthCount}件）</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-400">年間総支給</p>
-                    <p className="text-base font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.totalIncome)}</p>
+              <div key={year} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                {/* Header — clickable */}
+                <button
+                  onClick={() => toggleYear(year)}
+                  className="w-full flex items-center justify-between px-5 pt-5 pb-4 text-left hover:bg-gray-50 transition-colors"
+                >
+                  <p className="font-bold text-gray-900">
+                    {year}年
+                    <span className="text-sm font-normal text-gray-400 ml-2">{monthlyCount}ヶ月分{hasBonus ? `・賞与${bonusSlips.length}件` : ''}</span>
+                  </p>
+                  <svg
+                    className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                <div className="px-5 pb-5 space-y-4">
+                  {/* Totals */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-400">年間総支給</p>
+                      <p className="text-base font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.totalIncome)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">年間差引支給</p>
+                      <p className="text-base font-semibold tabular-nums text-brand-700 mt-0.5">{formatYen(totals.totalNetPay)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">年間控除合計</p>
+                      <p className="text-base font-semibold tabular-nums text-red-500 mt-0.5">{formatYen(totals.totalDeductions)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-400">年間差引支給</p>
-                    <p className="text-base font-semibold tabular-nums text-brand-700 mt-0.5">{formatYen(totals.totalNetPay)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">年間控除合計</p>
-                    <p className="text-base font-semibold tabular-nums text-red-500 mt-0.5">{formatYen(totals.totalDeductions)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">年間残業代</p>
-                    <p className="text-base font-semibold tabular-nums text-gray-700 mt-0.5">{formatYen(totals.totalOvertime)}</p>
-                  </div>
-                </div>
-                {hasBonus && (
-                  <div className="border-t border-gray-100 pt-3 space-y-2">
-                    <p className="text-xs text-gray-400">内訳</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-500 mb-1.5">給与（{monthlySlips.length}件）</p>
-                        <div className="space-y-0.5">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">総支給</span>
-                            <span className="tabular-nums font-medium">{formatYen(monthlyIncome)}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">差引支給</span>
-                            <span className="tabular-nums font-medium text-brand-700">{formatYen(monthlyNetPay)}</span>
+
+                  {/* Bonus breakdown */}
+                  {hasBonus && (
+                    <div className="border-t border-gray-100 pt-3 space-y-2">
+                      <p className="text-xs text-gray-400">内訳</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500 mb-1.5">給与（{monthlySlips.length}件）</p>
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">総支給</span>
+                              <span className="tabular-nums font-medium">{formatYen(monthlyIncome)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">差引支給</span>
+                              <span className="tabular-nums font-medium text-brand-700">{formatYen(monthlyNetPay)}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="bg-amber-50 rounded-lg p-3">
-                        <p className="text-xs text-amber-700 mb-1.5">賞与・インセンティブ（{bonusSlips.length}件）</p>
-                        <div className="space-y-0.5">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">総支給</span>
-                            <span className="tabular-nums font-medium">{formatYen(bonusIncome)}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">差引支給</span>
-                            <span className="tabular-nums font-medium text-brand-700">{formatYen(bonusNetPay)}</span>
+                        <div className="bg-amber-50 rounded-lg p-3">
+                          <p className="text-xs text-amber-700 mb-1.5">賞与・インセンティブ（{bonusSlips.length}件）</p>
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">総支給</span>
+                              <span className="tabular-nums font-medium">{formatYen(bonusIncome)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">差引支給</span>
+                              <span className="tabular-nums font-medium text-brand-700">{formatYen(bonusNetPay)}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {/* Monthly detail — expanded */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-100 pt-3">
+                      <p className="text-xs text-gray-400 mb-2">月別明細</p>
+                      <div className="space-y-1">
+                        {yearSlips.map((p) => (
+                          <div key={p.id} className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                            <span className="text-sm tabular-nums text-gray-600 w-14 shrink-0">
+                              {p.year}/{String(p.month).padStart(2, '0')}
+                            </span>
+                            {p.payslipType === 'bonus' && (
+                              <span className="text-xs font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded shrink-0">
+                                {p.payslipLabel ?? '賞与'}
+                              </span>
+                            )}
+                            <span className="flex-1" />
+                            <span className="text-xs text-gray-400">総支給</span>
+                            <span className="text-sm tabular-nums text-gray-700 w-24 text-right">{formatYen(p.income.total)}</span>
+                            <span className="text-xs text-gray-400">手取り</span>
+                            <span className="text-sm tabular-nums font-medium text-brand-700 w-24 text-right">{formatYen(p.summary.netPay)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )
           })}
