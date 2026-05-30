@@ -299,7 +299,8 @@ function parsePayslip(items: PosItem[]): Partial<Payslip> {
   deductions.total = findRight(rows, '控除合計額', isMoneyToken, parseMoney)
   summary.netPay = findRight(rows, '差引支給額', isMoneyToken, parseMoney, 25)
   summary.bankTransfer = findRight(rows, '銀行１振込額', isMoneyToken, parseMoney, 25)
-  summary.childSupportPayment = findRight(rows, '子育支援金', isMoneyToken, parseMoney) || undefined
+  const childSupport = findRight(rows, '子育支援金', isMoneyToken, parseMoney)
+  if (childSupport) summary.extras = { '子育支援金': childSupport }
 
   // 総支給金額のY位置を特定（これより下の支給項目は detailIncome に入れる）
   let totalLineY = -Infinity

@@ -73,7 +73,7 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
   const [deductions, setDeductions] = useState<PayslipDeductions>({ ...emptyDeductions(), ...initial.deductions })
   const [attendance, setAttendance] = useState<PayslipAttendance>({ ...emptyAttendance(), ...initial.attendance })
   const [netPay, setNetPay] = useState(initial.summary?.netPay ?? 0)
-  const [childSupport, setChildSupport] = useState(initial.summary?.childSupportPayment ?? 0)
+  const [summaryExtras, setSummaryExtras] = useState<Record<string, number>>(initial.summary?.extras ?? {})
 
   const [otherItems, setOtherItems] = useState<OtherItem[]>(() => [
     ...Object.entries(initial.income?.otherIncome ?? {}).map(([label, value]) => ({
@@ -128,7 +128,7 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
       summary: {
         netPay,
         bankTransfer: netPay,
-        childSupportPayment: childSupport > 0 ? childSupport : undefined,
+        extras: Object.keys(summaryExtras).length > 0 ? summaryExtras : undefined,
       },
       sourceFileName: initial.sourceFileName,
       createdAt: initial.createdAt ?? new Date().toISOString(),
@@ -275,7 +275,14 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
         <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-3">計算</p>
         <div className="grid grid-cols-2 gap-3">
           <NumInput label="差引支給額" value={netPay} onChange={setNetPay} />
-          <NumInput label="子育支援金（任意）" value={childSupport} onChange={setChildSupport} />
+          {Object.entries(summaryExtras).map(([label, value]) => (
+            <NumInput
+              key={label}
+              label={label}
+              value={value}
+              onChange={(v) => setSummaryExtras((prev) => ({ ...prev, [label]: v }))}
+            />
+          ))}
         </div>
       </div>
 

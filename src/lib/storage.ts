@@ -9,21 +9,26 @@ export interface StorageState {
 
 export interface OvertimeSettings {
   deemedLabel: string
-  actualLabel: string
+  actualLabels: string[]
 }
 
 const SETTINGS_KEY = 'payslip_tracker_settings'
 
 export const DEFAULT_OVERTIME_SETTINGS: OvertimeSettings = {
   deemedLabel: 'みなし残業',
-  actualLabel: '普通残業①',
+  actualLabels: ['普通残業①'],
 }
 
 export function loadSettings(): OvertimeSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (!raw) return { ...DEFAULT_OVERTIME_SETTINGS }
-    return { ...DEFAULT_OVERTIME_SETTINGS, ...JSON.parse(raw) }
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    // actualLabel (旧形式) から actualLabels へ移行
+    if (parsed.actualLabel && !parsed.actualLabels) {
+      parsed.actualLabels = [parsed.actualLabel]
+    }
+    return { ...DEFAULT_OVERTIME_SETTINGS, ...parsed }
   } catch {
     return { ...DEFAULT_OVERTIME_SETTINGS }
   }

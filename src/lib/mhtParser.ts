@@ -281,14 +281,16 @@ export async function parseMHTFile(file: File): Promise<ParseResult> {
 
   // ---- 計算 ----
   const calcPairs = extractCalcPairs(calcSection)
+  const summaryExtras: Record<string, number> = {}
   for (const { label, value } of calcPairs) {
     if (!value) continue
     const amount = parseMoney(value)
     if (!amount) continue
     if (label === '差引支給額') summary.netPay = amount
     else if (label === '銀行１振込額') summary.bankTransfer = amount
-    else if (label === '子育支援金') summary.childSupportPayment = amount
+    else summaryExtras[label] = amount
   }
+  if (Object.keys(summaryExtras).length > 0) summary.extras = summaryExtras
 
   // 氏名の再抽出（より確実な方法）
   const nameDataMatch = html.match(/氏[　 ]*名[\s\S]{0,200}?<td[^>]*itemData[^>]*>\s*([^\d<, -@]{2,20}?)\s*<\/td>/)

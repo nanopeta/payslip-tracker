@@ -4,24 +4,37 @@ import StatCard from '../components/ui/StatCard'
 import NetPayTrendChart from '../components/charts/NetPayTrendChart'
 import IncomeDeductionChart from '../components/charts/IncomeDeductionChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestPayslip, previousPayslip, calcOvertimeGain } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 export default function DashboardPage() {
   const payslips = useStore((s) => s.payslips)
   const settings = useStore((s) => s.overtimeSettings)
   const sorted = [...payslips].sort((a, b) => b.year * 100 + b.month - (a.year * 100 + a.month))
-  const latest = latestPayslip(payslips)
-  const prev = latest ? previousPayslip(payslips, latest) : null
-  const trend = netPayTrend(payslips)
-  const recent = sorted.slice(0, 5)
 
-  const latestGain = latest ? calcOvertimeGain(latest, settings) : null
-  const prevGain = prev ? calcOvertimeGain(prev, settings) : null
+  const trend = netPayTrend(payslips)
+  const latestMonth = latestMonthStats(payslips)
+  const prevMonth = latestMonth ? prevMonthStats(payslips, latestMonth) : null
+
+  // 給与のみ・賞与のみ の推移
+  const monthlyPayslips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
+  const bonusPayslips = payslips.filter((p) => p.payslipType === 'bonus')
+  const monthlyTrend = netPayTrend(monthlyPayslips)
+  const bonusTrend = netPayTrend(bonusPayslips)
+  const hasBonusData = bonusPayslips.length > 0
+
+  // みなし残業効率（給与明細のみ対象）
+  const latestMonthly = latestPayslip(monthlyPayslips)
+  const latestGain = latestMonthly ? calcOvertimeGain(latestMonthly, settings) : null
   const gainRows = sorted
-    .filter((p) => p.year === latest?.year)
-    .map((p) => ({ label: `${p.year}/${String(p.month).padStart(2, '0')}`, gain: calcOvertimeGain(p, settings) }))
+    .filter((p) => (!p.payslipType || p.payslipType === 'monthly') && p.year === latestMonthly?.year)
+    .map((p) => ({
+      label: `${p.year}/${String(p.month).padStart(2, '0')}`,
+      gain: calcOvertimeGain(p, settings),
+    }))
   const showGainSection = gainRows.some((r) => r.gain !== 0)
+
+  const recent = sorted.slice(0, 5)
 
   if (payslips.length === 0) {
     return (
@@ -30,12 +43,12 @@ export default function DashboardPage() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         <p className="text-gray-500 text-lg font-medium">データがありません</p>
-        <p className="text-gray-400 text-sm mt-1 mb-6">給与明細のPDFをアップロードして始めましょう</p>
+        <p className="text-gray-400 text-sm mt-1 mb-6">給与明細のMHTをアップロードして始めましょう</p>
         <Link
           to="/upload"
           className="px-6 py-3 bg-brand-600 text-white rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors"
         >
-          PDFをアップロード
+          MHTをアップロード
         </Link>
       </div>
     )
@@ -51,22 +64,22 @@ export default function DashboardPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-3">
         <StatCard
-          title="差引支給額（最新月）"
-          value={latest ? formatYen(latest.summary.netPay) : '—'}
-          sub={latest ? `${latest.year}年${latest.month}月` : undefined}
-          delta={latest && prev ? latest.summary.netPay - prev.summary.netPay : undefined}
+          title="差引支給額（最新月合計）"
+          value={latestMonth ? formatYen(latestMonth.netPay) : '—'}
+          sub={latestMonth ? `${latestMonth.year}年${latestMonth.month}月` : undefined}
+          delta={latestMonth && prevMonth ? latestMonth.netPay - prevMonth.netPay : undefined}
           highlight
         />
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             title="総支給金額"
-            value={latest ? formatYen(latest.income.total) : '—'}
-            delta={latest && prev ? latest.income.total - prev.income.total : undefined}
+            value={latestMonth ? formatYen(latestMonth.totalIncome) : '—'}
+            delta={latestMonth && prevMonth ? latestMonth.totalIncome - prevMonth.totalIncome : undefined}
           />
           <StatCard
             title="控除合計"
-            value={latest ? formatYen(latest.deductions.total) : '—'}
-            delta={latest && prev ? latest.deductions.total - prev.deductions.total : undefined}
+            value={latestMonth ? formatYen(latestMonth.totalDeductions) : '—'}
+            delta={latestMonth && prevMonth ? latestMonth.totalDeductions - prevMonth.totalDeductions : undefined}
           />
         </div>
       </div>
@@ -77,7 +90,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
-              <p className="text-xs text-gray-400">{settings.deemedLabel} − {settings.actualLabel}</p>
+              <p className="text-xs text-gray-400">
+                {settings.deemedLabel} − ({settings.actualLabels.join(' ＋ ')})
+              </p>
             </div>
             <Link to="/settings" className="text-xs text-brand-500 hover:text-brand-700">設定 →</Link>
           </div>
@@ -87,12 +102,7 @@ export default function DashboardPage() {
                 {latestGain >= 0 ? '+' : ''}{formatYen(latestGain)}
               </span>
               <span className="text-xs text-gray-400">
-                {latest?.year}年{latest?.month}月
-                {prevGain !== null && (
-                  <span className="ml-1">
-                    （前月 {prevGain >= 0 ? '+' : ''}{formatYen(prevGain)}）
-                  </span>
-                )}
+                {latestMonthly?.year}年{latestMonthly?.month}月
               </span>
             </div>
           )}
@@ -118,11 +128,27 @@ export default function DashboardPage() {
       {/* Charts */}
       <div className="space-y-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">差引支給額の推移</p>
+          <p className="text-sm font-semibold text-gray-700 mb-3">差引支給額の推移（月次合計）</p>
           <NetPayTrendChart data={trend} />
         </div>
+
+        {hasBonusData && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <p className="text-sm font-semibold text-gray-700 mb-1">給与のみ</p>
+              <p className="text-xs text-gray-400 mb-3">給与（payslipType: monthly）</p>
+              <NetPayTrendChart data={monthlyTrend} />
+            </div>
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <p className="text-sm font-semibold text-gray-700 mb-1">賞与・インセンティブのみ</p>
+              <p className="text-xs text-gray-400 mb-3">賞与・ｲﾝｾﾝﾃｨﾌﾞ等</p>
+              <NetPayTrendChart data={bonusTrend} />
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">支給・控除の内訳</p>
+          <p className="text-sm font-semibold text-gray-700 mb-3">支給・控除の内訳（月次合計）</p>
           <IncomeDeductionChart data={trend} />
         </div>
       </div>

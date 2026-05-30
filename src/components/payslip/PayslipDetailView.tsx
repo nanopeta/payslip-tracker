@@ -53,7 +53,10 @@ export default function PayslipDetailView({ payslip }: Props) {
   const dedWarning = deductions.total > 0 && dedSum !== deductions.total
 
   const deemedAmt = getIncomeValueByLabel(income, settings.deemedLabel)
-  const actualAmt = getIncomeValueByLabel(income, settings.actualLabel)
+  const actualAmt = settings.actualLabels.reduce(
+    (sum, label) => sum + getIncomeValueByLabel(income, label),
+    0,
+  )
   const gain = deemedAmt - actualAmt
   const showGain = deemedAmt > 0 || actualAmt > 0
 
@@ -74,9 +77,9 @@ export default function PayslipDetailView({ payslip }: Props) {
         {payslip.companyName && <p className="text-brand-300 text-xs mt-0.5">{payslip.companyName}</p>}
         <p className="text-3xl font-bold mt-2 tabular-nums">{formatYen(summary.netPay)}</p>
         <p className="text-brand-200 text-xs mt-0.5">差引支給額</p>
-        {summary.childSupportPayment ? (
-          <p className="text-brand-300 text-xs mt-1">子育支援金 +{formatYen(summary.childSupportPayment)}</p>
-        ) : null}
+        {summary.extras && Object.entries(summary.extras).map(([k, v]) => (
+          <p key={k} className="text-brand-300 text-xs mt-1">{k} +{formatYen(v)}</p>
+        ))}
       </div>
 
       {/* Income */}
@@ -120,10 +123,20 @@ export default function PayslipDetailView({ payslip }: Props) {
             <span className="text-sm text-gray-600">{settings.deemedLabel}</span>
             <span className="text-sm tabular-nums text-gray-900">{formatYen(deemedAmt)}</span>
           </div>
-          <div className="flex justify-between py-1.5">
-            <span className="text-sm text-gray-600">{settings.actualLabel}</span>
-            <span className="text-sm tabular-nums text-gray-900">{formatYen(actualAmt)}</span>
-          </div>
+          {settings.actualLabels.map((label) => (
+            <div key={label} className="flex justify-between py-1.5">
+              <span className="text-sm text-gray-600">{label}</span>
+              <span className="text-sm tabular-nums text-gray-900">
+                {formatYen(getIncomeValueByLabel(income, label))}
+              </span>
+            </div>
+          ))}
+          {settings.actualLabels.length > 1 && (
+            <div className="flex justify-between py-1.5 border-t border-gray-50">
+              <span className="text-xs text-gray-400">実残業合計</span>
+              <span className="text-sm tabular-nums text-gray-700">{formatYen(actualAmt)}</span>
+            </div>
+          )}
           <div className={`flex justify-between pt-2 mt-1 border-t border-gray-100 font-bold`}>
             <span className="text-sm text-gray-700">差額</span>
             <span className={`text-base tabular-nums ${gain >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
