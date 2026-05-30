@@ -3,8 +3,9 @@ import useStore from '../store/useStore'
 import StatCard from '../components/ui/StatCard'
 import NetPayTrendChart from '../components/charts/NetPayTrendChart'
 import IncomeDeductionChart from '../components/charts/IncomeDeductionChart'
+import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 export default function DashboardPage() {
@@ -22,6 +23,20 @@ export default function DashboardPage() {
   const monthlyTrend = netPayTrend(monthlyPayslips)
   const bonusTrend = netPayTrend(bonusPayslips)
   const hasBonusData = bonusPayslips.length > 0
+
+  // 手取り率
+  const takeHomeRate = latestMonth && latestMonth.totalIncome > 0
+    ? (latestMonth.netPay / latestMonth.totalIncome) * 100
+    : null
+  const prevTakeHomeRate = prevMonth && prevMonth.totalIncome > 0
+    ? (prevMonth.netPay / prevMonth.totalIncome) * 100
+    : null
+  const rateChange = takeHomeRate !== null && prevTakeHomeRate !== null
+    ? takeHomeRate - prevTakeHomeRate
+    : null
+
+  // 有給残日数推移
+  const leaveTrend = paidLeaveTrend(payslips)
 
   // みなし残業効率（給与明細のみ対象）
   const latestMonthly = latestPayslip(monthlyPayslips)
@@ -82,6 +97,15 @@ export default function DashboardPage() {
             delta={latestMonth && prevMonth ? latestMonth.totalDeductions - prevMonth.totalDeductions : undefined}
           />
         </div>
+        {takeHomeRate !== null && (
+          <StatCard
+            title="手取り率"
+            value={`${takeHomeRate.toFixed(1)}%`}
+            sub="差引支給額 ÷ 総支給金額"
+            deltaText={rateChange !== null ? `${rateChange >= 0 ? '+' : ''}${rateChange.toFixed(1)}pt` : undefined}
+            deltaPositive={rateChange !== null && rateChange >= 0}
+          />
+        )}
       </div>
 
       {/* Overtime gain */}
@@ -151,6 +175,13 @@ export default function DashboardPage() {
           <p className="text-sm font-semibold text-gray-700 mb-3">支給・控除の内訳（月次合計）</p>
           <IncomeDeductionChart data={trend} />
         </div>
+
+        {leaveTrend.length > 1 && (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <p className="text-sm font-semibold text-gray-700 mb-3">有給残日数の推移</p>
+            <PaidLeaveTrendChart data={leaveTrend} />
+          </div>
+        )}
       </div>
 
       {/* Recent payslips */}
