@@ -5,8 +5,10 @@ import PayslipReviewForm from '../components/upload/PayslipReviewForm'
 import WithholdingReviewForm from '../components/upload/WithholdingReviewForm'
 import useStore from '../store/useStore'
 import { parseMHTFile } from '../lib/mhtParser'
+import { latestPayslip } from '../lib/aggregations'
 import type { ParseResult } from '../types/withholding'
 import type { Payslip } from '../types/payslip'
+import { emptyAttendance } from '../types/payslip'
 import type { WithholdingTaxCertificate } from '../types/withholding'
 
 type Step = 'idle' | 'parsing' | 'review'
@@ -15,6 +17,16 @@ export default function UploadPage() {
   const navigate = useNavigate()
   const addPayslip = useStore((s) => s.addPayslip)
   const addWithholdingCert = useStore((s) => s.addWithholdingCert)
+  const payslips = useStore((s) => s.payslips)
+
+  function withPaidLeaveFallback(parsed: Partial<Payslip>): Partial<Payslip> {
+    if ((parsed.attendance?.paidLeaveRemaining ?? 0) > 0) return parsed
+    if (parsed.payslipType === 'bonus') return parsed
+    const monthly = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
+    const latest = latestPayslip(monthly)
+    if (!latest || latest.attendance.paidLeaveRemaining === 0) return parsed
+    return { ...parsed, attendance: { ...emptyAttendance(), ...parsed.attendance, paidLeaveRemaining: latest.attendance.paidLeaveRemaining } }
+  }
 
   const [step, setStep] = useState<Step>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -157,7 +169,7 @@ export default function UploadPage() {
           {currentResult.type === 'payslip' && currentResult.payslip && (
             <PayslipReviewForm
               key={reviewIndex}
-              initial={currentResult.payslip}
+              initial={withPaidLeaveFallback(currentResult.payslip)}
               onSave={handleSavePayslip}
               onCancel={handleCancel}
             />
