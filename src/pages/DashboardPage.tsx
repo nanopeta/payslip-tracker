@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import StatCard from '../components/ui/StatCard'
-import NetPayTrendChart from '../components/charts/NetPayTrendChart'
+import TrendSummaryChart from '../components/charts/TrendSummaryChart'
 import IncomeDeductionChart from '../components/charts/IncomeDeductionChart'
 import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
 import PayslipCard from '../components/payslip/PayslipCard'
@@ -17,12 +17,22 @@ export default function DashboardPage() {
   const latestMonth = latestMonthStats(payslips)
   const prevMonth = latestMonth ? prevMonthStats(payslips, latestMonth) : null
 
-  // 給与のみ・賞与のみ の推移
-  const monthlyPayslips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
-  const bonusPayslips = payslips.filter((p) => p.payslipType === 'bonus')
-  const monthlyTrend = netPayTrend(monthlyPayslips)
-  const bonusTrend = netPayTrend(bonusPayslips)
-  const hasBonusData = bonusPayslips.length > 0
+  // 賞与データ有無の判定（給与のみ手取りラインの表示制御用）
+  const hasBonusData = payslips.some((p) => p.payslipType === 'bonus')
+
+  // 手取り率
+  const takeHomeRate = latestMonth && latestMonth.totalIncome > 0
+    ? (latestMonth.netPay / latestMonth.totalIncome) * 100
+    : null
+  const prevTakeHomeRate = prevMonth && prevMonth.totalIncome > 0
+    ? (prevMonth.netPay / prevMonth.totalIncome) * 100
+    : null
+  const rateChange = takeHomeRate !== null && prevTakeHomeRate !== null
+    ? takeHomeRate - prevTakeHomeRate
+    : null
+
+  // 有給残日数推移
+  const leaveTrend = paidLeaveTrend(payslips)
 
   // 手取り率
   const takeHomeRate = latestMonth && latestMonth.totalIncome > 0
@@ -39,6 +49,7 @@ export default function DashboardPage() {
   const leaveTrend = paidLeaveTrend(payslips)
 
   // みなし残業効率（給与明細のみ対象）
+  const monthlyPayslips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
   const latestMonthly = latestPayslip(monthlyPayslips)
   const latestGain = latestMonthly ? calcOvertimeGain(latestMonthly, settings) : null
   const gainRows = sorted
@@ -152,24 +163,9 @@ export default function DashboardPage() {
       {/* Charts */}
       <div className="space-y-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">差引支給額の推移（月次合計）</p>
-          <NetPayTrendChart data={trend} />
+          <p className="text-sm font-semibold text-gray-700 mb-3">支給・手取りの推移</p>
+          <TrendSummaryChart data={trend} showMonthlyLine={hasBonusData} />
         </div>
-
-        {hasBonusData && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-              <p className="text-sm font-semibold text-gray-700 mb-1">給与のみ</p>
-              <p className="text-xs text-gray-400 mb-3">給与（payslipType: monthly）</p>
-              <NetPayTrendChart data={monthlyTrend} />
-            </div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-              <p className="text-sm font-semibold text-gray-700 mb-1">賞与・インセンティブのみ</p>
-              <p className="text-xs text-gray-400 mb-3">賞与・ｲﾝｾﾝﾃｨﾌﾞ等</p>
-              <NetPayTrendChart data={bonusTrend} />
-            </div>
-          </div>
-        )}
 
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <p className="text-sm font-semibold text-gray-700 mb-3">支給・控除の内訳（月次合計）</p>
