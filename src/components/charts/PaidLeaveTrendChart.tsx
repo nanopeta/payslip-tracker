@@ -37,7 +37,7 @@ export default function PaidLeaveTrendChart({ data }: Props) {
           labelFormatter={(l) => `${l}`}
           contentStyle={{ fontSize: 12, borderRadius: '8px' }}
         />
-        <Bar dataKey="remaining" fill="#0d9488" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="remaining" fill="#5fad9b" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
