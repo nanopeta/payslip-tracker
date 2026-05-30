@@ -70,7 +70,7 @@ function logPreview(text: string) {
 function callClaude(prompt: string): string {
   const result = spawnSync(
     'claude',
-    ['--print', '--dangerously-skip-permissions'],
+    ['--print', '--allowedTools', 'Read,Write,Edit,Bash'],
     {
       input: prompt,
       cwd: PROJECT_ROOT,
