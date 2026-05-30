@@ -1,17 +1,19 @@
 import { create } from 'zustand'
-import { load, save } from '../lib/storage'
+import { load, save, loadSettings, saveSettings, type OvertimeSettings } from '../lib/storage'
 import type { Payslip } from '../types/payslip'
 import type { WithholdingTaxCertificate } from '../types/withholding'
 
 interface AppStore {
   payslips: Payslip[]
   withholdingCerts: WithholdingTaxCertificate[]
+  overtimeSettings: OvertimeSettings
   addPayslip: (p: Payslip) => void
   updatePayslip: (id: string, updates: Partial<Payslip>) => void
   deletePayslip: (id: string) => void
   addWithholdingCert: (w: WithholdingTaxCertificate) => void
   updateWithholdingCert: (id: string, updates: Partial<WithholdingTaxCertificate>) => void
   deleteWithholdingCert: (id: string) => void
+  setOvertimeSettings: (s: OvertimeSettings) => void
 }
 
 const useStore = create<AppStore>((set, get) => {
@@ -19,6 +21,7 @@ const useStore = create<AppStore>((set, get) => {
   return {
     payslips: initial.payslips,
     withholdingCerts: initial.withholdingCerts,
+    overtimeSettings: loadSettings(),
 
     addPayslip: (p) => {
       const payslips = [...get().payslips, p]
@@ -52,6 +55,11 @@ const useStore = create<AppStore>((set, get) => {
       const withholdingCerts = get().withholdingCerts.filter((w) => w.id !== id)
       set({ withholdingCerts })
       save({ ...load(), withholdingCerts })
+    },
+
+    setOvertimeSettings: (s) => {
+      set({ overtimeSettings: s })
+      saveSettings(s)
     },
   }
 })

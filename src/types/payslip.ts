@@ -12,6 +12,7 @@ export interface PayslipIncome {
   overtime: number
   lifePlanSupport: number
   otherIncome: Record<string, number>
+  detailIncome: Record<string, number>
   total: number
 }
 
@@ -79,6 +80,7 @@ export function emptyIncome(): PayslipIncome {
     overtime: 0,
     lifePlanSupport: 0,
     otherIncome: {},
+    detailIncome: {},
     total: 0,
   }
 }

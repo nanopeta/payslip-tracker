@@ -4,12 +4,12 @@ import DropZone from '../components/upload/DropZone'
 import PayslipReviewForm from '../components/upload/PayslipReviewForm'
 import WithholdingReviewForm from '../components/upload/WithholdingReviewForm'
 import useStore from '../store/useStore'
-import { parsePDF } from '../lib/pdfParser'
+import { parseMHTFile } from '../lib/mhtParser'
 import type { ParseResult } from '../types/withholding'
 import type { Payslip } from '../types/payslip'
 import type { WithholdingTaxCertificate } from '../types/withholding'
 
-type Step = 'idle' | 'parsing' | 'review' | 'done'
+type Step = 'idle' | 'parsing' | 'review'
 
 export default function UploadPage() {
   const navigate = useNavigate()
@@ -26,37 +26,29 @@ export default function UploadPage() {
     setFileName(file.name)
     setStep('parsing')
     try {
-      const result = await parsePDF(file)
+      const result = await parseMHTFile(file)
       if (result.type === 'unknown') {
-        setError('給与明細または源泉徴収票として認識できませんでした。別のPDFを試してください。')
+        setError('給与明細として認識できませんでした。別のMHTファイルを試してください。')
         setStep('idle')
         return
       }
-      if (result.payslip) {
-        result.payslip.sourceFileName = file.name
-      }
-      if (result.withholding) {
-        result.withholding.sourceFileName = file.name
-      }
+      if (result.payslip) result.payslip.sourceFileName = file.name
+      if (result.withholding) result.withholding.sourceFileName = file.name
       setParseResult(result)
       setStep('review')
     } catch (e) {
-      setError(`PDFの読み込みに失敗しました: ${e instanceof Error ? e.message : String(e)}`)
+      setError(`MHTの読み込みに失敗しました: ${e instanceof Error ? e.message : String(e)}`)
       setStep('idle')
     }
   }
 
   function handleSavePayslip(p: Payslip) {
     addPayslip(p)
-    setStep('idle')
-    setParseResult(null)
     navigate('/payslips')
   }
 
   function handleSaveWithholding(w: WithholdingTaxCertificate) {
     addWithholdingCert(w)
-    setStep('idle')
-    setParseResult(null)
     navigate('/annual')
   }
 
@@ -67,18 +59,18 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">PDFアップロード</h1>
-        <p className="text-gray-500 text-sm mt-0.5">給与明細・源泉徴収票のPDFを解析して登録します</p>
+        <h1 className="text-xl font-bold text-gray-900">MHTアップロード</h1>
+        <p className="text-gray-500 text-sm mt-0.5">明細書照会ページをMHTで保存して登録</p>
       </div>
 
-      <div className="bg-brand-50 border border-brand-200 rounded-xl px-4 py-3 flex items-start gap-3">
+      <div className="bg-brand-50 border border-brand-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
         <svg className="w-5 h-5 text-brand-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
         <p className="text-sm text-brand-700">
-          アップロードしたPDFはすべてブラウザ内で処理されます。データは外部サーバーに送信されません。
+          MHTファイルはブラウザ内のみで処理。外部に送信されません。
         </p>
       </div>
 
@@ -94,16 +86,19 @@ export default function UploadPage() {
       )}
 
       {step === 'parsing' && (
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <div className="w-8 h-8 border-3 border-brand-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600 text-sm">「{fileName}」を解析中...</p>
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
+          <div className="text-center">
+            <p className="text-gray-700 font-medium">MHTを解析中...</p>
+            <p className="text-gray-400 text-sm mt-1">{fileName}</p>
+          </div>
         </div>
       )}
 
       {step === 'review' && parseResult?.type === 'payslip' && parseResult.payslip && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-gray-800">給与明細の内容を確認・編集してください</p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="font-semibold text-gray-800">内容を確認・編集してください</p>
             {parseResult.confidence < 0.5 && (
               <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
                 自動解析の精度が低い場合があります
@@ -120,8 +115,8 @@ export default function UploadPage() {
 
       {step === 'review' && parseResult?.type === 'withholding' && parseResult.withholding && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-gray-800">源泉徴収票の内容を確認・編集してください</p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="font-semibold text-gray-800">内容を確認・編集してください</p>
             {parseResult.confidence < 0.5 && (
               <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
                 自動解析の精度が低い場合があります

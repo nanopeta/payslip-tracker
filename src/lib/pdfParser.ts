@@ -97,14 +97,21 @@ function mergeRow(items: PosItem[]): PosItem[] {
   const isLabel = (s: string) => !/[\d,，.:]/.test(s)
   const out: PosItem[] = []
   let cur = { ...items[0] }
+  let lastX = items[0].x
+  let lastWidth = items[0].text.length * 14
   for (let i = 1; i < items.length; i++) {
     const nxt = items[i]
-    const gap = nxt.x - cur.x - cur.text.length * 14
+    // 直前の個別文字の右端からの隙間で判定（長い結合済みテキストでズレない）
+    const gap = nxt.x - lastX - lastWidth
     if (isLabel(cur.text) && isLabel(nxt.text) && gap < 30) {
       cur = { text: cur.text + nxt.text, x: cur.x, y: cur.y }
+      lastX = nxt.x
+      lastWidth = nxt.text.length * 14
     } else {
       out.push(cur)
       cur = { ...nxt }
+      lastX = nxt.x
+      lastWidth = nxt.text.length * 14
     }
   }
   out.push(cur)
@@ -128,7 +135,10 @@ function findRight(
 
     // 同じ行グループ（Y ± yTol 以内）の全行からも右側を探す
     const allSameArea = rows
-      .filter((r) => Math.abs(r[0].y - labelItem.y) <= yTol)
+      .filter((r) => {
+        const dy = labelItem.y - r[0].y  // positive = r is below label in PDF coords
+        return dy >= -5 && dy <= yTol    // same row (up to 5px above) or within yTol below
+      })
       .flatMap((r) => mergeRow(r))
       .filter((item) => item.x > labelItem.x)
       .sort((a, b) => a.x - b.x)
@@ -168,6 +178,7 @@ interface LabelValue {
   value: number
   rawValue: string
   column: Column
+  y: number
 }
 
 function discoverAllPairs(rows: PosItem[][]): LabelValue[] {
@@ -204,6 +215,7 @@ function discoverAllPairs(rows: PosItem[][]): LabelValue[] {
                 value: numericValue,
                 rawValue: candidate.text,
                 column: getColumn(item.x),
+                y: item.y,
               })
             }
           }
@@ -220,6 +232,8 @@ function discoverAllPairs(rows: PosItem[][]): LabelValue[] {
 const INCOME_LABELS: Record<string, string> = {
   '基本給': 'basicSalary',
   'ワークライフバランス手当': 'wlbAllowance',
+  'ﾜｰｸﾗｲﾌﾊﾞﾗﾝｽ手当': 'wlbAllowance',
+  'ｻﾝｷｭｰ手当': 'thankYouAllowance',
   'みなし残業': 'deemedOvertime',
   'ライフプラン手当': 'lifePlanAllowance',
   '通勤費調整': 'commuteAdjustment',
@@ -237,9 +251,13 @@ const INCOME_LABELS: Record<string, string> = {
 
 const DEDUCTION_LABELS: Record<string, string> = {
   '健康保険料': 'healthInsurance',
+  '健康保険': 'healthInsurance',
   '介護保険料': 'longTermCareInsurance',
+  '介護保険': 'longTermCareInsurance',
   '厚生年金保険': 'pensionInsurance',
+  '厚生年金': 'pensionInsurance',
   '雇用保険料': 'employmentInsurance',
+  '雇用保険': 'employmentInsurance',
   '所得税': 'incomeTax',
   '住民税': 'residentTax',
   '預り金': 'deposit',
@@ -276,47 +294,94 @@ function parsePayslip(items: PosItem[]): Partial<Payslip> {
   const attendance = emptyAttendance()
   const summary: PayslipSummary = { netPay: 0, bankTransfer: 0 }
 
-  // 合計・差引支給額は個別に取得（行が離れている可能性あり）
-  income.total = findRight(rows, '総支給金額', isMoneyToken, parseMoney)
+  // 合計・差引支給額は個別に取得（総支給金額はyTolを絞って直下の詳細行を避ける）
+  income.total = findRight(rows, '総支給金額', isMoneyToken, parseMoney, 12)
   deductions.total = findRight(rows, '控除合計額', isMoneyToken, parseMoney)
   summary.netPay = findRight(rows, '差引支給額', isMoneyToken, parseMoney, 25)
   summary.bankTransfer = findRight(rows, '銀行１振込額', isMoneyToken, parseMoney, 25)
   summary.childSupportPayment = findRight(rows, '子育支援金', isMoneyToken, parseMoney) || undefined
 
-  // 全ラベル-値ペアを自動検出
-  const pairs = discoverAllPairs(rows)
+  // 総支給金額のY位置を特定（これより下の支給項目は detailIncome に入れる）
+  let totalLineY = -Infinity
+  for (const row of rows) {
+    if (mergeRow(row).some((item) => item.text === '総支給金額' || item.text.includes('総支給金額'))) {
+      totalLineY = row[0].y
+      break
+    }
+  }
+  const isAboveTotal = (y: number) => totalLineY === -Infinity || y >= totalLineY - 5
 
-  for (const pair of pairs) {
-    if (pair.column === '支給') {
-      const key = INCOME_LABELS[pair.label]
-      if (key) {
-        (income as unknown as Record<string, number>)[key] = pair.value
-      } else if (!['総支給金額', '普通残業①'].includes(pair.label)) {
-        // 未知の支給項目
-        income.otherIncome[pair.label] = pair.value
+  // ラベルのY座標を取得（findRight が値を見つけたときに上下判定するため）
+  const getLabelY = (searchLabel: string): number => {
+    for (const row of rows) {
+      const found = mergeRow(row).find(
+        (item) => item.text === searchLabel || item.text.includes(searchLabel),
+      )
+      if (found) return found.y
+    }
+    return Infinity
+  }
+
+  // 既知の支給ラベルを findRight で直接検索（groupByRow の yTol 問題を回避）
+  const setIncomeFields = new Set<string>()
+  const setDetailFields = new Set<string>()
+  for (const [label, field] of Object.entries(INCOME_LABELS)) {
+    if (setIncomeFields.has(field) && setDetailFields.has(field)) continue
+    const value = findRight(rows, label, isMoneyToken, parseMoney)
+    if (value <= 0) continue
+    const labelY = getLabelY(label)
+    if (isAboveTotal(labelY)) {
+      if (!setIncomeFields.has(field)) {
+        (income as unknown as Record<string, number>)[field] = value
+        setIncomeFields.add(field)
       }
-    } else if (pair.column === '控除') {
-      const key = DEDUCTION_LABELS[pair.label]
-      if (key) {
-        (deductions as unknown as Record<string, number>)[key] = pair.value
-      } else if (!['控除合計額'].includes(pair.label)) {
-        // 未知の控除項目
-        deductions.otherDeductions[pair.label] = pair.value
-      }
-    } else if (pair.column === '勤怠') {
-      if (ATTENDANCE_DAY_LABELS.has(pair.label)) {
-        const key = ATT_KEY_MAP[pair.label]
-        if (key) (attendance as unknown as Record<string, number>)[key] = pair.value
-      } else if (ATTENDANCE_TIME_LABELS.has(pair.label)) {
-        const key = ATT_KEY_MAP[pair.label]
-        if (key) (attendance as unknown as Record<string, number>)[key] = pair.value
+    } else {
+      if (!setDetailFields.has(field)) {
+        income.detailIncome[label] = value
+        setDetailFields.add(field)
       }
     }
   }
 
-  // 普通残業①は計算行にある場合もある
-  if (income.overtime === 0) {
-    income.overtime = findRight(rows, '普通残業①', isMoneyToken, parseMoney)
+  // 既知の控除ラベルを findRight で直接検索
+  const setDedFields = new Set<string>()
+  for (const [label, field] of Object.entries(DEDUCTION_LABELS)) {
+    if (setDedFields.has(field)) continue
+    const value = findRight(rows, label, isMoneyToken, parseMoney)
+    if (value > 0) {
+      (deductions as unknown as Record<string, number>)[field] = value
+      setDedFields.add(field)
+    }
+  }
+
+  // 未知の項目を discoverAllPairs で検出（既知ラベルはスキップ）
+  const pairs = discoverAllPairs(rows)
+  const knownIncomeSet = new Set(Object.keys(INCOME_LABELS))
+  const knownDedSet = new Set(Object.keys(DEDUCTION_LABELS))
+  const skipLabels = new Set(['総支給金額', '控除合計額', '差引支給額', '銀行１振込額', '子育支援金'])
+
+  for (const pair of pairs) {
+    if (knownIncomeSet.has(pair.label) || knownDedSet.has(pair.label)) continue
+    if (skipLabels.has(pair.label)) continue
+
+    if (pair.column === '支給') {
+      if (isAboveTotal(pair.y)) {
+        income.otherIncome[pair.label] = pair.value
+      } else {
+        income.detailIncome[pair.label] = pair.value
+      }
+    } else if (pair.column === '控除') {
+      deductions.otherDeductions[pair.label] = pair.value
+    } else if (pair.column === '勤怠') {
+      if (ATTENDANCE_DAY_LABELS.has(pair.label) && !pair.rawValue.includes(',')) {
+        const key = ATT_KEY_MAP[pair.label]
+        if (key) (attendance as unknown as Record<string, number>)[key] = pair.value
+      } else if (ATTENDANCE_TIME_LABELS.has(pair.label) && isTimeToken(pair.rawValue)) {
+        const key = ATT_KEY_MAP[pair.label]
+        if (key) (attendance as unknown as Record<string, number>)[key] = pair.value
+      }
+    }
+    // '計算' column: 無視
   }
 
   // 年月抽出

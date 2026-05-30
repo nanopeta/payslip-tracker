@@ -9,11 +9,15 @@ export default function DropZone({ onFile, disabled }: Props) {
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  function isMHT(file: File): boolean {
+    return file.name.toLowerCase().endsWith('.mht') || file.name.toLowerCase().endsWith('.mhtml')
+  }
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault()
     setDragging(false)
     const file = e.dataTransfer.files[0]
-    if (file && file.type === 'application/pdf') onFile(file)
+    if (file && isMHT(file)) onFile(file)
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -39,7 +43,7 @@ export default function DropZone({ onFile, disabled }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept="application/pdf"
+        accept=".mht,.mhtml"
         className="hidden"
         onChange={handleChange}
         disabled={disabled}
@@ -48,9 +52,9 @@ export default function DropZone({ onFile, disabled }: Props) {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
       <div className="text-center">
-        <p className="text-gray-700 font-medium">ここにPDFをドラッグ&amp;ドロップ</p>
+        <p className="text-gray-700 font-medium">ここにMHTをドラッグ&amp;ドロップ</p>
         <p className="text-gray-400 text-sm mt-1">またはクリックしてファイルを選択</p>
-        <p className="text-gray-400 text-xs mt-2">給与明細・源泉徴収票のPDFに対応</p>
+        <p className="text-gray-400 text-xs mt-2">.mht / .mhtml 形式の給与明細に対応</p>
       </div>
     </div>
   )

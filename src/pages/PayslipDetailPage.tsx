@@ -1,13 +1,18 @@
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import PayslipDetailView from '../components/payslip/PayslipDetailView'
+import PayslipReviewForm from '../components/upload/PayslipReviewForm'
+import type { Payslip } from '../types/payslip'
 
 export default function PayslipDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const payslips = useStore((s) => s.payslips)
   const deletePayslip = useStore((s) => s.deletePayslip)
+  const updatePayslip = useStore((s) => s.updatePayslip)
   const payslip = payslips.find((p) => p.id === id)
+  const [editing, setEditing] = useState(false)
 
   if (!payslip) {
     return (
@@ -24,6 +29,11 @@ export default function PayslipDetailPage() {
     navigate('/payslips')
   }
 
+  function handleSaveEdit(updated: Payslip) {
+    updatePayslip(payslip!.id, updated)
+    setEditing(false)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -36,14 +46,36 @@ export default function PayslipDetailPage() {
           </svg>
           給与明細一覧
         </Link>
-        <button
-          onClick={handleDelete}
-          className="text-sm text-gray-400 hover:text-red-500 transition-colors"
-        >
-          削除
-        </button>
+        <div className="flex items-center gap-3">
+          {!editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="text-sm text-brand-600 hover:text-brand-700 transition-colors"
+            >
+              編集
+            </button>
+          )}
+          <button
+            onClick={handleDelete}
+            className="text-sm text-gray-400 hover:text-red-500 transition-colors"
+          >
+            削除
+          </button>
+        </div>
       </div>
-      <PayslipDetailView payslip={payslip} />
+
+      {editing ? (
+        <div className="space-y-4">
+          <p className="font-semibold text-gray-800">数値を編集してください</p>
+          <PayslipReviewForm
+            initial={payslip}
+            onSave={handleSaveEdit}
+            onCancel={() => setEditing(false)}
+          />
+        </div>
+      ) : (
+        <PayslipDetailView payslip={payslip} />
+      )}
     </div>
   )
 }

@@ -1,4 +1,37 @@
-import type { Payslip } from '../types/payslip'
+import type { Payslip, PayslipIncome } from '../types/payslip'
+import type { OvertimeSettings } from './storage'
+
+// 日本語ラベルから income の数値を取得（通常フィールド・detailIncome・otherIncome を横断検索）
+const INCOME_LABEL_FIELDS: Record<string, keyof PayslipIncome> = {
+  '基本給': 'basicSalary',
+  'みなし残業': 'deemedOvertime',
+  'ワークライフバランス手当': 'wlbAllowance',
+  'ライフプラン手当': 'lifePlanAllowance',
+  '通勤費調整': 'commuteAdjustment',
+  'サンキュー手当': 'thankYouAllowance',
+  'ZOOM手当': 'zoomAllowance',
+  '調整給': 'adjustmentSalary',
+  '通勤手当': 'commuteAllowance',
+  '課税通勤手当': 'taxableCommuteAllowance',
+  '普通残業①': 'overtime',
+  'ライフプラン支援': 'lifePlanSupport',
+}
+
+export function getIncomeValueByLabel(income: PayslipIncome, label: string): number {
+  const field = INCOME_LABEL_FIELDS[label]
+  if (field) {
+    const v = (income as unknown as Record<string, number>)[field as string]
+    if (v > 0) return v
+  }
+  // 新規データ: detailIncome / otherIncome も検索
+  return income.detailIncome?.[label] ?? income.otherIncome?.[label] ?? 0
+}
+
+export function calcOvertimeGain(payslip: Payslip, settings: OvertimeSettings): number {
+  const deemed = getIncomeValueByLabel(payslip.income, settings.deemedLabel)
+  const actual = getIncomeValueByLabel(payslip.income, settings.actualLabel)
+  return deemed - actual
+}
 
 export interface TrendPoint {
   label: string
