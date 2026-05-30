@@ -136,12 +136,27 @@ export async function parseMHTFile(file: File): Promise<ParseResult> {
   const text = await file.text()
   const html = extractHTML(text)
 
-  // 年月: 右上に表示されている targetPaymentTime 要素から取得（最優先）
+  // 年月・種別: 右上に表示されている targetPaymentTime 要素から取得（最優先）
   let year = 0, month = 0
+  let payslipType: 'monthly' | 'bonus' = 'monthly'
+  let payslipLabel: string | undefined
+
+  function applyTypeLabel(text: string) {
+    const m = text.match(/月分\s*(\S+)/)
+    if (m) {
+      const label = m[1].trim()
+      if (label !== '給与') {
+        payslipType = 'bonus'
+        payslipLabel = label
+      }
+    }
+  }
+
   const payTimeDiv = html.match(/<div[^>]*class="[^"]*targetPaymentTime[^"]*"[^>]*>\s*<h>([^<]+)<\/h>/)
   if (payTimeDiv) {
     const ym = payTimeDiv[1].match(/(\d{4})年\s*(\d{1,2})月/)
     if (ym) { year = parseInt(ym[1]); month = parseInt(ym[2]) }
+    applyTypeLabel(payTimeDiv[1])
   }
   // フォールバック: ドロップダウンの selected option
   if (!year) {
@@ -149,12 +164,16 @@ export async function parseMHTFile(file: File): Promise<ParseResult> {
     if (selectedOpt) {
       const ym = selectedOpt[1].match(/(\d{4})年\s*(\d{1,2})月/)
       if (ym) { year = parseInt(ym[1]); month = parseInt(ym[2]) }
+      applyTypeLabel(selectedOpt[1])
     }
   }
-  // フォールバック2: ページ内の最初の YYYY年MM月分 パターン（給与のみ対象）
+  // フォールバック2: ページ内の最初の YYYY年MM月分 パターン
   if (!year) {
-    const ym = html.match(/(\d{4})年\s*(\d{1,2})月分\s*給与/)
-    if (ym) { year = parseInt(ym[1]); month = parseInt(ym[2]) }
+    const ym = html.match(/(\d{4})年\s*(\d{1,2})月分\s*(\S+)/)
+    if (ym) {
+      year = parseInt(ym[1]); month = parseInt(ym[2])
+      applyTypeLabel(ym[0])
+    }
   }
 
   // 会社名: companyName--expand クラスの h タグ
@@ -278,6 +297,8 @@ export async function parseMHTFile(file: File): Promise<ParseResult> {
   const payslip: Partial<Payslip> = {
     id: uuidv4(),
     year, month,
+    payslipType,
+    payslipLabel,
     employeeName,
     companyName,
     income,

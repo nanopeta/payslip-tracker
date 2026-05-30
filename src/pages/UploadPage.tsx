@@ -18,45 +18,84 @@ export default function UploadPage() {
 
   const [step, setStep] = useState<Step>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [parseResult, setParseResult] = useState<ParseResult | null>(null)
-  const [fileName, setFileName] = useState('')
+  const [parseResults, setParseResults] = useState<ParseResult[]>([])
+  const [reviewIndex, setReviewIndex] = useState(0)
+  const [parsingTotal, setParsingTotal] = useState(0)
+  const [parsingDone, setParsingDone] = useState(0)
 
-  async function handleFile(file: File) {
+  async function handleFiles(files: File[]) {
     setError(null)
-    setFileName(file.name)
+    setParsingTotal(files.length)
+    setParsingDone(0)
     setStep('parsing')
-    try {
-      const result = await parseMHTFile(file)
-      if (result.type === 'unknown') {
-        setError('給与明細として認識できませんでした。別のMHTファイルを試してください。')
-        setStep('idle')
-        return
+
+    const results: ParseResult[] = []
+    const errors: string[] = []
+
+    await Promise.all(files.map(async (file) => {
+      try {
+        const result = await parseMHTFile(file)
+        if (result.type !== 'unknown') {
+          if (result.payslip) result.payslip.sourceFileName = file.name
+          if (result.withholding) result.withholding.sourceFileName = file.name
+          results.push(result)
+        } else {
+          errors.push(`${file.name}: 給与明細として認識できませんでした`)
+        }
+      } catch (e) {
+        errors.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`)
       }
-      if (result.payslip) result.payslip.sourceFileName = file.name
-      if (result.withholding) result.withholding.sourceFileName = file.name
-      setParseResult(result)
-      setStep('review')
-    } catch (e) {
-      setError(`MHTの読み込みに失敗しました: ${e instanceof Error ? e.message : String(e)}`)
+      setParsingDone((n) => n + 1)
+    }))
+
+    if (results.length === 0) {
+      setError(errors.join('\n') || '読み込めるファイルがありませんでした。')
       setStep('idle')
+      return
     }
+
+    // 年月順にソート
+    results.sort((a, b) => {
+      const ay = (a.payslip?.year ?? a.withholding?.year ?? 0) * 100 + (a.payslip?.month ?? 0)
+      const by = (b.payslip?.year ?? b.withholding?.year ?? 0) * 100 + (b.payslip?.month ?? 0)
+      return ay - by
+    })
+
+    if (errors.length > 0) setError(errors.join('\n'))
+    setParseResults(results)
+    setReviewIndex(0)
+    setStep('review')
   }
 
   function handleSavePayslip(p: Payslip) {
     addPayslip(p)
-    navigate('/payslips')
+    advance()
   }
 
   function handleSaveWithholding(w: WithholdingTaxCertificate) {
     addWithholdingCert(w)
-    navigate('/annual')
+    advance()
+  }
+
+  function advance() {
+    const next = reviewIndex + 1
+    if (next < parseResults.length) {
+      setReviewIndex(next)
+    } else {
+      const hasPayslip = parseResults.some((r) => r.type === 'payslip')
+      navigate(hasPayslip ? '/payslips' : '/annual')
+    }
   }
 
   function handleCancel() {
     setStep('idle')
-    setParseResult(null)
+    setParseResults([])
+    setReviewIndex(0)
     setError(null)
   }
+
+  const currentResult = parseResults[reviewIndex]
+  const total = parseResults.length
 
   return (
     <div className="space-y-4">
@@ -77,11 +116,11 @@ export default function UploadPage() {
       {step === 'idle' && (
         <>
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 whitespace-pre-wrap">
               {error}
             </div>
           )}
-          <DropZone onFile={handleFile} />
+          <DropZone onFiles={handleFiles} />
         </>
       )}
 
@@ -90,44 +129,45 @@ export default function UploadPage() {
           <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
           <div className="text-center">
             <p className="text-gray-700 font-medium">MHTを解析中...</p>
-            <p className="text-gray-400 text-sm mt-1">{fileName}</p>
+            <p className="text-gray-400 text-sm mt-1">{parsingDone} / {parsingTotal} 件</p>
           </div>
         </div>
       )}
 
-      {step === 'review' && parseResult?.type === 'payslip' && parseResult.payslip && (
+      {step === 'review' && currentResult && (
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="font-semibold text-gray-800">内容を確認・編集してください</p>
-            {parseResult.confidence < 0.5 && (
+            <div>
+              <p className="font-semibold text-gray-800">内容を確認・編集してください</p>
+              {total > 1 && (
+                <p className="text-sm text-gray-500 mt-0.5">{reviewIndex + 1} / {total} 件目</p>
+              )}
+            </div>
+            {currentResult.confidence < 0.5 && (
               <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
                 自動解析の精度が低い場合があります
               </span>
             )}
           </div>
-          <PayslipReviewForm
-            initial={parseResult.payslip}
-            onSave={handleSavePayslip}
-            onCancel={handleCancel}
-          />
-        </div>
-      )}
-
-      {step === 'review' && parseResult?.type === 'withholding' && parseResult.withholding && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="font-semibold text-gray-800">内容を確認・編集してください</p>
-            {parseResult.confidence < 0.5 && (
-              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
-                自動解析の精度が低い場合があります
-              </span>
-            )}
-          </div>
-          <WithholdingReviewForm
-            initial={parseResult.withholding}
-            onSave={handleSaveWithholding}
-            onCancel={handleCancel}
-          />
+          {error && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 whitespace-pre-wrap">
+              {error}
+            </div>
+          )}
+          {currentResult.type === 'payslip' && currentResult.payslip && (
+            <PayslipReviewForm
+              initial={currentResult.payslip}
+              onSave={handleSavePayslip}
+              onCancel={handleCancel}
+            />
+          )}
+          {currentResult.type === 'withholding' && currentResult.withholding && (
+            <WithholdingReviewForm
+              initial={currentResult.withholding}
+              onSave={handleSaveWithholding}
+              onCancel={handleCancel}
+            />
+          )}
         </div>
       )}
     </div>

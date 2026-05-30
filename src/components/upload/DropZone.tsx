@@ -1,28 +1,31 @@
 import { useRef, useState } from 'react'
 
 interface Props {
-  onFile: (file: File) => void
+  onFiles: (files: File[]) => void
   disabled?: boolean
 }
 
-export default function DropZone({ onFile, disabled }: Props) {
+export default function DropZone({ onFiles, disabled }: Props) {
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  function isMHT(file: File): boolean {
-    return file.name.toLowerCase().endsWith('.mht') || file.name.toLowerCase().endsWith('.mhtml')
+  function filterMHT(files: FileList | null): File[] {
+    if (!files) return []
+    return Array.from(files).filter((f) =>
+      f.name.toLowerCase().endsWith('.mht') || f.name.toLowerCase().endsWith('.mhtml')
+    )
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault()
     setDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file && isMHT(file)) onFile(file)
+    const files = filterMHT(e.dataTransfer.files)
+    if (files.length > 0) onFiles(files)
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) onFile(file)
+    const files = filterMHT(e.target.files)
+    if (files.length > 0) onFiles(files)
     e.target.value = ''
   }
 
@@ -44,6 +47,7 @@ export default function DropZone({ onFile, disabled }: Props) {
         ref={inputRef}
         type="file"
         accept=".mht,.mhtml"
+        multiple
         className="hidden"
         onChange={handleChange}
         disabled={disabled}
@@ -53,7 +57,7 @@ export default function DropZone({ onFile, disabled }: Props) {
       </svg>
       <div className="text-center">
         <p className="text-gray-700 font-medium">ここにMHTをドラッグ&amp;ドロップ</p>
-        <p className="text-gray-400 text-sm mt-1">またはクリックしてファイルを選択</p>
+        <p className="text-gray-400 text-sm mt-1">またはクリックしてファイルを選択（複数可）</p>
         <p className="text-gray-400 text-xs mt-2">.mht / .mhtml 形式の給与明細に対応</p>
       </div>
     </div>

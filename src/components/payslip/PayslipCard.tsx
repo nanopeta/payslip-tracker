@@ -17,7 +17,14 @@ export default function PayslipCard({ payslip, prevNetPay }: Props) {
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500">{formatYearMonth(payslip.year, payslip.month)}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-gray-500">{formatYearMonth(payslip.year, payslip.month)}</p>
+            {payslip.payslipType === 'bonus' && (
+              <span className="text-xs font-medium bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+                {payslip.payslipLabel ?? '賞与'}
+              </span>
+            )}
+          </div>
           <p className="text-xl font-bold tabular-nums text-gray-900 mt-0.5">
             {formatYen(payslip.summary.netPay)}
           </p>
