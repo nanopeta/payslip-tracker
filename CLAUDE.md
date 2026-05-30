@@ -1,5 +1,30 @@
 # CLAUDE.md
 
+## Claude Code への指示（必読）
+
+このプロジェクトで作業する際は以下のルールに従うこと。
+
+### ブランチ・PR ワークフロー
+
+1. **作業ブランチ**: `claude/<機能名>-<ランダムID>` 形式で作成（例: `claude/fix-parser-a1b2c3`）
+2. **コミット**: 日本語メッセージ、末尾に `https://claude.ai/code/session_...` を付ける
+3. **プッシュ後は必ず PR を作成**（draft でよい）
+4. **マージはユーザーに確認**してから行う（「マージしますか？」と聞く）
+5. `main` への直接プッシュは禁止。必ずフィーチャーブランチ経由
+
+### ビルド確認
+
+コードを変更したら必ず `npm run build` でエラーがないことを確認してからコミット。
+
+### 実装変更時のチェックリスト
+
+- [ ] `npm run build` が通ること（`tsc -b && vite build`）
+- [ ] 既存のデータ型変更時は localStorage の後方互換性を確認
+- [ ] `OvertimeSettings` の変更時は `loadSettings()` のマイグレーション処理を更新
+- [ ] 新しい支給・控除項目追加時は「開発時の注意点」セクションの手順に従う
+
+---
+
 ## プロジェクト概要
 
 給与明細・源泉徴収票の MHT ファイルをアップロードして管理・可視化する React SPA。
@@ -328,3 +353,70 @@ OBC 給与システム（hromssp.obc.jp）から「名前を付けて保存（MH
 2. `src/App.tsx` に `<Route path="new-page" element={<NewPage />} />` を追加
 3. `src/components/layout/Sidebar.tsx` にリンクを追加
 4. `src/components/layout/BottomNav.tsx` にタブを追加（スマホ用）
+
+---
+
+## 開発環境セットアップ
+
+```bash
+# 初回セットアップ
+npm install        # 依存パッケージのインストール（postinstall で pdf.worker.min.mjs もコピーされる）
+npm run dev        # 開発サーバー起動（ http://localhost:5173/payslip-tracker/ ）
+
+# ビルド確認
+npm run build      # TypeScript チェック + Vite ビルド
+npm run preview    # ビルド成果物をローカルで確認
+```
+
+### 推奨 VS Code 拡張
+
+- **ESLint** (`dbaeumer.vscode-eslint`)
+- **Tailwind CSS IntelliSense** (`bradlc.vscode-tailwindcss`)
+- **TypeScript Vue Plugin** または **Volar** は不要（React プロジェクト）
+
+### 環境変数
+
+| 変数 | 値 | 用途 |
+|---|---|---|
+| `BASE_URL`（Vite 自動設定） | `/payslip-tracker/` | ルーティング・ワーカーパス |
+
+`vite.config.ts` で `base: '/payslip-tracker/'` を設定済み。`import.meta.env.BASE_URL` で参照できる。
+
+---
+
+## GitHub Actions（CI/CD）
+
+`.github/workflows/deploy.yml`:
+- `main` ブランチへのプッシュで自動実行
+- `npm ci && npm run build` → `dist/` を GitHub Pages にデプロイ
+- デプロイ先: https://nanopeta.github.io/payslip-tracker/
+
+### GitHub Pages の設定（初回のみ）
+
+リポジトリの Settings > Pages > Source を **GitHub Actions** に変更する必要がある。
+
+---
+
+## よくある開発タスクのパターン
+
+### MHT パーサーに新しいラベルを追加
+
+```typescript
+// src/lib/mhtParser.ts
+const INCOME_LABELS: Record<string, string> = {
+  // ...既存...
+  '新しい手当': 'newAllowance',  // 追加
+}
+```
+
+同時に `PayslipIncome` 型・`emptyIncome()` にも追加が必要（上記「新しい支給・控除項目を追加したいとき」参照）。
+
+### ダッシュボードに新しい統計を追加
+
+1. `src/lib/aggregations.ts` に集計関数を追加
+2. `src/pages/DashboardPage.tsx` で呼び出して `<StatCard>` または新しいセクションで表示
+
+### localStorage のデータをリセットしたいとき（開発中）
+
+ブラウザの DevTools > Application > Local Storage で `payslip_tracker_v1` を削除。
+設定だけリセットしたい場合は `payslip_tracker_settings` を削除。
