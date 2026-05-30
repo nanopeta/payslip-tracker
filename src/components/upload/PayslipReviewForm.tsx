@@ -6,8 +6,10 @@ import { formatHoursMinutes, parseHoursMinutes } from '../../lib/formatters'
 
 interface Props {
   initial: Partial<Payslip>
-  onSave: (p: Payslip) => void
+  onSave: (p: Payslip, idToDelete?: string) => void
   onCancel: () => void
+  duplicatePayslip?: Payslip
+  onSkip?: () => void
 }
 
 interface OtherItem {
@@ -66,7 +68,7 @@ function sumDeductionItems(ded: PayslipDeductions, others: OtherItem[]): number 
   )
 }
 
-export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) {
+export default function PayslipReviewForm({ initial, onSave, onCancel, duplicatePayslip, onSkip }: Props) {
   const [year, setYear] = useState(initial.year ?? new Date().getFullYear())
   const [month, setMonth] = useState(initial.month ?? new Date().getMonth() + 1)
   const [income, setIncome] = useState<PayslipIncome>({ ...emptyIncome(), ...initial.income })
@@ -102,7 +104,7 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
   const incomeWarning = income.total > 0 && incomeSum !== income.total
   const dedWarning = deductions.total > 0 && dedSum !== deductions.total
 
-  function handleSave() {
+  function handleSave(idToDelete?: string) {
     const finalIncome: PayslipIncome = {
       ...income,
       otherIncome: {},
@@ -133,11 +135,43 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
       sourceFileName: initial.sourceFileName,
       createdAt: initial.createdAt ?? new Date().toISOString(),
     }
-    onSave(payslip)
+    onSave(payslip, idToDelete)
   }
 
   return (
     <div className="space-y-5">
+      {duplicatePayslip && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">重複データが検出されました</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                {duplicatePayslip.year}年{duplicatePayslip.month}月分の{duplicatePayslip.payslipType === 'bonus' ? '賞与' : '給与'}はすでに登録されています
+              </p>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => handleSave(duplicatePayslip.id)}
+                  className="text-xs px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  上書き保存
+                </button>
+                {onSkip && (
+                  <button
+                    onClick={onSkip}
+                    className="text-xs px-3 py-1.5 bg-white border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors"
+                  >
+                    スキップ
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Year/Month */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-3">対象月</p>
@@ -290,7 +324,7 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
         <button onClick={onCancel} className="px-5 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
           キャンセル
         </button>
-        <button onClick={handleSave} className="px-5 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
+        <button onClick={() => handleSave()} className="px-5 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
           保存する
         </button>
       </div>

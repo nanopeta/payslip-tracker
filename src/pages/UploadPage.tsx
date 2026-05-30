@@ -16,6 +16,7 @@ type Step = 'idle' | 'parsing' | 'review'
 export default function UploadPage() {
   const navigate = useNavigate()
   const addPayslip = useStore((s) => s.addPayslip)
+  const deletePayslip = useStore((s) => s.deletePayslip)
   const addWithholdingCert = useStore((s) => s.addWithholdingCert)
   const payslips = useStore((s) => s.payslips)
 
@@ -79,7 +80,15 @@ export default function UploadPage() {
     setStep('review')
   }
 
-  function handleSavePayslip(p: Payslip) {
+  function findDuplicate(candidate: Partial<Payslip>): Payslip | undefined {
+    const cType = candidate.payslipType ?? 'monthly'
+    return payslips.find(
+      (p) => p.year === candidate.year && p.month === candidate.month && (p.payslipType ?? 'monthly') === cType,
+    )
+  }
+
+  function handleSavePayslip(p: Payslip, idToDelete?: string) {
+    if (idToDelete) deletePayslip(idToDelete)
     addPayslip(p)
     advance()
   }
@@ -172,6 +181,8 @@ export default function UploadPage() {
               initial={withPaidLeaveFallback(currentResult.payslip)}
               onSave={handleSavePayslip}
               onCancel={handleCancel}
+              duplicatePayslip={findDuplicate(currentResult.payslip)}
+              onSkip={advance}
             />
           )}
           {currentResult.type === 'withholding' && currentResult.withholding && (

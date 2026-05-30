@@ -5,8 +5,10 @@ import useStore from '../store/useStore'
 import StatCard from '../components/ui/StatCard'
 import TrendSummaryChart from '../components/charts/TrendSummaryChart'
 import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
+import DeductionDonutChart from '../components/charts/DeductionDonutChart'
+import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, getIncomeValueByLabel } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, getIncomeValueByLabel, annualTotals } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 type PeriodFilter = 'all' | 'year' | '6m' | '12m'
@@ -69,6 +71,7 @@ export default function DashboardPage() {
       label: `${p.year}/${String(p.month).padStart(2, '0')}`,
       yearMonth: `${p.year}/${String(p.month).padStart(2, '0')}`,
       gain: calcOvertimeGain(p, settings),
+      overtimeHours: p.attendance.overtimeHours,
     }))
     .reverse()
   const showGainSection = gainRows.some((r) => r.gain !== 0)
@@ -85,6 +88,10 @@ export default function DashboardPage() {
   const usagePercent = (overtimeHoursLatest / DEEMED_HOURS) * 100
   const overtimeHourlyRate = deemedAmtLatest > 0 ? Math.round(deemedAmtLatest / DEEMED_HOURS) : 0
   const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
+
+  const currentYear = new Date().getFullYear()
+  const ytd = annualTotals(payslips, currentYear)
+  const hasYtdData = ytd.monthCount > 0
 
   const recent = sorted.slice(0, 5)
 
@@ -145,6 +152,28 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* YTD summary */}
+      {hasYtdData && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
+          <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthCount}ヶ月分</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">年間総支給額</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytd.totalIncome)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">年間手取り</p>
+              <p className="text-sm font-semibold tabular-nums" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">年間控除合計</p>
+              <p className="text-sm font-semibold tabular-nums" style={{ color: '#d06868' }}>{formatYen(ytd.totalDeductions)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Overtime gain — unified card */}
       {showGainSection && latestMonthly && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
@@ -198,10 +227,17 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {gainRows.length > 1 && gainRows.some((r) => r.overtimeHours > 0) && (
+            <div className="border-t border-gray-100 pt-3 mt-1">
+              <p className="text-xs text-gray-400 mb-2">残業時間推移</p>
+              <OvertimeHoursChart data={filteredGainRows} deemedHours={DEEMED_HOURS} />
+            </div>
+          )}
+
           {gainRows.length > 1 && (
             <div className="border-t border-gray-100 pt-3">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-gray-400">月次推移</p>
+                <p className="text-xs text-gray-400">月次推移（差額）</p>
                 <div className="flex gap-1">
                   {PERIOD_FILTERS.map((f) => (
                     <button
@@ -274,6 +310,16 @@ export default function DashboardPage() {
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
             <p className="text-sm font-semibold text-gray-700 mb-3">有給残日数の推移</p>
             <PaidLeaveTrendChart data={leaveTrend} />
+          </div>
+        )}
+
+        {latestMonthly && latestMonthly.deductions.total > 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <p className="text-sm font-semibold text-gray-700 mb-0.5">控除内訳</p>
+            <p className="text-xs text-gray-400 mb-3">
+              {latestMonthly.year}年{latestMonthly.month}月 合計 {formatYen(latestMonthly.deductions.total)}
+            </p>
+            <DeductionDonutChart deductions={latestMonthly.deductions} />
           </div>
         )}
       </div>
