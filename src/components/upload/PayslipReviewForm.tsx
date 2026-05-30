@@ -77,7 +77,7 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
 
   const [otherItems, setOtherItems] = useState<OtherItem[]>(() => [
     ...Object.entries(initial.income?.otherIncome ?? {}).map(([label, value]) => ({
-      label, value, category: '控除' as const,
+      label, value, category: '支給' as const,
     })),
     ...Object.entries(initial.deductions?.otherDeductions ?? {}).map(([label, value]) => ({
       label, value, category: '控除' as const,
@@ -103,7 +103,11 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
   const dedWarning = deductions.total > 0 && dedSum !== deductions.total
 
   function handleSave() {
-    const finalIncome: PayslipIncome = { ...income, otherIncome: {} }
+    const finalIncome: PayslipIncome = {
+      ...income,
+      otherIncome: {},
+      detailIncome: initial.income?.detailIncome ?? {},
+    }
     const finalDeductions: PayslipDeductions = { ...deductions, otherDeductions: {} }
     for (const item of otherItems) {
       if (item.value <= 0) continue
@@ -196,6 +200,22 @@ export default function PayslipReviewForm({ initial, onSave, onCancel }: Props) 
           <NumInput label="控除合計額" value={deductions.total} onChange={(v) => patchDed('total', v)} />
         </div>
       </div>
+
+      {/* Detail income (below 総支給金額 — read-only, excluded from total) */}
+      {Object.keys(initial.income?.detailIncome ?? {}).length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">支給内訳（合計に含まず）</p>
+          <p className="text-xs text-gray-400 mb-3">総支給金額より下に記載された項目です</p>
+          <div className="space-y-1.5">
+            {Object.entries(initial.income?.detailIncome ?? {}).map(([label, value]) => (
+              <div key={label} className="flex justify-between">
+                <span className="text-sm text-gray-600">{label}</span>
+                <span className="text-sm tabular-nums text-gray-600">{value.toLocaleString()}円</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Other items */}
       {otherItems.length > 0 && (

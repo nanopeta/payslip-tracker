@@ -28,6 +28,7 @@ function calcIncomeSum(income: Payslip['income']): number {
     income.commuteAdjustment + income.thankYouAllowance + income.zoomAllowance + income.adjustmentSalary +
     income.commuteAllowance + income.taxableCommuteAllowance + income.overtime + income.lifePlanSupport +
     Object.values(income.otherIncome).reduce((s, v) => s + v, 0)
+    // detailIncome は総支給金額より下の詳細項目なので合計に含めない
   )
 }
 
@@ -84,6 +85,17 @@ export default function PayslipDetailView({ payslip }: Props) {
         <Row label="ライフプラン支援" value={income.lifePlanSupport} />
         {Object.entries(income.otherIncome).map(([k, v]) => <Row key={k} label={k} value={v} />)}
         <Row label="総支給金額" value={income.total} bold accent="text-brand-700" />
+        {Object.keys(income.detailIncome ?? {}).length > 0 && (
+          <div className="mt-3 pt-2 border-t border-gray-200">
+            <p className="text-xs text-gray-400 mb-1">内訳（合計に含まず）</p>
+            {Object.entries(income.detailIncome ?? {}).map(([k, v]) => (
+              <div key={k} className="flex justify-between py-1.5">
+                <span className="text-xs text-gray-500">{k}</span>
+                <span className="text-xs tabular-nums text-gray-500">{formatYen(v)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Deductions */}

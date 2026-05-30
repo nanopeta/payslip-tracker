@@ -291,15 +291,14 @@ function parsePayslip(items: PosItem[]): Partial<Payslip> {
   const attendance = emptyAttendance()
   const summary: PayslipSummary = { netPay: 0, bankTransfer: 0 }
 
-  // 合計・差引支給額は個別に取得
-  // 総支給金額はyTolを絞り、直下の詳細行の値を拾わないようにする
+  // 合計・差引支給額は個別に取得（総支給金額はyTolを絞って直下の詳細行を避ける）
   income.total = findRight(rows, '総支給金額', isMoneyToken, parseMoney, 12)
   deductions.total = findRight(rows, '控除合計額', isMoneyToken, parseMoney)
   summary.netPay = findRight(rows, '差引支給額', isMoneyToken, parseMoney, 25)
   summary.bankTransfer = findRight(rows, '銀行１振込額', isMoneyToken, parseMoney, 25)
   summary.childSupportPayment = findRight(rows, '子育支援金', isMoneyToken, parseMoney) || undefined
 
-  // 総支給金額のY位置を特定（これより下の支給項目は詳細なので合計に含めない）
+  // 総支給金額のY位置を特定（これより下の支給項目は detailIncome に入れる）
   let totalLineY = -Infinity
   for (const row of rows) {
     if (mergeRow(row).some((item) => item.text === '総支給金額' || item.text.includes('総支給金額'))) {
@@ -309,30 +308,66 @@ function parsePayslip(items: PosItem[]): Partial<Payslip> {
   }
   const isAboveTotal = (y: number) => totalLineY === -Infinity || y >= totalLineY - 5
 
-  // 全ラベル-値ペアを自動検出
-  const pairs = discoverAllPairs(rows)
+  // ラベルのY座標を取得（findRight が値を見つけたときに上下判定するため）
+  const getLabelY = (searchLabel: string): number => {
+    for (const row of rows) {
+      const found = mergeRow(row).find(
+        (item) => item.text === searchLabel || item.text.includes(searchLabel),
+      )
+      if (found) return found.y
+    }
+    return Infinity
+  }
 
-  for (const pair of pairs) {
-    // 既知の支給ラベル: カラム位置問わず名前で照合、総支給金額より上のみ
-    if (isAboveTotal(pair.y)) {
-      const incomeKey = INCOME_LABELS[pair.label]
-      if (incomeKey) {
-        (income as unknown as Record<string, number>)[incomeKey] = pair.value
-        continue
+  // 既知の支給ラベルを findRight で直接検索（groupByRow の yTol 問題を回避）
+  const setIncomeFields = new Set<string>()
+  const setDetailFields = new Set<string>()
+  for (const [label, field] of Object.entries(INCOME_LABELS)) {
+    if (setIncomeFields.has(field) && setDetailFields.has(field)) continue
+    const value = findRight(rows, label, isMoneyToken, parseMoney)
+    if (value <= 0) continue
+    const labelY = getLabelY(label)
+    if (isAboveTotal(labelY)) {
+      if (!setIncomeFields.has(field)) {
+        (income as unknown as Record<string, number>)[field] = value
+        setIncomeFields.add(field)
+      }
+    } else {
+      if (!setDetailFields.has(field)) {
+        income.detailIncome[label] = value
+        setDetailFields.add(field)
       }
     }
+  }
 
-    // 既知の控除ラベル: カラム位置問わず名前で照合
-    const dedKey = DEDUCTION_LABELS[pair.label]
-    if (dedKey) {
-      (deductions as unknown as Record<string, number>)[dedKey] = pair.value
-      continue
+  // 既知の控除ラベルを findRight で直接検索
+  const setDedFields = new Set<string>()
+  for (const [label, field] of Object.entries(DEDUCTION_LABELS)) {
+    if (setDedFields.has(field)) continue
+    const value = findRight(rows, label, isMoneyToken, parseMoney)
+    if (value > 0) {
+      (deductions as unknown as Record<string, number>)[field] = value
+      setDedFields.add(field)
     }
+  }
 
-    // 未知の項目はカラム位置で分類
-    if (pair.column === '支給' && isAboveTotal(pair.y) && pair.label !== '総支給金額') {
-      income.otherIncome[pair.label] = pair.value
-    } else if (pair.column === '控除' && pair.label !== '控除合計額') {
+  // 未知の項目を discoverAllPairs で検出（既知ラベルはスキップ）
+  const pairs = discoverAllPairs(rows)
+  const knownIncomeSet = new Set(Object.keys(INCOME_LABELS))
+  const knownDedSet = new Set(Object.keys(DEDUCTION_LABELS))
+  const skipLabels = new Set(['総支給金額', '控除合計額', '差引支給額', '銀行１振込額', '子育支援金'])
+
+  for (const pair of pairs) {
+    if (knownIncomeSet.has(pair.label) || knownDedSet.has(pair.label)) continue
+    if (skipLabels.has(pair.label)) continue
+
+    if (pair.column === '支給') {
+      if (isAboveTotal(pair.y)) {
+        income.otherIncome[pair.label] = pair.value
+      } else {
+        income.detailIncome[pair.label] = pair.value
+      }
+    } else if (pair.column === '控除') {
       deductions.otherDeductions[pair.label] = pair.value
     } else if (pair.column === '勤怠') {
       if (ATTENDANCE_DAY_LABELS.has(pair.label) && !pair.rawValue.includes(',')) {
@@ -343,7 +378,7 @@ function parsePayslip(items: PosItem[]): Partial<Payslip> {
         if (key) (attendance as unknown as Record<string, number>)[key] = pair.value
       }
     }
-    // '計算' column: 総支給金額より下の詳細項目なので無視
+    // '計算' column: 無視
   }
 
   // 年月抽出
