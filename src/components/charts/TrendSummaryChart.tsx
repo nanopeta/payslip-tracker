@@ -29,9 +29,16 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
   }
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+      <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#6b7280' }} />
+        <XAxis
+          dataKey="label"
+          tick={{ fontSize: 11, fill: '#6b7280' }}
+          interval={0}
+          angle={-30}
+          textAnchor="end"
+          height={48}
+        />
         <YAxis
           tickFormatter={formatYen}
           tick={{ fontSize: 11, fill: '#6b7280' }}
@@ -65,9 +72,9 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
             type="monotone"
             dataKey="monthlyTotalIncome"
             name="給与のみ総支給額"
-            stroke="#0891b2"
+            stroke="#6ee7b7"
             strokeWidth={2}
-            dot={{ fill: '#0891b2', r: 3 }}
+            dot={{ fill: '#6ee7b7', r: 3 }}
             strokeDasharray="5 3"
           />
         )}
@@ -76,9 +83,9 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
             type="monotone"
             dataKey="monthlyNetPay"
             name="給与のみ手取り"
-            stroke="#2563eb"
+            stroke="#6d28d9"
             strokeWidth={2}
-            dot={{ fill: '#2563eb', r: 3 }}
+            dot={{ fill: '#6d28d9', r: 3 }}
             strokeDasharray="3 2"
           />
         )}

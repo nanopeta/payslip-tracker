@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import StatCard from '../components/ui/StatCard'
 import TrendSummaryChart from '../components/charts/TrendSummaryChart'
-import IncomeDeductionChart from '../components/charts/IncomeDeductionChart'
 import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
 import PayslipCard from '../components/payslip/PayslipCard'
 import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend } from '../lib/aggregations'
@@ -151,11 +150,6 @@ export default function DashboardPage() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <p className="text-sm font-semibold text-gray-700 mb-3">支給・手取りの推移</p>
           <TrendSummaryChart data={trend} showMonthlyLine={hasBonusData} />
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">支給・控除の内訳（月次合計）</p>
-          <IncomeDeductionChart data={trend} />
         </div>
 
         {leaveTrend.length > 1 && (
