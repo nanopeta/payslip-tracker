@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import PayslipDetailView from '../components/payslip/PayslipDetailView'
 import PayslipReviewForm from '../components/upload/PayslipReviewForm'
 import { previousPayslip, nextPayslip } from '../lib/aggregations'
+import { formatYen } from '../lib/formatters'
 import type { Payslip } from '../types/payslip'
 
 export default function PayslipDetailPage() {
@@ -92,6 +93,29 @@ export default function PayslipDetailPage() {
               </svg>
             </button>
           ) : <div />}
+        </div>
+      )}
+
+      {!editing && prev && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-brand-200">
+          <p className="text-xs text-gray-400 mb-3">{prev.year}年{prev.month}月との比較</p>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: '手取り', delta: payslip.summary.netPay - prev.summary.netPay },
+              { label: '総支給', delta: payslip.income.total - prev.income.total },
+              { label: '控除合計', delta: payslip.deductions.total - prev.deductions.total, invert: true },
+            ].map(({ label, delta, invert }) => (
+              <div key={label} className="text-center">
+                <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                <p
+                  className="text-sm font-semibold tabular-nums"
+                  style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}
+                >
+                  {delta >= 0 ? '+' : '-'}{formatYen(Math.abs(delta))}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
