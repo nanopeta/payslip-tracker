@@ -7,7 +7,18 @@ import { formatYen } from '../lib/formatters'
 export default function PayslipsPage() {
   const payslips = useStore((s) => s.payslips)
   const deletePayslips = useStore((s) => s.deletePayslips)
-  const sorted = [...payslips].sort((a, b) => b.year * 100 + b.month - (a.year * 100 + a.month))
+  const sorted = [...payslips].sort((a, b) => {
+    switch (sortOrder) {
+      case 'date-asc':
+        return (a.year * 100 + a.month) - (b.year * 100 + b.month)
+      case 'netpay-desc':
+        return b.summary.netPay - a.summary.netPay
+      case 'income-desc':
+        return b.income.total - a.income.total
+      default:
+        return (b.year * 100 + b.month) - (a.year * 100 + a.month)
+    }
+  })
 
   const [selecting, setSelecting] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -15,6 +26,7 @@ export default function PayslipsPage() {
   const [filterMonth, setFilterMonth] = useState<number | 'all'>('all')
   const [filterType, setFilterType] = useState<'all' | 'monthly' | 'bonus'>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc' | 'netpay-desc' | 'income-desc'>('date-desc')
 
   const years = [...new Set(payslips.map((p) => p.year))].sort((a, b) => b - a)
   const hasBonusData = payslips.some((p) => p.payslipType === 'bonus')
@@ -50,8 +62,8 @@ export default function PayslipsPage() {
     return true
   })
 
-  // filterYear === 'all' のとき年別グループを生成
-  const groupedByYear = filterYear === 'all'
+  // filterYear === 'all' かつ日付ソートのとき年別グループを生成
+  const groupedByYear = filterYear === 'all' && sortOrder.startsWith('date')
     ? (() => {
         const yearMap = new Map<number, typeof filtered>()
         for (const p of filtered) {
@@ -176,6 +188,24 @@ export default function PayslipsPage() {
               ))}
             </div>
           )}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm ml-auto">
+            {(
+              [
+                { key: 'date-desc', label: '新しい順' },
+                { key: 'date-asc', label: '古い順' },
+                { key: 'netpay-desc', label: '手取り↓' },
+                { key: 'income-desc', label: '総支給↓' },
+              ] as const
+            ).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setSortOrder(key)}
+                className={`px-3 py-1.5 transition-colors ${sortOrder === key ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {filterYear !== 'all' && (
             <div className="flex flex-wrap gap-1.5">
               <button
@@ -270,7 +300,7 @@ export default function PayslipsPage() {
                       >
                         <PayslipCard
                           payslip={p}
-                          prevNetPay={filtered[fi + 1]?.summary.netPay}
+                          prevNetPay={sortOrder === 'date-desc' ? filtered[fi + 1]?.summary.netPay : undefined}
                         />
                       </div>
                     </div>
@@ -306,7 +336,7 @@ export default function PayslipsPage() {
               >
                 <PayslipCard
                   payslip={p}
-                  prevNetPay={filtered[i + 1]?.summary.netPay}
+                  prevNetPay={sortOrder === 'date-desc' ? filtered[i + 1]?.summary.netPay : undefined}
                 />
               </div>
             </div>
