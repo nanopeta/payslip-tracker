@@ -1,17 +1,23 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import useStore from '../store/useStore'
 import { DEFAULT_OVERTIME_SETTINGS } from '../lib/storage'
 import { exportJSON, exportCSV } from '../lib/exporters'
+import type { StorageState } from '../lib/storage'
+import { getIncomeValueByLabel, latestPayslip } from '../lib/aggregations'
+import { formatYen } from '../lib/formatters'
 
 export default function SettingsPage() {
   const settings = useStore((s) => s.overtimeSettings)
   const setOvertimeSettings = useStore((s) => s.setOvertimeSettings)
   const payslips = useStore((s) => s.payslips)
   const withholdingCerts = useStore((s) => s.withholdingCerts)
+  const restoreState = useStore((s) => s.restoreState)
 
   const [deemedLabel, setDeemedLabel] = useState(settings.deemedLabel)
   const [actualLabels, setActualLabels] = useState<string[]>(settings.actualLabels)
   const [saved, setSaved] = useState(false)
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleSave() {
     const labels = actualLabels.filter((l) => l.trim())
@@ -26,6 +32,38 @@ export default function SettingsPage() {
 
   function handleExportCSV() {
     exportCSV(payslips)
+  }
+
+  function handleImportJSON(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string) as StorageState
+        if (
+          !Array.isArray(parsed.payslips) ||
+          !Array.isArray(parsed.withholdingCerts) ||
+          typeof parsed.version !== 'number'
+        ) {
+          setImportStatus('error')
+          setTimeout(() => setImportStatus('idle'), 4000)
+          return
+        }
+        if (!window.confirm(`${parsed.payslips.length}件の明細と${parsed.withholdingCerts.length}件の源泉徴収票を復元します。現在のデータは上書きされます。よろしいですか？`)) {
+          return
+        }
+        restoreState({ payslips: parsed.payslips, withholdingCerts: parsed.withholdingCerts })
+        setImportStatus('success')
+        setTimeout(() => setImportStatus('idle'), 3000)
+      } catch {
+        setImportStatus('error')
+        setTimeout(() => setImportStatus('idle'), 4000)
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = ''
+      }
+    }
+    reader.readAsText(file)
   }
 
   function handleReset() {
@@ -50,6 +88,22 @@ export default function SettingsPage() {
   }
 
   const formula = `${deemedLabel || '…'} − (${actualLabels.filter(Boolean).join(' ＋ ') || '…'}) ＝ 差額`
+
+  const latestMonthly = latestPayslip(
+    payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly'),
+  )
+  const previewDeemed = latestMonthly
+    ? getIncomeValueByLabel(latestMonthly.income, deemedLabel.trim())
+    : null
+  const activeActualLabels = actualLabels.filter((l) => l.trim())
+  const previewActualBreakdown = latestMonthly
+    ? activeActualLabels.map((l) => ({
+        label: l,
+        value: getIncomeValueByLabel(latestMonthly.income, l.trim()),
+      }))
+    : []
+  const previewActualTotal = previewActualBreakdown.reduce((s, r) => s + r.value, 0)
+  const previewGain = previewDeemed !== null ? previewDeemed - previewActualTotal : null
 
   return (
     <div className="space-y-5 max-w-lg">
@@ -115,6 +169,49 @@ export default function SettingsPage() {
           計算式：{formula}（プラスなら得）
         </div>
 
+        {latestMonthly ? (
+          <div className="bg-brand-50 rounded-lg border border-brand-200 px-3 py-3 space-y-1.5">
+            <p className="text-xs font-semibold text-brand-700 mb-2">
+              試算プレビュー（{latestMonthly.year}年{latestMonthly.month}月分）
+            </p>
+            <div className="flex justify-between text-xs text-gray-600">
+              <span>{deemedLabel.trim() || 'みなし残業'}</span>
+              <span
+                className="font-mono"
+                style={{ color: (previewDeemed ?? 0) === 0 ? '#9ca3af' : undefined }}
+              >
+                {(previewDeemed ?? 0) === 0 ? '¥0 (未検出)' : formatYen(previewDeemed ?? 0)}
+              </span>
+            </div>
+            {previewActualBreakdown.map((row, i) => (
+              <div key={i} className="flex justify-between text-xs text-gray-500 pl-2">
+                <span>−&nbsp;{row.label}</span>
+                <span
+                  className="font-mono"
+                  style={{ color: row.value === 0 ? '#9ca3af' : undefined }}
+                >
+                  {row.value === 0 ? '¥0 (未検出)' : formatYen(row.value)}
+                </span>
+              </div>
+            ))}
+            <div className="border-t border-brand-200 pt-1.5 flex justify-between text-xs font-semibold">
+              <span className="text-gray-700">差額</span>
+              <span
+                className="font-mono"
+                style={{ color: (previewGain ?? 0) >= 0 ? '#5fad9b' : '#d06868' }}
+              >
+                {previewGain !== null
+                  ? `${previewGain >= 0 ? '+' : ''}${formatYen(previewGain)}`
+                  : '—'}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 px-1">
+            明細データがありません。MHTファイルをアップロードするとプレビューが表示されます。
+          </p>
+        )}
+
         <div className="flex gap-3 justify-end pt-1">
           <button
             onClick={handleReset}
@@ -151,6 +248,26 @@ export default function SettingsPage() {
             <span>CSVでエクスポート</span>
             <span className="text-xs text-gray-400">Excel・スプレッドシート用</span>
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImportJSON}
+          />
+          <button
+            onClick={() => { setImportStatus('idle'); fileInputRef.current?.click() }}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <span>JSONから復元</span>
+            <span className="text-xs text-gray-400">バックアップファイルを選択</span>
+          </button>
+          {importStatus === 'success' && (
+            <p className="text-xs px-1" style={{ color: '#5fad9b' }}>復元が完了しました</p>
+          )}
+          {importStatus === 'error' && (
+            <p className="text-xs px-1" style={{ color: '#d06868' }}>ファイルの形式が正しくありません</p>
+          )}
         </div>
       </div>
     </div>
