@@ -44,7 +44,7 @@ npm run build    # 本番ビルド（tsc -b && vite build）
 npm run preview  # ビルド結果をローカルでプレビュー
 
 # エージェントチーム（AI 自律改善）
-ANTHROPIC_API_KEY=sk-ant-... npm run agent-team             # Ctrl+C まで無限改善
+npm run agent-team                     # Ctrl+C まで無限改善（API キー不要）
 npm run agent-team -- --sprint-size=3  # 1スプリント 3件で改善
 ```
 
@@ -63,7 +63,6 @@ npm run agent-team -- --sprint-size=3  # 1スプリント 3件で改善
 | React Router | 6.28.0 | ルーティング |
 | pdfjs-dist | 5.2.133 | PDF解析（現在ほぼ未使用） |
 | uuid | 11.1.0 | ID生成 |
-| @anthropic-ai/sdk | 0.39+ | エージェントチーム（devDep） |
 | tsx | 4.19+ | TypeScript スクリプト実行（devDep） |
 
 > **注意**: Tailwind は `3.4.19` に固定。`npm install tailwindcss` で最新版（v4）に上がると設定が壊れる。
@@ -598,15 +597,15 @@ const INCOME_LABELS: Record<string, string> = {
 ### 起動方法
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... npm run agent-team
+npm run agent-team                     # API キー不要・Ctrl+C で停止
 npm run agent-team -- --sprint-size=3  # 1スプリントあたり3件
 ```
 
 ### 動作フロー（スプリント方式）
 
 1. **PM（スプリント計画）**: `git log` と最新 `CLAUDE.md` を読んで未実装の改善を N 件バックログ化
-2. **Dev（実装）**: 各タスクを `read_file` → `write_file` → `npm run build` で実装・検証
-3. **Reviewer（レビュー）**: `git diff HEAD` で変更を確認し LGTM or 修正指示
+2. **Dev（実装）**: 各タスクを Read → Edit/Write → Bash(`npm run build`) で実装・検証
+3. **Reviewer（レビュー）**: Bash(`git diff HEAD`) で変更を確認し LGTM or 修正指示
 4. Dev が修正（最大1回）→ タスクごとに **自動コミット**
 5. スプリント後に **CLAUDE.md を自動更新**（新コンポーネント・パターンを追記）
 6. `Ctrl+C` で停止 → ブランチをプッシュして終了
