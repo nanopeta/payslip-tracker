@@ -47,6 +47,10 @@ export default function PayslipsPage() {
 
   const filteredIndexMap = new Map(filtered.map((p, i) => [p.id, i]))
 
+  const isFiltered = filtered.length < payslips.length || filterYear !== 'all' || filterType !== 'all' || filterMonth !== 'all'
+  const filteredNetPayTotal = filtered.reduce((sum, p) => sum + p.summary.netPay, 0)
+  const filteredNetPayAvg = filtered.length > 0 ? Math.round(filteredNetPayTotal / filtered.length) : 0
+
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -259,6 +263,16 @@ export default function PayslipsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {isFiltered && filtered.length > 0 && (
+        <div className="bg-white rounded-xl border border-brand-200 shadow-sm px-5 py-3 flex flex-wrap gap-x-6 gap-y-1 items-center text-sm">
+          <span className="text-gray-500">絞り込み <span className="font-semibold text-gray-800">{filtered.length}件</span></span>
+          <span className="text-gray-400">·</span>
+          <span className="text-gray-500">手取合計 <span className="font-semibold text-gray-800">{formatYen(filteredNetPayTotal)}</span></span>
+          <span className="text-gray-400">·</span>
+          <span className="text-gray-500">平均手取 <span className="font-semibold text-gray-800">{formatYen(filteredNetPayAvg)}</span></span>
         </div>
       )}
     </div>
