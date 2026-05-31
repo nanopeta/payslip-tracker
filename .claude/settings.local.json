@@ -4,7 +4,8 @@
       "Bash(where claude *)",
       "Bash(Get-Command claude *)",
       "Bash(claude *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(gh pr create --title 明細詳細ページに前後ナビゲーション追加・エージェントチームWindows対応 --body ' *)"
     ]
   }
 }
