@@ -3,7 +3,8 @@
     "allow": [
       "Bash(where claude *)",
       "Bash(Get-Command claude *)",
-      "Bash(claude *)"
+      "Bash(claude *)",
+      "Bash(git config *)"
     ]
   }
 }
