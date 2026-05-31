@@ -106,7 +106,7 @@ src/
 └── pages/
     ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳）
     ├── PayslipsPage.tsx    # 給与明細一覧（一括削除機能あり）
-    ├── PayslipDetailPage.tsx
+    ├── PayslipDetailPage.tsx  # 明細詳細（前の明細/次の明細ナビゲーション付き）
     ├── AnnualSummaryPage.tsx
     ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定
@@ -615,3 +615,8 @@ npm run agent-team -- --sprint-size=3  # 1スプリントあたり3件
 - `git commit/push/add` などはスクリプト側が制御（エージェントは実行不可）
 - `types/payslip.ts`, `lib/storage.ts`, `lib/mhtParser.ts` は変更対象外
 - PM は毎スプリントで最新の `CLAUDE.md` と `git log` を参照して実装済み改善をスキップ
+
+### Windows 互換対応（index.ts）
+
+- `AGENT_CWD` は `/tmp` 固定ではなく `os.tmpdir()` を使用（Windows では `%TEMP%` に解決される）
+- `spawnSync` / `execSync` の呼び出しには `shell: true` を付与（Windows で `claude` コマンドが PATH 経由で見つかるようにするため）
