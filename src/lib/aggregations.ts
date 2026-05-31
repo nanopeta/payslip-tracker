@@ -245,6 +245,21 @@ function calcSocialInsuranceTotal(p: Payslip): number {
   )
 }
 
+export interface SocialInsuranceTrendPoint {
+  label: string
+  total: number
+}
+
+export function socialInsuranceTrend(payslips: Payslip[]): SocialInsuranceTrendPoint[] {
+  return [...payslips]
+    .filter((p) => !p.payslipType || p.payslipType === 'monthly')
+    .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
+    .map((p) => ({
+      label: `${p.year}/${String(p.month).padStart(2, '0')}`,
+      total: calcSocialInsuranceTotal(p),
+    }))
+}
+
 export function latestSocialInsurance(payslips: Payslip[]): SocialInsuranceStats | null {
   const monthly = [...payslips]
     .filter((p) => !p.payslipType || p.payslipType === 'monthly')

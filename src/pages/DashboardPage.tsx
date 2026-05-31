@@ -7,8 +7,9 @@ import TrendSummaryChart from '../components/charts/TrendSummaryChart'
 import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
+import SocialInsuranceTrendChart from '../components/charts/SocialInsuranceTrendChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, latestPaidLeave, getIncomeValueByLabel, annualTotals, latestSocialInsurance } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, latestPaidLeave, getIncomeValueByLabel, annualTotals, latestSocialInsurance, socialInsuranceTrend } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 type PeriodFilter = 'all' | 'year' | '6m' | '12m'
@@ -64,6 +65,7 @@ export default function DashboardPage() {
 
   // 4保険合計
   const socialInsuranceStats = latestSocialInsurance(payslips)
+  const siTrend = socialInsuranceTrend(payslips)
 
   // みなし残業効率（給与明細のみ対象）
   const monthlyPayslips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
@@ -176,6 +178,14 @@ export default function DashboardPage() {
           />
         )}
       </div>
+
+      {/* Social insurance trend */}
+      {siTrend.length >= 2 && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <p className="text-sm font-semibold text-gray-700 mb-3">社会保険料の推移</p>
+          <SocialInsuranceTrendChart data={siTrend} />
+        </div>
+      )}
 
       {/* YTD summary */}
       {hasYtdData && (

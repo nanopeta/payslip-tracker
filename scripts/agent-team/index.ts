@@ -39,6 +39,9 @@ const cliArgs = process.argv.slice(2)
 const sprintSize = parseInt(
   cliArgs.find(a => a.startsWith('--sprint-size='))?.split('=')[1] ?? '5'
 )
+const maxSprints = parseInt(
+  cliArgs.find(a => a.startsWith('--max-sprints='))?.split('=')[1] ?? '0'
+)
 
 // ─── claude CLI の存在確認 ────────────────────────────
 const claudeCheck = spawnSync('claude', ['--version'], { encoding: 'utf-8', shell: true })
@@ -345,6 +348,10 @@ function main() {
       `ドキュメント更新（スプリント${sprintNo}）\n\nhttps://claude.ai/code/session_01PqsriuZUFvNfoZUk8KksSp`
     )
 
+    if (maxSprints > 0 && sprintNo >= maxSprints) {
+      console.log(`\n${C.cyan}✅ 指定スプリント数（${maxSprints}）完了。終了します。${C.reset}`)
+      break
+    }
     sprintNo++
     console.log(`\n${C.cyan}🔄 スプリント ${sprintNo} を開始します... (Ctrl+C で停止)${C.reset}`)
   }
