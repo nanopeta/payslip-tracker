@@ -119,6 +119,28 @@ export default function PayslipDetailPage() {
         </div>
       )}
 
+      {!editing && prev && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-brand-200">
+          <p className="text-xs text-gray-400 mb-3">勤怠（前月比）</p>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: '残業時間', delta: payslip.attendance.overtimeHours - prev.attendance.overtimeHours, unit: 'h', invert: true },
+              { label: '有給残', delta: payslip.attendance.paidLeaveRemaining - prev.attendance.paidLeaveRemaining, unit: '日', invert: false },
+            ].map(({ label, delta, unit, invert }) => (
+              <div key={label} className="text-center">
+                <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                <p
+                  className="text-sm font-semibold tabular-nums"
+                  style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}
+                >
+                  {delta > 0 ? '+' : ''}{delta.toFixed(1)} {unit}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {editing ? (
         <div className="space-y-4">
           <p className="font-semibold text-gray-800">数値を編集してください</p>
