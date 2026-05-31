@@ -222,7 +222,7 @@ export default function PayslipsPage() {
                       >
                         <PayslipCard
                           payslip={p}
-                          prevNetPay={sorted[fi + 1]?.summary.netPay}
+                          prevNetPay={filtered[fi + 1]?.summary.netPay}
                         />
                       </div>
                     </div>
@@ -258,7 +258,7 @@ export default function PayslipsPage() {
               >
                 <PayslipCard
                   payslip={p}
-                  prevNetPay={sorted[i + 1]?.summary.netPay}
+                  prevNetPay={filtered[i + 1]?.summary.netPay}
                 />
               </div>
             </div>

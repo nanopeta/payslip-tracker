@@ -40,9 +40,12 @@ export default function PayslipCard({ payslip, prevNetPay }: Props) {
             <p className="text-sm font-medium tabular-nums" style={{ color: '#d06868' }}>{formatYen(payslip.deductions.total)}</p>
           </div>
           {delta !== undefined && (
-            <p className="text-xs font-medium" style={{ color: delta >= 0 ? '#5fad9b' : '#d06868' }}>
-              {delta >= 0 ? '+' : '-'}¥{Math.abs(delta).toLocaleString('ja-JP')}
-            </p>
+            <div>
+              <p className="text-xs text-gray-400">前月比</p>
+              <p className="text-xs font-medium tabular-nums" style={{ color: delta >= 0 ? '#5fad9b' : '#d06868' }}>
+                {delta >= 0 ? '+' : '-'}¥{Math.abs(delta).toLocaleString('ja-JP')}
+              </p>
+            </div>
           )}
         </div>
       </div>
