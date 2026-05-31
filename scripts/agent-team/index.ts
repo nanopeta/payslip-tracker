@@ -13,6 +13,7 @@
 
 import { spawnSync, execSync } from 'child_process'
 import path from 'path'
+import os from 'os'
 import { fileURLToPath } from 'url'
 
 // ─── 定数 ────────────────────────────────────────────

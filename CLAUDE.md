@@ -283,6 +283,22 @@ delta < 0  → '-¥XX,XXX' (color: #d06868)
 
 Props: `title`, `value`, `sub?`, `delta?`（数値、¥付きで自動フォーマット）, `deltaLabel?`（デフォルト: `'前月比'`）, `deltaText?`（文字列、`deltaPositive?` で色制御）, `highlight?`
 
+### 給与種別バッジ（pill）
+
+`payslipType === 'bonus'` の明細カードに表示するインラインバッジのスタイル:
+
+```tsx
+<span className="rounded-full text-xs px-2 py-0.5 bg-brand-100 text-brand-700">
+  {payslip.payslipLabel ?? '賞与'}
+</span>
+```
+
+- `payslipType === 'monthly'`（または未指定）には表示しない
+- `payslipLabel` 未設定時は `'賞与'` をフォールバック表示
+- 配置: カード右カラムの `text-right space-y-1` 先頭に `<p>` ラッパーで配置
+
+---
+
 ### formatYen（formatters.ts）
 
 ```typescript
@@ -753,3 +769,8 @@ npm run agent-team -- --sprint-size=3  # 1スプリントあたり3件
 - `git commit/push/add` などはスクリプト側が制御（エージェントは実行不可）
 - `types/payslip.ts`, `lib/storage.ts`, `lib/mhtParser.ts` は変更対象外
 - PM は毎スプリントで最新の `CLAUDE.md` と `git log` を参照して実装済み改善をスキップ
+
+### Windows 互換対応（index.ts）
+
+- `AGENT_CWD` は `/tmp` 固定ではなく `os.tmpdir()` を使用（Windows では `%TEMP%` に解決される）
+- `spawnSync` / `execSync` の呼び出しには `shell: true` を付与（Windows で `claude` コマンドが PATH 経由で見つかるようにするため）
