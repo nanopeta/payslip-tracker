@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts'
 import useStore from '../store/useStore'
 import WithholdingCard from '../components/withholding/WithholdingCard'
 import AnnualDetailView from '../components/payslip/AnnualDetailView'
@@ -155,28 +158,66 @@ export default function AnnualSummaryPage() {
                     )
                   })()}
 
-                  {/* Monthly stats: avg / max / min */}
-                  {monthlySlips.length > 0 && (
-                    <div className="border-t border-gray-100 pt-3">
-                      <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div>
-                          <p className="text-xs text-gray-400">平均月手取</p>
-                          <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.avgMonthlyNetPay)}</p>
+                  {/* Monthly stats: avg / max / min + bar chart */}
+                  {monthlySlips.length > 0 && (() => {
+                    const chartData = monthlySlips
+                      .reduce<{ month: number; netPay: number }[]>((acc, p) => {
+                        const existing = acc.find((d) => d.month === p.month)
+                        if (existing) existing.netPay += p.summary.netPay
+                        else acc.push({ month: p.month, netPay: p.summary.netPay })
+                        return acc
+                      }, [])
+                      .sort((a, b) => a.month - b.month)
+                      .map((d) => ({ label: `${d.month}月`, netPay: d.netPay }))
+                    return (
+                      <div className="border-t border-gray-100 pt-3">
+                        <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <p className="text-xs text-gray-400">平均月手取</p>
+                            <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.avgMonthlyNetPay)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400">最高月</p>
+                            <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(totals.maxMonthNetPay)}</p>
+                            <p className="text-xs text-gray-400">{totals.maxMonthLabel}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400">最低月</p>
+                            <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(totals.minMonthNetPay)}</p>
+                            <p className="text-xs text-gray-400">{totals.minMonthLabel}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-gray-400">最高月</p>
-                          <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(totals.maxMonthNetPay)}</p>
-                          <p className="text-xs text-gray-400">{totals.maxMonthLabel}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400">最低月</p>
-                          <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(totals.minMonthNetPay)}</p>
-                          <p className="text-xs text-gray-400">{totals.minMonthLabel}</p>
-                        </div>
+                        {chartData.length >= 2 && (
+                          <div className="mt-3" style={{ height: 160 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis
+                                  dataKey="label"
+                                  tick={{ fontSize: 11, fill: '#6b7280' }}
+                                  interval={0}
+                                  angle={-30}
+                                  textAnchor="end"
+                                  height={48}
+                                />
+                                <YAxis
+                                  tickFormatter={(v) => `¥${(v / 10000).toFixed(1)}万`}
+                                  tick={{ fontSize: 11, fill: '#6b7280' }}
+                                  width={62}
+                                />
+                                <Tooltip
+                                  formatter={(v: number) => [formatYen(v), '手取り']}
+                                  contentStyle={{ fontSize: 12, borderRadius: '8px' }}
+                                />
+                                <Bar dataKey="netPay" fill="#5fad9b" radius={[3, 3, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
 
                   {/* Bonus breakdown */}
                   {hasBonus && (
