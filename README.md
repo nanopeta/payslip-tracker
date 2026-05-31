@@ -74,7 +74,7 @@ PM・Dev・Reviewer の3 Claude エージェントがスプリント方式で協
 
 ```bash
 npm run agent-team                     # API キー不要（Claude Code CLI を使用）
-npm run agent-team -- --sprint-size=3  # 1スプリント 3件
+npm run agent-team -- --sprint-size=3  # 1スプリント 5件
 ```
 
 **動作フロー:**
