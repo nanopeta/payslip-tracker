@@ -102,6 +102,12 @@ export default function DashboardPage() {
     (p) => p.year === currentYear && (!p.payslipType || p.payslipType === 'monthly')
   )
 
+  // 今年の税負担（所得税＋住民税）
+  const ytdTaxTotal = ytd.totalIncomeTax + ytd.totalResidentTax
+  const prevYtd = annualTotals(payslips, currentYear - 1)
+  const prevYtdTaxTotal = prevYtd.monthCount > 0 ? prevYtd.totalIncomeTax + prevYtd.totalResidentTax : null
+  const taxDelta = prevYtdTaxTotal !== null ? ytdTaxTotal - prevYtdTaxTotal : null
+
   // 今年の賞与合計
   const currentYearBonusSlips = payslips.filter(
     (p) => p.year === currentYear && p.payslipType === 'bonus'
@@ -188,6 +194,15 @@ export default function DashboardPage() {
             sub={socialInsuranceStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
             deltaText={socialInsuranceStats.delta !== null ? `${socialInsuranceStats.delta >= 0 ? '+' : '-'}¥${Math.abs(socialInsuranceStats.delta).toLocaleString('ja-JP')}` : undefined}
             deltaPositive={socialInsuranceStats.delta !== null && socialInsuranceStats.delta <= 0}
+          />
+        )}
+        {hasYtdData && ytdTaxTotal > 0 && (
+          <StatCard
+            title="今年の税負担"
+            value={formatYen(ytdTaxTotal)}
+            sub={`${currentYear}年累計（所得税＋住民税）`}
+            delta={taxDelta !== null ? taxDelta : undefined}
+            deltaLabel="前年比"
           />
         )}
         {hasBonusData && currentYearBonusTotal > 0 && (
