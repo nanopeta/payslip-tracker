@@ -99,7 +99,7 @@ src/
 │   │   ├── NetPayTrendChart.tsx       # 旧・未使用
 │   │   └── IncomeDeductionChart.tsx   # 旧・未使用
 │   ├── payslip/
-│   │   ├── PayslipCard.tsx            # 明細一覧のカード
+│   │   ├── PayslipCard.tsx            # 明細一覧のカード（monthly かつ overtimeHours > 0 のとき残業時間を表示）
 │   │   ├── PayslipDetailView.tsx      # 1件の明細詳細
 │   │   └── AnnualDetailView.tsx       # 年間集計詳細（PayslipDetailView スタイル）
 │   ├── withholding/        # WithholdingCard
@@ -108,7 +108,7 @@ src/
     ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳・4保険合計）
     ├── PayslipsPage.tsx    # 給与明細一覧（一括削除・年別グループ表示・月フィルター付き）
     ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション・前月比サマリー付き）
-    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月付き）
+    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月・税/社保内訳付き）
     ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定
 ```
@@ -281,7 +281,7 @@ delta >= 0 → '+¥XX,XXX' (color: #5fad9b)
 delta < 0  → '-¥XX,XXX' (color: #d06868)
 ```
 
-Props: `title`, `value`, `sub?`, `delta?`（数値、¥付きで自動フォーマット）, `deltaText?`（文字列、`deltaPositive?` で色制御）, `highlight?`
+Props: `title`, `value`, `sub?`, `delta?`（数値、¥付きで自動フォーマット）, `deltaLabel?`（デフォルト: `'前月比'`）, `deltaText?`（文字列、`deltaPositive?` で色制御）, `highlight?`
 
 ### formatYen（formatters.ts）
 
@@ -644,7 +644,7 @@ const INCOME_LABELS: Record<string, string> = {
 ### ダッシュボードのセクション構成（DashboardPage.tsx）
 
 上から順に:
-1. **StatCards** — 最新月の差引支給額・総支給・控除合計・手取り率・有給残日数・**4保険合計**（前月比付き）
+1. **StatCards** — 最新月の差引支給額・総支給・控除合計・手取り率・有給残日数・**4保険合計**（前月比付き）・**今年の賞与**（前年比付き・当年賞与データがある場合のみ）
 2. **社会保険料の推移** — `SocialInsuranceTrendChart`（2件以上ある場合のみ）
 3. **今年の累計（YTD）** — `annualTotals(payslips, currentYear)` で計算。当年データがない場合は非表示
 4. **みなし残業効率カード** — 差額・詳細数値・残業時間推移チャート（`OvertimeHoursChart`）・月次差額推移
@@ -681,6 +681,29 @@ if (val === 'all') setFilterMonth('all')
 
 - `filterYear === 'all'` のとき月フィルターは非表示（`groupedByYear` と排他）
 - スタイルは期間フィルターと同一（選択中: `bg-brand-600 text-white`、未選択: `bg-gray-100 text-gray-500`）
+
+### PayslipsPage の絞り込みサマリーバー
+
+フィルター適用時（`isFiltered === true`）かつ `filtered.length > 0` のとき、一覧末尾にサマリーバーを表示する。
+
+```typescript
+// フィルター適用判定（いずれかが 'all' 以外なら true）
+const isFiltered =
+  filtered.length < payslips.length ||
+  filterYear !== 'all' ||
+  filterType !== 'all' ||
+  filterMonth !== 'all'
+
+// 集計
+const filteredNetPayTotal = filtered.reduce((sum, p) => sum + p.summary.netPay, 0)
+const filteredNetPayAvg = filtered.length > 0 ? Math.round(filteredNetPayTotal / filtered.length) : 0
+```
+
+表示内容: 「絞り込み件数 · 手取合計 · 平均手取」を `·` 区切りで横並び。
+スタイル: `bg-white rounded-xl border border-brand-200 shadow-sm px-5 py-3`
+
+- `filtered.length === 0` のとき「条件に一致する明細がありません」が表示されるためサマリーバーは非表示
+- `filterYear === 'all'` のとき月フィルターは非表示だが、`filterType !== 'all'` 選択時は年別グループビューの下にサマリーが現れる（全体合計として自然な挙動）
 
 ### PayslipDetailPage の前月比サマリー
 
