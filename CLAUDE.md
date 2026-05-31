@@ -98,7 +98,7 @@ src/
 │   │   ├── NetPayTrendChart.tsx       # 旧・未使用
 │   │   └── IncomeDeductionChart.tsx   # 旧・未使用
 │   ├── payslip/
-│   │   ├── PayslipCard.tsx            # 明細一覧のカード
+│   │   ├── PayslipCard.tsx            # 明細一覧のカード（bonus 種別 pill バッジ付き）
 │   │   ├── PayslipDetailView.tsx      # 1件の明細詳細
 │   │   └── AnnualDetailView.tsx       # 年間集計詳細（PayslipDetailView スタイル）
 │   ├── withholding/        # WithholdingCard
@@ -281,6 +281,22 @@ delta < 0  → '-¥XX,XXX' (color: #d06868)
 ```
 
 Props: `title`, `value`, `sub?`, `delta?`（数値、¥付きで自動フォーマット）, `deltaText?`（文字列、`deltaPositive?` で色制御）, `highlight?`
+
+### 給与種別バッジ（pill）
+
+`payslipType === 'bonus'` の明細カードに表示するインラインバッジのスタイル:
+
+```tsx
+<span className="rounded-full text-xs px-2 py-0.5 bg-brand-100 text-brand-700">
+  {payslip.payslipLabel ?? '賞与'}
+</span>
+```
+
+- `payslipType === 'monthly'`（または未指定）には表示しない
+- `payslipLabel` 未設定時は `'賞与'` をフォールバック表示
+- 配置: カード右カラムの `text-right space-y-1` 先頭に `<p>` ラッパーで配置
+
+---
 
 ### formatYen（formatters.ts）
 
