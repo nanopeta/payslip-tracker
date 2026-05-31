@@ -122,6 +122,39 @@ export default function AnnualSummaryPage() {
                     </div>
                   </div>
 
+                  {/* Tax & social insurance breakdown */}
+                  {(() => {
+                    const incomeTaxTotal = yearSlips.reduce((s, p) => s + p.deductions.incomeTax, 0)
+                    const residentTaxTotal = yearSlips.reduce((s, p) => s + p.deductions.residentTax, 0)
+                    const socialInsuranceTotal = yearSlips.reduce(
+                      (s, p) =>
+                        s +
+                        p.deductions.healthInsurance +
+                        p.deductions.longTermCareInsurance +
+                        p.deductions.pensionInsurance +
+                        p.deductions.employmentInsurance,
+                      0
+                    )
+                    return (
+                      <div className="border-t border-gray-100 pt-3">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-xs text-gray-400">所得税合計</p>
+                            <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(incomeTaxTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400">住民税合計</p>
+                            <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(residentTaxTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400">社会保険料合計</p>
+                            <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(socialInsuranceTotal)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   {/* Monthly stats: avg / max / min */}
                   {monthlySlips.length > 0 && (
                     <div className="border-t border-gray-100 pt-3">
