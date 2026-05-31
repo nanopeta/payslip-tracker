@@ -96,6 +96,9 @@ export default function DashboardPage() {
   const currentYear = new Date().getFullYear()
   const ytd = annualTotals(payslips, currentYear)
   const hasYtdData = ytd.monthCount > 0
+  const currentYearMonthlySlips = payslips.filter(
+    (p) => p.year === currentYear && (!p.payslipType || p.payslipType === 'monthly')
+  )
 
   const recent = sorted.slice(0, 5)
 
@@ -193,6 +196,27 @@ export default function DashboardPage() {
               <p className="text-sm font-semibold tabular-nums" style={{ color: '#d06868' }}>{formatYen(ytd.totalDeductions)}</p>
             </div>
           </div>
+          {currentYearMonthlySlips.length > 0 && (
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs text-gray-400">平均月手取</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(ytd.avgMonthlyNetPay)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">最高月</p>
+                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(ytd.maxMonthNetPay)}</p>
+                  <p className="text-xs text-gray-400">{ytd.maxMonthLabel}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">最低月</p>
+                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(ytd.minMonthNetPay)}</p>
+                  <p className="text-xs text-gray-400">{ytd.minMonthLabel}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
