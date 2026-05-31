@@ -43,6 +43,11 @@ const sprintSize = parseInt(
 const maxSprints = parseInt(
   cliArgs.find(a => a.startsWith('--max-sprints='))?.split('=')[1] ?? '0'
 )
+const modelArg = cliArgs.find(a => a.startsWith('--model='))?.split('=')[1]
+// --fast は --no-review + --no-doc-update のショートカット
+const fast = cliArgs.includes('--fast')
+const skipReview    = fast || cliArgs.includes('--no-review')
+const skipDocUpdate = fast || cliArgs.includes('--no-doc-update')
 
 // ─── claude CLI の存在確認 ────────────────────────────
 const claudeCheck = spawnSync('claude', ['--version'], { encoding: 'utf-8', shell: true })
@@ -74,20 +79,18 @@ function logPreview(text: string) {
 }
 
 // ─── Claude CLI 呼び出し ──────────────────────────────
-// AGENT_CWD（/tmp）から起動することで PROJECT_ROOT の CLAUDE.md を読まない
 function callClaude(prompt: string): string {
-  const result = spawnSync(
-    'claude',
-    ['--print', '--allowedTools', 'Read,Write,Edit,Bash'],
-    {
-      input: prompt,
-      cwd: AGENT_CWD,
-      encoding: 'utf-8',
-      timeout: 300_000,
-      maxBuffer: 10 * 1024 * 1024,
-      shell: true,
-    }
-  )
+  const args = ['--print', '--allowedTools', 'Read,Write,Edit,Bash']
+  if (modelArg) args.push('--model', modelArg)
+
+  const result = spawnSync('claude', args, {
+    input: prompt,
+    cwd: AGENT_CWD,
+    encoding: 'utf-8',
+    timeout: 300_000,
+    maxBuffer: 10 * 1024 * 1024,
+    shell: true,
+  })
 
   if (result.error) {
     throw new Error(`Claude CLI エラー: ${result.error.message}`)
@@ -100,6 +103,9 @@ function callClaude(prompt: string): string {
 }
 
 // ─── エージェント呼び出し ──────────────────────────────
+const MAX_HISTORY_ENTRIES = 4
+const MAX_ENTRY_CHARS = 300
+
 function runAgent(
   role: Role,
   systemContext: string,
@@ -109,11 +115,13 @@ function runAgent(
   log(role, '作業開始...')
 
   const historySection = sharedHistory.length > 0
-    ? `## チームの会話履歴（最新 ${Math.min(sharedHistory.length, 8)} 件）\n\n` +
-      sharedHistory.slice(-8).join('\n\n---\n\n') + '\n\n---\n\n'
+    ? `## 直近の作業履歴\n` +
+      sharedHistory.slice(-MAX_HISTORY_ENTRIES)
+        .map(h => h.length > MAX_ENTRY_CHARS ? h.slice(0, MAX_ENTRY_CHARS) + '…' : h)
+        .join('\n---\n') + '\n---\n\n'
     : ''
 
-  const prompt = `${systemContext}\n\n${historySection}## 今回のタスク\n\n${taskInstruction}`
+  const prompt = `${systemContext}\n\n${historySection}## タスク\n\n${taskInstruction}`
 
   const result = callClaude(prompt)
   logPreview(result)
@@ -121,88 +129,43 @@ function runAgent(
 }
 
 // ─── システムプロンプト ───────────────────────────────
-const BASE_CONSTRAINTS = `
-## プロジェクトルート
-${PROJECT_ROOT}
+const R = PROJECT_ROOT  // 短縮エイリアス
 
-すべてのファイル参照・コマンド実行は以下のように絶対パスまたは cd を使用:
-- Read: ${PROJECT_ROOT}/src/pages/DashboardPage.tsx
-- Bash: cd ${PROJECT_ROOT} && npm run build
-- Bash: cd ${PROJECT_ROOT} && git log --oneline -30
+const BASE_CONSTRAINTS = `プロジェクト: ${R}
+制約: Tailwind 3.4.19固定 / brand-600=#5b8fa8 / success=#5fad9b / danger=#d06868 / TSストリクト / git操作禁止 / 変更禁止: types/payslip.ts,lib/storage.ts,lib/mhtParser.ts`
 
-## プロジェクト制約（CLAUDE.md より）
-- Tailwind CSS 3.4.19 固定（npm install tailwindcss を実行しない）
-- ブランドカラー: brand-600 (#5b8fa8)、success #5fad9b、danger #d06868、background #eef4f8
-- TypeScript strict モード（型エラーは必ず修正すること）
-- git commit/push/add/checkout などは絶対に実行しない（スクリプト側が制御する）
-- 以下のファイルは変更しない: types/payslip.ts, lib/storage.ts, lib/mhtParser.ts
-- formatYen は '¥' プレフィックス形式
-`
-
-const PM_SYSTEM = `あなたは payslip-tracker のプロダクトマネージャーです。コードを分析してスプリントバックログを作成します。
+const PM_SYSTEM = `payslip-tracker PM。バックログ作成専任。
 ${BASE_CONSTRAINTS}
 
-## スプリント計画の手順
-1. Bash ツールで \`cd ${PROJECT_ROOT} && git log --oneline -30\` を実行して実装済みの改善を確認
-2. Read ツールで ${PROJECT_ROOT}/CLAUDE.md を読んで最新の制約・設計方針・コンポーネント一覧を把握
-3. Bash ツールで \`ls ${PROJECT_ROOT}/src/pages ${PROJECT_ROOT}/src/components/charts\` を確認
-4. 必要に応じて主要ファイルを Read ツールで読む
-5. 未実装の改善を ${sprintSize} 件選んで、以下の JSON 形式だけで返す（前後に余分なテキスト不要）:
+1. \`cd ${R} && git log --oneline -20\` で実装済みを確認
+2. \`ls ${R}/src/pages ${R}/src/components/charts\` でファイル一覧確認
+3. 未実装の改善${sprintSize}件を以下のJSON形式のみで返す（余分なテキスト不要）:
 
-{"backlog":["タスク1の説明（対象ファイル・実装内容を含む）","タスク2の説明","..."]}
+{"backlog":["タスク1（対象ファイル・内容）","タスク2",...]}
 
-## 選定基準
-- git log に含まれていない（実装済みでない）改善のみ
-- 既存データ（PayslipIncome, PayslipDeductions, PayslipAttendance）で実現できる改善
-- 1タスク = Dev が単独で実装できる規模（1〜3ファイルの変更）
-- CLAUDE.md の規約に従った実装が可能なタスク`
+選定基準: git logに無い / 既存データで実現可能 / 1〜3ファイル変更規模`
 
-const DEV_SYSTEM = `あなたは payslip-tracker の熟練したフロントエンドエンジニアです。実装を担当します。
+const DEV_SYSTEM = `payslip-tracker フロントエンドエンジニア。
 ${BASE_CONSTRAINTS}
 
-## 実装手順
-1. Read ツールで ${PROJECT_ROOT}/CLAUDE.md を読んで最新の制約を確認
-2. Read ツールで変更予定のファイルを読む（絶対パスを使用）
-3. 類似する既存コンポーネント（TrendSummaryChart.tsx, StatCard.tsx 等）も Read ツールで読んで一貫性を保つ
-4. Edit または Write ツールで変更を適用（絶対パスを使用）
-5. Bash ツールで \`cd ${PROJECT_ROOT} && npm run build\` を実行してエラーがないか確認
-6. ビルドエラーがあれば修正して再度 build を確認
-7. 完了したら変更したファイルと実装内容の概要を報告
+実装: 対象ファイルをReadで確認→Edit/Writeで実装→\`cd ${R} && npm run build\`でエラー確認→修正
+- 新Chartは ${R}/src/components/charts/ に作成
+- Recharts: interval={0}, angle={-30}, Y軸は万単位
+- git操作は一切実行しない`
 
-## 注意
-- 新規 Chart コンポーネントは ${PROJECT_ROOT}/src/components/charts/ に作成
-- インライン style={{ color: '#5fad9b' }} はブランドカラーに使用
-- Recharts 標準設定（interval={0}, angle={-30} 等）に従う
-- Bash ツールで git commit/push/add を実行しない（スクリプト側が管理）`
-
-const REVIEWER_SYSTEM = `あなたは payslip-tracker のコードレビュアーです。
+const REVIEWER_SYSTEM = `payslip-tracker コードレビュアー。
 ${BASE_CONSTRAINTS}
 
-## レビュー手順
-1. Bash ツールで \`cd ${PROJECT_ROOT} && git diff HEAD\` を実行して変更内容を確認
-2. 変更されたファイルを Read ツールで詳しく確認（絶対パスを使用）
-3. チェック項目:
-   - TypeScript 型安全性（any の不適切な使用、型エラー等）
-   - CLAUDE.md の規約遵守（ブランドカラー、Recharts パターン等）
-   - 既存パターンとの一貫性（StatCard, TrendSummaryChart 等との整合性）
-   - 既存機能のデグレードがないか
+1. \`cd ${R} && git diff HEAD\` で変更確認
+2. TS型安全性 / ブランドカラー遵守 / 既存パターン整合性 をチェック
+3. 問題なし→最後に「LGTM」と明記 / 問題あり→「LGTM」を書かず修正箇所を列挙`
 
-## 判断
-- 問題なし → 最後に「LGTM」と明記して承認
-- 問題あり → 「LGTM」とは書かず、具体的な修正箇所と方法を列挙`
-
-const DOC_UPDATE_SYSTEM = `あなたは payslip-tracker のドキュメント管理者です。
+const DOC_UPDATE_SYSTEM = `payslip-tracker ドキュメント管理者。
 ${BASE_CONSTRAINTS}
 
-## 手順
-1. Bash ツールで \`cd ${PROJECT_ROOT} && git diff HEAD\` を実行してスプリントの変更内容を確認
-2. Read ツールで ${PROJECT_ROOT}/CLAUDE.md を読む
-3. 必要なら Edit ツールで ${PROJECT_ROOT}/CLAUDE.md を更新:
-   - 新しいコンポーネントがあれば「ディレクトリ構成」に追加
-   - 新しいパターンや制約があれば「開発時の注意点」に追記
-4. 変更が小さくドキュメント更新が不要な場合は「更新不要」と返す
-
-既存の記述スタイル（日本語、表形式）を維持すること`
+1. \`cd ${R} && git diff HEAD\` で変更確認
+2. 新コンポーネント・新パターンがあれば ${R}/CLAUDE.md をEditで更新（既存スタイル維持）
+3. 更新不要なら「更新不要」とだけ返す`
 
 // ─── Git ヘルパー ─────────────────────────────────────
 function gitCommit(message: string) {
@@ -218,10 +181,16 @@ function gitCommit(message: string) {
 
 // ─── メイン ───────────────────────────────────────────
 function main() {
+  const flags = [
+    modelArg    ? `model=${modelArg}`   : '',
+    skipReview    ? 'no-review'         : '',
+    skipDocUpdate ? 'no-doc-update'     : '',
+  ].filter(Boolean).join(' / ') || 'standard'
+
   console.log(`${C.cyan}${C.bold}
 ╔══════════════════════════════════════════╗
 ║   🤖  Agent Team — payslip-tracker      ║
-║   スプリントサイズ: ${String(sprintSize).padEnd(2)} 件 / Ctrl+C で停止  ║
+║   sprint=${String(sprintSize).padEnd(2)} / ${flags.padEnd(26)}║
 ╚══════════════════════════════════════════╝${C.reset}`)
 
   // 作業ブランチを作成
@@ -308,26 +277,28 @@ function main() {
       )
       sharedHistory.push(`[Dev — タスク${itemNo + 1}]\n${implText}`)
 
-      // Reviewer: レビュー
-      const reviewText = runAgent(
-        'Reviewer',
-        REVIEWER_SYSTEM,
-        sharedHistory,
-        'Dev の実装をレビューしてください。',
-      )
-      const approved = reviewText.toLowerCase().includes('lgtm')
-      sharedHistory.push(`[Reviewer — タスク${itemNo + 1}]\n${reviewText}`)
-
-      // 修正が必要な場合（1回まで）
-      if (!approved) {
-        log('System', 'Reviewer から修正指示あり → Dev が対応します')
-        const revisionText = runAgent(
-          'Dev',
-          DEV_SYSTEM,
+      // Reviewer: レビュー（--no-review / --fast でスキップ）
+      if (!skipReview) {
+        const reviewText = runAgent(
+          'Reviewer',
+          REVIEWER_SYSTEM,
           sharedHistory,
-          'Reviewer の指摘に対応して修正してください。',
+          'Dev の実装をレビューしてください。',
         )
-        sharedHistory.push(`[Dev — 修正]\n${revisionText}`)
+        const approved = reviewText.toLowerCase().includes('lgtm')
+        sharedHistory.push(`[Reviewer — タスク${itemNo + 1}]\n${reviewText}`)
+
+        // 修正が必要な場合（1回まで）
+        if (!approved) {
+          log('System', 'Reviewer から修正指示あり → Dev が対応します')
+          const revisionText = runAgent(
+            'Dev',
+            DEV_SYSTEM,
+            sharedHistory,
+            'Reviewer の指摘に対応して修正してください。',
+          )
+          sharedHistory.push(`[Dev — 修正]\n${revisionText}`)
+        }
       }
 
       // タスクごとにコミット
@@ -336,18 +307,22 @@ function main() {
       gitCommit(commitMsg)
     }
 
-    // ─── ドキュメント更新 ─────────────────────────
-    log('System', 'CLAUDE.md を最新状態に更新中...')
-    const docText = runAgent(
-      'Dev',
-      DOC_UPDATE_SYSTEM,
-      sharedHistory,
-      'このスプリントの変更内容を CLAUDE.md に反映してください。',
-    )
-    sharedHistory.push(`[ドキュメント更新 — スプリント${sprintNo}]\n${docText}`)
-    gitCommit(
-      `ドキュメント更新（スプリント${sprintNo}）\n\nhttps://claude.ai/code/session_01PqsriuZUFvNfoZUk8KksSp`
-    )
+    // ─── ドキュメント更新（--no-doc-update / --fast でスキップ）─
+    if (!skipDocUpdate) {
+      log('System', 'CLAUDE.md を最新状態に更新中...')
+      const docText = runAgent(
+        'Dev',
+        DOC_UPDATE_SYSTEM,
+        sharedHistory,
+        'このスプリントの変更内容を CLAUDE.md に反映してください。',
+      )
+      sharedHistory.push(`[ドキュメント更新 — スプリント${sprintNo}]\n${docText}`)
+      if (!docText.includes('更新不要')) {
+        gitCommit(
+          `ドキュメント更新（スプリント${sprintNo}）\n\nhttps://claude.ai/code/session_01PqsriuZUFvNfoZUk8KksSp`
+        )
+      }
+    }
 
     if (maxSprints > 0 && sprintNo >= maxSprints) {
       console.log(`\n${C.cyan}✅ 指定スプリント数（${maxSprints}）完了。終了します。${C.reset}`)
