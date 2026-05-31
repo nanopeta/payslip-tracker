@@ -15,6 +15,7 @@ interface AppStore {
   updateWithholdingCert: (id: string, updates: Partial<WithholdingTaxCertificate>) => void
   deleteWithholdingCert: (id: string) => void
   setOvertimeSettings: (s: OvertimeSettings) => void
+  restoreState: (state: { payslips: Payslip[]; withholdingCerts: WithholdingTaxCertificate[] }) => void
 }
 
 const useStore = create<AppStore>((set, get) => {
@@ -67,6 +68,11 @@ const useStore = create<AppStore>((set, get) => {
     setOvertimeSettings: (s) => {
       set({ overtimeSettings: s })
       saveSettings(s)
+    },
+
+    restoreState: ({ payslips, withholdingCerts }) => {
+      set({ payslips, withholdingCerts })
+      save({ version: 1, payslips, withholdingCerts })
     },
   }
 })

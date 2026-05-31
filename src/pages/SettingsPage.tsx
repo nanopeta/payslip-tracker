@@ -1,17 +1,21 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import useStore from '../store/useStore'
 import { DEFAULT_OVERTIME_SETTINGS } from '../lib/storage'
 import { exportJSON, exportCSV } from '../lib/exporters'
+import type { StorageState } from '../lib/storage'
 
 export default function SettingsPage() {
   const settings = useStore((s) => s.overtimeSettings)
   const setOvertimeSettings = useStore((s) => s.setOvertimeSettings)
   const payslips = useStore((s) => s.payslips)
   const withholdingCerts = useStore((s) => s.withholdingCerts)
+  const restoreState = useStore((s) => s.restoreState)
 
   const [deemedLabel, setDeemedLabel] = useState(settings.deemedLabel)
   const [actualLabels, setActualLabels] = useState<string[]>(settings.actualLabels)
   const [saved, setSaved] = useState(false)
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleSave() {
     const labels = actualLabels.filter((l) => l.trim())
@@ -26,6 +30,35 @@ export default function SettingsPage() {
 
   function handleExportCSV() {
     exportCSV(payslips)
+  }
+
+  function handleImportJSON(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string) as StorageState
+        if (
+          !Array.isArray(parsed.payslips) ||
+          !Array.isArray(parsed.withholdingCerts) ||
+          typeof parsed.version !== 'number'
+        ) {
+          setImportStatus('error')
+          return
+        }
+        if (!window.confirm(`${parsed.payslips.length}件の明細と${parsed.withholdingCerts.length}件の源泉徴収票を復元します。現在のデータは上書きされます。よろしいですか？`)) {
+          return
+        }
+        restoreState({ payslips: parsed.payslips, withholdingCerts: parsed.withholdingCerts })
+        setImportStatus('success')
+      } catch {
+        setImportStatus('error')
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = ''
+      }
+    }
+    reader.readAsText(file)
   }
 
   function handleReset() {
@@ -151,6 +184,26 @@ export default function SettingsPage() {
             <span>CSVでエクスポート</span>
             <span className="text-xs text-gray-400">Excel・スプレッドシート用</span>
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImportJSON}
+          />
+          <button
+            onClick={() => { setImportStatus('idle'); fileInputRef.current?.click() }}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <span>JSONから復元</span>
+            <span className="text-xs text-gray-400">バックアップファイルを選択</span>
+          </button>
+          {importStatus === 'success' && (
+            <p className="text-xs px-1" style={{ color: '#5fad9b' }}>復元が完了しました</p>
+          )}
+          {importStatus === 'error' && (
+            <p className="text-xs px-1" style={{ color: '#d06868' }}>ファイルの形式が正しくありません</p>
+          )}
         </div>
       </div>
     </div>
