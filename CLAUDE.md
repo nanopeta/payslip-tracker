@@ -84,7 +84,7 @@ src/
 │   ├── mhtParser.ts        # MHTファイル解析（メイン）
 │   ├── pdfParser.ts        # PDF解析（旧・ほぼ未使用）
 │   ├── formatters.ts       # 円表示・和暦・時間フォーマット
-│   └── aggregations.ts     # 月次集計・年次集計・みなし残業計算
+│   └── aggregations.ts     # 月次集計・年次集計・みなし残業計算・社会保険料集計・前後明細ナビゲーション
 ├── store/
 │   └── useStore.ts         # Zustand store（localStorage と同期）
 ├── components/
@@ -104,10 +104,10 @@ src/
 │   ├── withholding/        # WithholdingCard
 │   └── upload/             # DropZone、PayslipReviewForm（重複検出付き）、WithholdingReviewForm
 └── pages/
-    ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳）
-    ├── PayslipsPage.tsx    # 給与明細一覧（一括削除機能あり）
-    ├── PayslipDetailPage.tsx
-    ├── AnnualSummaryPage.tsx
+    ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳・4保険合計）
+    ├── PayslipsPage.tsx    # 給与明細一覧（一括削除・年別グループ表示あり）
+    ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション付き）
+    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月付き）
     ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定
 ```
@@ -375,6 +375,50 @@ DEEMED_HOURS = 45  // みなし残業時間（固定値）
 
 複数の実残業ラベルをすべて合算して差額を計算。
 
+### previousPayslip / nextPayslip / pickMonthlyFirst
+
+```typescript
+previousPayslip(payslips, id)  // 対象明細より前月以前で最も新しい明細を返す
+nextPayslip(payslips, id)      // 対象明細より後月以降で最も古い明細を返す
+pickMonthlyFirst(candidates)   // 候補から monthly 優先（undefined は monthly 扱い）で返す
+```
+
+- 比較キーは `year*100+month`。年またぎも正しく動作
+- 同月複数明細がある場合は `pickMonthlyFirst` でボーナスより給与を優先
+
+### AnnualTotals（月次手取統計）
+
+`annualTotals()` で以下の統計フィールドも計算される:
+
+| フィールド | 内容 |
+|---|---|
+| `avgMonthlyNetPay` | 月次手取の平均（monthly 明細のみ、円単位で丸め） |
+| `maxMonthNetPay` | 月次手取の最高額 |
+| `maxMonthLabel` | 最高月のラベル（例: `"5月"`） |
+| `minMonthNetPay` | 月次手取の最低額 |
+| `minMonthLabel` | 最低月のラベル |
+
+`AnnualSummaryPage.tsx` で `monthlySlips.length > 0` のときのみ「月次手取（給与のみ）」セクションを表示。
+
+### latestSocialInsurance / SocialInsuranceStats
+
+```typescript
+latestSocialInsurance(payslips): SocialInsuranceStats | null
+```
+
+monthly 明細のみを対象に、最新月の健康保険＋介護保険＋厚生年金＋雇用保険の合計と差額を返す。
+
+```typescript
+interface SocialInsuranceStats {
+  total: number       // 4保険合計額
+  prevTotal: number | null
+  delta: number | null  // 前月比（1件のみのとき null）
+  label: string       // "YYYY/MM" 形式の最新月ラベル
+}
+```
+
+`DashboardPage.tsx` の StatCard で `deltaPositive={delta <= 0}`（保険料減少=緑）を使う。
+
 ### getIncomeValueByLabel
 
 ラベル文字列から数値を取得する優先順位:
@@ -575,13 +619,28 @@ const INCOME_LABELS: Record<string, string> = {
 ### ダッシュボードのセクション構成（DashboardPage.tsx）
 
 上から順に:
-1. **StatCards** — 最新月の差引支給額・総支給・控除合計・手取り率（前月比付き）
+1. **StatCards** — 最新月の差引支給額・総支給・控除合計・手取り率・有給残日数・**4保険合計**（前月比付き）
 2. **今年の累計（YTD）** — `annualTotals(payslips, currentYear)` で計算。当年データがない場合は非表示
 3. **みなし残業効率カード** — 差額・詳細数値・残業時間推移チャート（`OvertimeHoursChart`）・月次差額推移
 4. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
 5. **有給残日数の推移** — `PaidLeaveTrendChart`（2件以上ある場合のみ）
 6. **控除内訳ドーナツチャート** — `DeductionDonutChart`（最新給与月のデータ）
 7. **最近の給与明細** — 直近5件のカードリスト
+
+### PayslipsPage の年別グループ表示パターン
+
+`filterYear === 'all'` のとき、`filtered` を年ごとにグループ化して年ヘッダー（件数・手取合計）付きで表示する。
+
+```typescript
+// groupedByYear: { year, items, count, totalNetPay }[] | null
+// null のとき（特定年フィルター中）はフラットグリッドを表示
+const groupedByYear = filterYear === 'all'
+  ? Array.from(yearMap).sort(([a], [b]) => b - a).map(...)
+  : null
+```
+
+- `filterType`（給与/賞与）フィルターとの組み合わせは `filtered` を共通ベースとするため自動で正しく動作
+- 前月比デルタ参照には `filteredIndexMap`（`id → filtered インデックス`）を使う
 
 ### localStorage のデータをリセットしたいとき（開発中）
 
