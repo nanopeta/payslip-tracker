@@ -7,6 +7,15 @@ import { formatYen } from '../lib/formatters'
 export default function PayslipsPage() {
   const payslips = useStore((s) => s.payslips)
   const deletePayslips = useStore((s) => s.deletePayslips)
+
+  const [selecting, setSelecting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [filterYear, setFilterYear] = useState<number | 'all'>('all')
+  const [filterMonth, setFilterMonth] = useState<number | 'all'>('all')
+  const [filterType, setFilterType] = useState<'all' | 'monthly' | 'bonus'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc' | 'netpay-desc' | 'income-desc'>('date-desc')
+
   const sorted = [...payslips].sort((a, b) => {
     switch (sortOrder) {
       case 'date-asc':
@@ -19,14 +28,6 @@ export default function PayslipsPage() {
         return (b.year * 100 + b.month) - (a.year * 100 + a.month)
     }
   })
-
-  const [selecting, setSelecting] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [filterYear, setFilterYear] = useState<number | 'all'>('all')
-  const [filterMonth, setFilterMonth] = useState<number | 'all'>('all')
-  const [filterType, setFilterType] = useState<'all' | 'monthly' | 'bonus'>('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc' | 'netpay-desc' | 'income-desc'>('date-desc')
 
   const years = [...new Set(payslips.map((p) => p.year))].sort((a, b) => b - a)
   const hasBonusData = payslips.some((p) => p.payslipType === 'bonus')
