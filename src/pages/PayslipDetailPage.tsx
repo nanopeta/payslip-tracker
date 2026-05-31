@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import PayslipDetailView from '../components/payslip/PayslipDetailView'
 import PayslipReviewForm from '../components/upload/PayslipReviewForm'
+import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import { previousPayslip, nextPayslip } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 import type { Payslip } from '../types/payslip'
@@ -151,7 +152,15 @@ export default function PayslipDetailPage() {
           />
         </div>
       ) : (
-        <PayslipDetailView payslip={payslip} prev={prev} />
+        <>
+          {payslip.deductions.total > 0 && (
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-brand-200">
+              <p className="text-xs text-gray-400 mb-1">控除内訳</p>
+              <DeductionDonutChart deductions={payslip.deductions} />
+            </div>
+          )}
+          <PayslipDetailView payslip={payslip} prev={prev} />
+        </>
       )}
     </div>
   )
