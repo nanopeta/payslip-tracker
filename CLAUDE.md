@@ -95,6 +95,7 @@ src/
 │   │   ├── PaidLeaveTrendChart.tsx    # 有給残日数の推移（棒グラフ）
 │   │   ├── DeductionDonutChart.tsx    # 控除内訳ドーナツチャート（最新月）
 │   │   ├── OvertimeHoursChart.tsx     # 残業時間推移（棒グラフ・45h参照線付き）
+│   │   ├── SocialInsuranceTrendChart.tsx  # 4保険合計の月次推移（折れ線）
 │   │   ├── NetPayTrendChart.tsx       # 旧・未使用
 │   │   └── IncomeDeductionChart.tsx   # 旧・未使用
 │   ├── payslip/
@@ -105,8 +106,8 @@ src/
 │   └── upload/             # DropZone、PayslipReviewForm（重複検出付き）、WithholdingReviewForm
 └── pages/
     ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳・4保険合計）
-    ├── PayslipsPage.tsx    # 給与明細一覧（一括削除・年別グループ表示あり）
-    ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション付き）
+    ├── PayslipsPage.tsx    # 給与明細一覧（一括削除・年別グループ表示・月フィルター付き）
+    ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション・前月比サマリー付き）
     ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月付き）
     ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定
@@ -392,13 +393,37 @@ pickMonthlyFirst(candidates)   // 候補から monthly 優先（undefined は mo
 
 | フィールド | 内容 |
 |---|---|
+| `monthCount` | 全明細件数（賞与込み）。`hasYtdData` 判定専用 |
+| `monthlyMonthCount` | monthly 明細のユニーク月数（Set で重複排除）。YTD「〇ヶ月分」表示に使用 |
 | `avgMonthlyNetPay` | 月次手取の平均（monthly 明細のみ、円単位で丸め） |
 | `maxMonthNetPay` | 月次手取の最高額 |
 | `maxMonthLabel` | 最高月のラベル（例: `"5月"`） |
 | `minMonthNetPay` | 月次手取の最低額 |
 | `minMonthLabel` | 最低月のラベル |
 
+- `monthCount` は `hasYtdData`（YTD セクション表示判定）専用。賞与のみ月も1件としてカウント
+- `monthlyMonthCount` は表示用（「3ヶ月分」など）。賞与月を除いたユニーク月数
+
 `AnnualSummaryPage.tsx` で `monthlySlips.length > 0` のときのみ「月次手取（給与のみ）」セクションを表示。
+
+### socialInsuranceTrend / SocialInsuranceTrendPoint
+
+```typescript
+socialInsuranceTrend(payslips): SocialInsuranceTrendPoint[]
+```
+
+monthly 明細のみを対象に、全期間の月次 4保険合計を時系列順（古い→新しい）で返す。
+
+```typescript
+export interface SocialInsuranceTrendPoint {
+  label: string   // "YYYY/MM" 形式（applyPeriodFilter 互換）
+  total: number   // 4保険合計額
+}
+```
+
+- `SocialInsuranceTrendChart.tsx` で Recharts 折れ線チャートとして描画
+- `DashboardPage.tsx` の `siTrend.length >= 2` のときのみ表示（StatCards 直下・YTD 前）
+- `calcSocialInsuranceTotal()` を再利用して計算
 
 ### latestSocialInsurance / SocialInsuranceStats
 
@@ -620,12 +645,13 @@ const INCOME_LABELS: Record<string, string> = {
 
 上から順に:
 1. **StatCards** — 最新月の差引支給額・総支給・控除合計・手取り率・有給残日数・**4保険合計**（前月比付き）
-2. **今年の累計（YTD）** — `annualTotals(payslips, currentYear)` で計算。当年データがない場合は非表示
-3. **みなし残業効率カード** — 差額・詳細数値・残業時間推移チャート（`OvertimeHoursChart`）・月次差額推移
-4. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
-5. **有給残日数の推移** — `PaidLeaveTrendChart`（2件以上ある場合のみ）
-6. **控除内訳ドーナツチャート** — `DeductionDonutChart`（最新給与月のデータ）
-7. **最近の給与明細** — 直近5件のカードリスト
+2. **社会保険料の推移** — `SocialInsuranceTrendChart`（2件以上ある場合のみ）
+3. **今年の累計（YTD）** — `annualTotals(payslips, currentYear)` で計算。当年データがない場合は非表示
+4. **みなし残業効率カード** — 差額・詳細数値・残業時間推移チャート（`OvertimeHoursChart`）・月次差額推移
+5. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
+6. **有給残日数の推移** — `PaidLeaveTrendChart`（2件以上ある場合のみ）
+7. **控除内訳ドーナツチャート** — `DeductionDonutChart`（最新給与月のデータ）
+8. **最近の給与明細** — 直近5件のカードリスト
 
 ### PayslipsPage の年別グループ表示パターン
 
@@ -641,6 +667,36 @@ const groupedByYear = filterYear === 'all'
 
 - `filterType`（給与/賞与）フィルターとの組み合わせは `filtered` を共通ベースとするため自動で正しく動作
 - 前月比デルタ参照には `filteredIndexMap`（`id → filtered インデックス`）を使う
+
+### PayslipsPage の月フィルターパターン
+
+`filterYear !== 'all'` のときのみ月 pill ボタンを表示する。
+
+```typescript
+const [filterMonth, setFilterMonth] = useState<number | 'all'>('all')
+
+// 年を 'all' に戻したとき月フィルターもリセット
+if (val === 'all') setFilterMonth('all')
+```
+
+- `filterYear === 'all'` のとき月フィルターは非表示（`groupedByYear` と排他）
+- スタイルは期間フィルターと同一（選択中: `bg-brand-600 text-white`、未選択: `bg-gray-100 text-gray-500`）
+
+### PayslipDetailPage の前月比サマリー
+
+前後ナビゲーションバー直下に手取り・総支給・控除合計の前月比カード（`!editing && prev` のときのみ表示）。
+
+```typescript
+const items = [
+  { label: '手取り', delta: payslip.summary.netPay - prev.summary.netPay },
+  { label: '総支給', delta: payslip.income.total - prev.income.total },
+  { label: '控除合計', delta: payslip.deductions.total - prev.deductions.total, invert: true },
+]
+// invert: true の項目は増加→赤（控除が増えると手取り減少）
+style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}
+```
+
+- **`invert` フラグ**: 控除合計など「増加が不利」な指標に使う。`deltaPositive={delta <= 0}` の StatCard パターンと同義
 
 ### localStorage のデータをリセットしたいとき（開発中）
 
