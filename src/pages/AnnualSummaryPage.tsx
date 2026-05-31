@@ -8,6 +8,29 @@ import WithholdingCard from '../components/withholding/WithholdingCard'
 import AnnualDetailView from '../components/payslip/AnnualDetailView'
 import { annualTotals, uniqueYears } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
+import type { Payslip } from '../types/payslip'
+
+function exportCsv(year: number, slips: Payslip[]) {
+  const headers = ['年月', '種別', '総支給', '控除合計', '手取り', '残業時間']
+  const rows = [...slips]
+    .sort((a, b) => a.month - b.month)
+    .map((p) => [
+      `${p.year}/${String(p.month).padStart(2, '0')}`,
+      p.payslipType === 'bonus' ? (p.payslipLabel ?? '賞与') : '給与',
+      p.income.total,
+      p.deductions.total,
+      p.summary.netPay,
+      p.attendance.overtimeHours,
+    ])
+  const csv = [headers, ...rows].map((r) => r.join(',')).join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `payslip_${year}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 export default function AnnualSummaryPage() {
   const payslips = useStore((s) => s.payslips)
@@ -143,22 +166,34 @@ export default function AnnualSummaryPage() {
 
             return (
               <div key={year} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                {/* Header — clickable */}
-                <button
-                  onClick={() => toggleYear(year)}
-                  className="w-full flex items-center justify-between px-5 pt-5 pb-4 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <p className="font-bold text-gray-900">
-                    {year}年
-                    <span className="text-sm font-normal text-gray-400 ml-2">{monthlyCount}ヶ月分{hasBonus ? `・賞与${bonusSlips.length}件` : ''}</span>
-                  </p>
-                  <svg
-                    className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                {/* Header row */}
+                <div className="flex items-center gap-2 px-5 pt-5 pb-4">
+                  <button
+                    onClick={() => toggleYear(year)}
+                    className="flex-1 flex items-center justify-between text-left hover:bg-gray-50 rounded transition-colors"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                    <p className="font-bold text-gray-900">
+                      {year}年
+                      <span className="text-sm font-normal text-gray-400 ml-2">{monthlyCount}ヶ月分{hasBonus ? `・賞与${bonusSlips.length}件` : ''}</span>
+                    </p>
+                    <svg
+                      className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => exportCsv(year, yearSlips)}
+                    title={`${year}年のCSVをダウンロード`}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-brand-600 border border-brand-200 rounded-lg hover:bg-brand-50 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    CSV
+                  </button>
+                </div>
 
                 <div className="px-5 pb-5 space-y-4">
                   {/* Totals */}
