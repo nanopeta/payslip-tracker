@@ -191,7 +191,7 @@ export default function DashboardPage() {
       {hasYtdData && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
-          <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthCount}ヶ月分</p>
+          <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
           <div className="grid grid-cols-3 gap-3">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">年間総支給額</p>

@@ -115,6 +115,7 @@ export interface AnnualTotals {
   totalNetPay: number
   totalOvertime: number
   monthCount: number
+  monthlyMonthCount: number
   avgMonthlyNetPay: number
   maxMonthNetPay: number
   maxMonthLabel: string
@@ -157,6 +158,7 @@ export function annualTotals(payslips: Payslip[], year: number): AnnualTotals {
     totalNetPay: filtered.reduce((s, p) => s + p.summary.netPay, 0),
     totalOvertime: filtered.reduce((s, p) => s + p.income.overtime, 0),
     monthCount: filtered.length,
+    monthlyMonthCount: new Set(monthlySlips.map((p) => p.month)).size,
     avgMonthlyNetPay,
     maxMonthNetPay,
     maxMonthLabel,
