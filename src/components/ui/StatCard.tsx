@@ -3,6 +3,7 @@ interface StatCardProps {
   value: string
   sub?: string
   delta?: number
+  deltaLabel?: string
   deltaText?: string
   deltaPositive?: boolean
   highlight?: boolean
@@ -11,7 +12,7 @@ interface StatCardProps {
 const SUCCESS = '#5fad9b'
 const DANGER  = '#d06868'
 
-export default function StatCard({ title, value, sub, delta, deltaText, deltaPositive, highlight }: StatCardProps) {
+export default function StatCard({ title, value, sub, delta, deltaLabel, deltaText, deltaPositive, highlight }: StatCardProps) {
   const highlightStyle = highlight
     ? { background: 'linear-gradient(135deg, #2a5068 0%, #3d7490 50%, #4e8fa6 100%)' }
     : {}
@@ -26,7 +27,7 @@ export default function StatCard({ title, value, sub, delta, deltaText, deltaPos
       {delta !== undefined && (
         <p className="text-xs mt-1 font-medium" style={{ color: delta >= 0 ? SUCCESS : DANGER }}>
           {delta >= 0 ? '+' : '-'}¥{Math.abs(delta).toLocaleString('ja-JP')}
-          <span className="font-normal ml-1" style={{ color: highlight ? 'rgba(255,255,255,0.6)' : '#9ca3af' }}>前月比</span>
+          <span className="font-normal ml-1" style={{ color: highlight ? 'rgba(255,255,255,0.6)' : '#9ca3af' }}>{deltaLabel ?? '前月比'}</span>
         </p>
       )}
       {deltaText !== undefined && (

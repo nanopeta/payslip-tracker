@@ -102,6 +102,19 @@ export default function DashboardPage() {
     (p) => p.year === currentYear && (!p.payslipType || p.payslipType === 'monthly')
   )
 
+  // 今年の賞与合計
+  const currentYearBonusSlips = payslips.filter(
+    (p) => p.year === currentYear && p.payslipType === 'bonus'
+  )
+  const currentYearBonusTotal = currentYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+  const prevYearBonusSlips = payslips.filter(
+    (p) => p.year === currentYear - 1 && p.payslipType === 'bonus'
+  )
+  const prevYearBonusTotal = prevYearBonusSlips.length > 0
+    ? prevYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+    : null
+  const bonusDelta = prevYearBonusTotal !== null ? currentYearBonusTotal - prevYearBonusTotal : null
+
   const recent = sorted.slice(0, 5)
 
   if (payslips.length === 0) {
@@ -175,6 +188,15 @@ export default function DashboardPage() {
             sub={socialInsuranceStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
             deltaText={socialInsuranceStats.delta !== null ? `${socialInsuranceStats.delta >= 0 ? '+' : '-'}¥${Math.abs(socialInsuranceStats.delta).toLocaleString('ja-JP')}` : undefined}
             deltaPositive={socialInsuranceStats.delta !== null && socialInsuranceStats.delta <= 0}
+          />
+        )}
+        {hasBonusData && currentYearBonusTotal > 0 && (
+          <StatCard
+            title="今年の賞与"
+            value={formatYen(currentYearBonusTotal)}
+            sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
+            delta={bonusDelta !== null ? bonusDelta : undefined}
+            deltaLabel="前年比"
           />
         )}
       </div>
