@@ -21,8 +21,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const PROJECT_ROOT = path.resolve(__dirname, '../..')
 
-// エージェントはシステム temp dir から起動（PROJECT_ROOT の CLAUDE.md を読み込まないため）
-const AGENT_CWD = os.tmpdir()
+// PROJECT_ROOT から起動（Windows ではTEMPからだとプロジェクトへのアクセスがブロックされる）
+const AGENT_CWD = PROJECT_ROOT
 
 const C = {
   reset:  '\x1b[0m',
@@ -39,6 +39,9 @@ const C = {
 const cliArgs = process.argv.slice(2)
 const sprintSize = parseInt(
   cliArgs.find(a => a.startsWith('--sprint-size='))?.split('=')[1] ?? '5'
+)
+const maxSprints = parseInt(
+  cliArgs.find(a => a.startsWith('--max-sprints='))?.split('=')[1] ?? '0'
 )
 
 // ─── claude CLI の存在確認 ────────────────────────────
@@ -346,6 +349,10 @@ function main() {
       `ドキュメント更新（スプリント${sprintNo}）\n\nhttps://claude.ai/code/session_01PqsriuZUFvNfoZUk8KksSp`
     )
 
+    if (maxSprints > 0 && sprintNo >= maxSprints) {
+      console.log(`\n${C.cyan}✅ 指定スプリント数（${maxSprints}）完了。終了します。${C.reset}`)
+      break
+    }
     sprintNo++
     console.log(`\n${C.cyan}🔄 スプリント ${sprintNo} を開始します... (Ctrl+C で停止)${C.reset}`)
   }

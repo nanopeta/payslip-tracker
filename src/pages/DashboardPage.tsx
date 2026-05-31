@@ -7,8 +7,9 @@ import TrendSummaryChart from '../components/charts/TrendSummaryChart'
 import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
+import SocialInsuranceTrendChart from '../components/charts/SocialInsuranceTrendChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, getIncomeValueByLabel, annualTotals } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, latestPaidLeave, getIncomeValueByLabel, annualTotals, latestSocialInsurance, socialInsuranceTrend } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 type PeriodFilter = 'all' | 'year' | '6m' | '12m'
@@ -60,6 +61,11 @@ export default function DashboardPage() {
 
   // 有給残日数推移
   const leaveTrend = paidLeaveTrend(payslips)
+  const paidLeaveStats = latestPaidLeave(payslips)
+
+  // 4保険合計
+  const socialInsuranceStats = latestSocialInsurance(payslips)
+  const siTrend = socialInsuranceTrend(payslips)
 
   // みなし残業効率（給与明細のみ対象）
   const monthlyPayslips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
@@ -92,6 +98,22 @@ export default function DashboardPage() {
   const currentYear = new Date().getFullYear()
   const ytd = annualTotals(payslips, currentYear)
   const hasYtdData = ytd.monthCount > 0
+  const currentYearMonthlySlips = payslips.filter(
+    (p) => p.year === currentYear && (!p.payslipType || p.payslipType === 'monthly')
+  )
+
+  // 今年の賞与合計
+  const currentYearBonusSlips = payslips.filter(
+    (p) => p.year === currentYear && p.payslipType === 'bonus'
+  )
+  const currentYearBonusTotal = currentYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+  const prevYearBonusSlips = payslips.filter(
+    (p) => p.year === currentYear - 1 && p.payslipType === 'bonus'
+  )
+  const prevYearBonusTotal = prevYearBonusSlips.length > 0
+    ? prevYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+    : null
+  const bonusDelta = prevYearBonusTotal !== null ? currentYearBonusTotal - prevYearBonusTotal : null
 
   const recent = sorted.slice(0, 5)
 
@@ -150,13 +172,48 @@ export default function DashboardPage() {
             deltaPositive={rateChange !== null && rateChange >= 0}
           />
         )}
+        {paidLeaveStats !== null && (
+          <StatCard
+            title="有給残日数"
+            value={`${paidLeaveStats.remaining}日`}
+            sub={paidLeaveStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
+            deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
+            deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
+          />
+        )}
+        {socialInsuranceStats !== null && (
+          <StatCard
+            title="4保険合計"
+            value={formatYen(socialInsuranceStats.total)}
+            sub={socialInsuranceStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
+            deltaText={socialInsuranceStats.delta !== null ? `${socialInsuranceStats.delta >= 0 ? '+' : '-'}¥${Math.abs(socialInsuranceStats.delta).toLocaleString('ja-JP')}` : undefined}
+            deltaPositive={socialInsuranceStats.delta !== null && socialInsuranceStats.delta <= 0}
+          />
+        )}
+        {hasBonusData && currentYearBonusTotal > 0 && (
+          <StatCard
+            title="今年の賞与"
+            value={formatYen(currentYearBonusTotal)}
+            sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
+            delta={bonusDelta !== null ? bonusDelta : undefined}
+            deltaLabel="前年比"
+          />
+        )}
       </div>
+
+      {/* Social insurance trend */}
+      {siTrend.length >= 2 && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <p className="text-sm font-semibold text-gray-700 mb-3">社会保険料の推移</p>
+          <SocialInsuranceTrendChart data={siTrend} />
+        </div>
+      )}
 
       {/* YTD summary */}
       {hasYtdData && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
-          <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthCount}ヶ月分</p>
+          <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
           <div className="grid grid-cols-3 gap-3">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">年間総支給額</p>
@@ -171,6 +228,27 @@ export default function DashboardPage() {
               <p className="text-sm font-semibold tabular-nums" style={{ color: '#d06868' }}>{formatYen(ytd.totalDeductions)}</p>
             </div>
           </div>
+          {currentYearMonthlySlips.length > 0 && (
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs text-gray-400">平均月手取</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(ytd.avgMonthlyNetPay)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">最高月</p>
+                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(ytd.maxMonthNetPay)}</p>
+                  <p className="text-xs text-gray-400">{ytd.maxMonthLabel}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">最低月</p>
+                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(ytd.minMonthNetPay)}</p>
+                  <p className="text-xs text-gray-400">{ytd.minMonthLabel}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

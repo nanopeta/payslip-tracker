@@ -84,7 +84,7 @@ src/
 │   ├── mhtParser.ts        # MHTファイル解析（メイン）
 │   ├── pdfParser.ts        # PDF解析（旧・ほぼ未使用）
 │   ├── formatters.ts       # 円表示・和暦・時間フォーマット
-│   └── aggregations.ts     # 月次集計・年次集計・みなし残業計算
+│   └── aggregations.ts     # 月次集計・年次集計・みなし残業計算・社会保険料集計・前後明細ナビゲーション
 ├── store/
 │   └── useStore.ts         # Zustand store（localStorage と同期）
 ├── components/
@@ -95,19 +95,20 @@ src/
 │   │   ├── PaidLeaveTrendChart.tsx    # 有給残日数の推移（棒グラフ）
 │   │   ├── DeductionDonutChart.tsx    # 控除内訳ドーナツチャート（最新月）
 │   │   ├── OvertimeHoursChart.tsx     # 残業時間推移（棒グラフ・45h参照線付き）
+│   │   ├── SocialInsuranceTrendChart.tsx  # 4保険合計の月次推移（折れ線）
 │   │   ├── NetPayTrendChart.tsx       # 旧・未使用
 │   │   └── IncomeDeductionChart.tsx   # 旧・未使用
 │   ├── payslip/
-│   │   ├── PayslipCard.tsx            # 明細一覧のカード（bonus 種別 pill バッジ付き）
+│   │   ├── PayslipCard.tsx            # 明細一覧のカード（monthly かつ overtimeHours > 0 のとき残業時間を表示）
 │   │   ├── PayslipDetailView.tsx      # 1件の明細詳細
 │   │   └── AnnualDetailView.tsx       # 年間集計詳細（PayslipDetailView スタイル）
 │   ├── withholding/        # WithholdingCard
 │   └── upload/             # DropZone、PayslipReviewForm（重複検出付き）、WithholdingReviewForm
 └── pages/
-    ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳）
-    ├── PayslipsPage.tsx    # 給与明細一覧（一括削除機能あり）
-    ├── PayslipDetailPage.tsx  # 明細詳細（前の明細/次の明細ナビゲーション付き）
-    ├── AnnualSummaryPage.tsx
+    ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳・4保険合計）
+    ├── PayslipsPage.tsx    # 給与明細一覧（一括削除・年別グループ表示・月フィルター付き）
+    ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション・前月比サマリー付き）
+    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月・税/社保内訳付き）
     ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定
 ```
@@ -280,7 +281,7 @@ delta >= 0 → '+¥XX,XXX' (color: #5fad9b)
 delta < 0  → '-¥XX,XXX' (color: #d06868)
 ```
 
-Props: `title`, `value`, `sub?`, `delta?`（数値、¥付きで自動フォーマット）, `deltaText?`（文字列、`deltaPositive?` で色制御）, `highlight?`
+Props: `title`, `value`, `sub?`, `delta?`（数値、¥付きで自動フォーマット）, `deltaLabel?`（デフォルト: `'前月比'`）, `deltaText?`（文字列、`deltaPositive?` で色制御）, `highlight?`
 
 ### 給与種別バッジ（pill）
 
@@ -390,6 +391,74 @@ DEEMED_HOURS = 45  // みなし残業時間（固定値）
 ```
 
 複数の実残業ラベルをすべて合算して差額を計算。
+
+### previousPayslip / nextPayslip / pickMonthlyFirst
+
+```typescript
+previousPayslip(payslips, id)  // 対象明細より前月以前で最も新しい明細を返す
+nextPayslip(payslips, id)      // 対象明細より後月以降で最も古い明細を返す
+pickMonthlyFirst(candidates)   // 候補から monthly 優先（undefined は monthly 扱い）で返す
+```
+
+- 比較キーは `year*100+month`。年またぎも正しく動作
+- 同月複数明細がある場合は `pickMonthlyFirst` でボーナスより給与を優先
+
+### AnnualTotals（月次手取統計）
+
+`annualTotals()` で以下の統計フィールドも計算される:
+
+| フィールド | 内容 |
+|---|---|
+| `monthCount` | 全明細件数（賞与込み）。`hasYtdData` 判定専用 |
+| `monthlyMonthCount` | monthly 明細のユニーク月数（Set で重複排除）。YTD「〇ヶ月分」表示に使用 |
+| `avgMonthlyNetPay` | 月次手取の平均（monthly 明細のみ、円単位で丸め） |
+| `maxMonthNetPay` | 月次手取の最高額 |
+| `maxMonthLabel` | 最高月のラベル（例: `"5月"`） |
+| `minMonthNetPay` | 月次手取の最低額 |
+| `minMonthLabel` | 最低月のラベル |
+
+- `monthCount` は `hasYtdData`（YTD セクション表示判定）専用。賞与のみ月も1件としてカウント
+- `monthlyMonthCount` は表示用（「3ヶ月分」など）。賞与月を除いたユニーク月数
+
+`AnnualSummaryPage.tsx` で `monthlySlips.length > 0` のときのみ「月次手取（給与のみ）」セクションを表示。
+
+### socialInsuranceTrend / SocialInsuranceTrendPoint
+
+```typescript
+socialInsuranceTrend(payslips): SocialInsuranceTrendPoint[]
+```
+
+monthly 明細のみを対象に、全期間の月次 4保険合計を時系列順（古い→新しい）で返す。
+
+```typescript
+export interface SocialInsuranceTrendPoint {
+  label: string   // "YYYY/MM" 形式（applyPeriodFilter 互換）
+  total: number   // 4保険合計額
+}
+```
+
+- `SocialInsuranceTrendChart.tsx` で Recharts 折れ線チャートとして描画
+- `DashboardPage.tsx` の `siTrend.length >= 2` のときのみ表示（StatCards 直下・YTD 前）
+- `calcSocialInsuranceTotal()` を再利用して計算
+
+### latestSocialInsurance / SocialInsuranceStats
+
+```typescript
+latestSocialInsurance(payslips): SocialInsuranceStats | null
+```
+
+monthly 明細のみを対象に、最新月の健康保険＋介護保険＋厚生年金＋雇用保険の合計と差額を返す。
+
+```typescript
+interface SocialInsuranceStats {
+  total: number       // 4保険合計額
+  prevTotal: number | null
+  delta: number | null  // 前月比（1件のみのとき null）
+  label: string       // "YYYY/MM" 形式の最新月ラベル
+}
+```
+
+`DashboardPage.tsx` の StatCard で `deltaPositive={delta <= 0}`（保険料減少=緑）を使う。
 
 ### getIncomeValueByLabel
 
@@ -591,13 +660,82 @@ const INCOME_LABELS: Record<string, string> = {
 ### ダッシュボードのセクション構成（DashboardPage.tsx）
 
 上から順に:
-1. **StatCards** — 最新月の差引支給額・総支給・控除合計・手取り率（前月比付き）
-2. **今年の累計（YTD）** — `annualTotals(payslips, currentYear)` で計算。当年データがない場合は非表示
-3. **みなし残業効率カード** — 差額・詳細数値・残業時間推移チャート（`OvertimeHoursChart`）・月次差額推移
-4. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
-5. **有給残日数の推移** — `PaidLeaveTrendChart`（2件以上ある場合のみ）
-6. **控除内訳ドーナツチャート** — `DeductionDonutChart`（最新給与月のデータ）
-7. **最近の給与明細** — 直近5件のカードリスト
+1. **StatCards** — 最新月の差引支給額・総支給・控除合計・手取り率・有給残日数・**4保険合計**（前月比付き）・**今年の賞与**（前年比付き・当年賞与データがある場合のみ）
+2. **社会保険料の推移** — `SocialInsuranceTrendChart`（2件以上ある場合のみ）
+3. **今年の累計（YTD）** — `annualTotals(payslips, currentYear)` で計算。当年データがない場合は非表示
+4. **みなし残業効率カード** — 差額・詳細数値・残業時間推移チャート（`OvertimeHoursChart`）・月次差額推移
+5. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
+6. **有給残日数の推移** — `PaidLeaveTrendChart`（2件以上ある場合のみ）
+7. **控除内訳ドーナツチャート** — `DeductionDonutChart`（最新給与月のデータ）
+8. **最近の給与明細** — 直近5件のカードリスト
+
+### PayslipsPage の年別グループ表示パターン
+
+`filterYear === 'all'` のとき、`filtered` を年ごとにグループ化して年ヘッダー（件数・手取合計）付きで表示する。
+
+```typescript
+// groupedByYear: { year, items, count, totalNetPay }[] | null
+// null のとき（特定年フィルター中）はフラットグリッドを表示
+const groupedByYear = filterYear === 'all'
+  ? Array.from(yearMap).sort(([a], [b]) => b - a).map(...)
+  : null
+```
+
+- `filterType`（給与/賞与）フィルターとの組み合わせは `filtered` を共通ベースとするため自動で正しく動作
+- 前月比デルタ参照には `filteredIndexMap`（`id → filtered インデックス`）を使う
+
+### PayslipsPage の月フィルターパターン
+
+`filterYear !== 'all'` のときのみ月 pill ボタンを表示する。
+
+```typescript
+const [filterMonth, setFilterMonth] = useState<number | 'all'>('all')
+
+// 年を 'all' に戻したとき月フィルターもリセット
+if (val === 'all') setFilterMonth('all')
+```
+
+- `filterYear === 'all'` のとき月フィルターは非表示（`groupedByYear` と排他）
+- スタイルは期間フィルターと同一（選択中: `bg-brand-600 text-white`、未選択: `bg-gray-100 text-gray-500`）
+
+### PayslipsPage の絞り込みサマリーバー
+
+フィルター適用時（`isFiltered === true`）かつ `filtered.length > 0` のとき、一覧末尾にサマリーバーを表示する。
+
+```typescript
+// フィルター適用判定（いずれかが 'all' 以外なら true）
+const isFiltered =
+  filtered.length < payslips.length ||
+  filterYear !== 'all' ||
+  filterType !== 'all' ||
+  filterMonth !== 'all'
+
+// 集計
+const filteredNetPayTotal = filtered.reduce((sum, p) => sum + p.summary.netPay, 0)
+const filteredNetPayAvg = filtered.length > 0 ? Math.round(filteredNetPayTotal / filtered.length) : 0
+```
+
+表示内容: 「絞り込み件数 · 手取合計 · 平均手取」を `·` 区切りで横並び。
+スタイル: `bg-white rounded-xl border border-brand-200 shadow-sm px-5 py-3`
+
+- `filtered.length === 0` のとき「条件に一致する明細がありません」が表示されるためサマリーバーは非表示
+- `filterYear === 'all'` のとき月フィルターは非表示だが、`filterType !== 'all'` 選択時は年別グループビューの下にサマリーが現れる（全体合計として自然な挙動）
+
+### PayslipDetailPage の前月比サマリー
+
+前後ナビゲーションバー直下に手取り・総支給・控除合計の前月比カード（`!editing && prev` のときのみ表示）。
+
+```typescript
+const items = [
+  { label: '手取り', delta: payslip.summary.netPay - prev.summary.netPay },
+  { label: '総支給', delta: payslip.income.total - prev.income.total },
+  { label: '控除合計', delta: payslip.deductions.total - prev.deductions.total, invert: true },
+]
+// invert: true の項目は増加→赤（控除が増えると手取り減少）
+style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}
+```
+
+- **`invert` フラグ**: 控除合計など「増加が不利」な指標に使う。`deltaPositive={delta <= 0}` の StatCard パターンと同義
 
 ### localStorage のデータをリセットしたいとき（開発中）
 
