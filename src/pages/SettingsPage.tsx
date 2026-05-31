@@ -47,6 +47,7 @@ export default function SettingsPage() {
           typeof parsed.version !== 'number'
         ) {
           setImportStatus('error')
+          setTimeout(() => setImportStatus('idle'), 4000)
           return
         }
         if (!window.confirm(`${parsed.payslips.length}件の明細と${parsed.withholdingCerts.length}件の源泉徴収票を復元します。現在のデータは上書きされます。よろしいですか？`)) {
@@ -54,8 +55,10 @@ export default function SettingsPage() {
         }
         restoreState({ payslips: parsed.payslips, withholdingCerts: parsed.withholdingCerts })
         setImportStatus('success')
+        setTimeout(() => setImportStatus('idle'), 3000)
       } catch {
         setImportStatus('error')
+        setTimeout(() => setImportStatus('idle'), 4000)
       } finally {
         if (fileInputRef.current) fileInputRef.current.value = ''
       }
@@ -173,12 +176,22 @@ export default function SettingsPage() {
             </p>
             <div className="flex justify-between text-xs text-gray-600">
               <span>{deemedLabel.trim() || 'みなし残業'}</span>
-              <span className="font-mono">{formatYen(previewDeemed ?? 0)}</span>
+              <span
+                className="font-mono"
+                style={{ color: (previewDeemed ?? 0) === 0 ? '#9ca3af' : undefined }}
+              >
+                {(previewDeemed ?? 0) === 0 ? '¥0 (未検出)' : formatYen(previewDeemed ?? 0)}
+              </span>
             </div>
             {previewActualBreakdown.map((row, i) => (
               <div key={i} className="flex justify-between text-xs text-gray-500 pl-2">
                 <span>−&nbsp;{row.label}</span>
-                <span className="font-mono">{formatYen(row.value)}</span>
+                <span
+                  className="font-mono"
+                  style={{ color: row.value === 0 ? '#9ca3af' : undefined }}
+                >
+                  {row.value === 0 ? '¥0 (未検出)' : formatYen(row.value)}
+                </span>
               </div>
             ))}
             <div className="border-t border-brand-200 pt-1.5 flex justify-between text-xs font-semibold">
