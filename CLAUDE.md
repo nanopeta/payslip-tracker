@@ -110,9 +110,9 @@ src/
 │   └── upload/             # DropZone、PayslipReviewForm（重複検出付き）、WithholdingReviewForm
 └── pages/
     ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳・4保険合計）
-    ├── PayslipsPage.tsx    # 給与明細一覧（一括削除・年別グループ表示・月フィルター付き）
+    ├── PayslipsPage.tsx    # 給与明細一覧（一括削除・年別グループ表示・月フィルター・フリーテキスト検索付き）
     ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション・前月比サマリー付き）
-    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月・税/社保内訳付き）
+    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月・税/社保内訳・CSV エクスポート付き）
     ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定
 ```
@@ -712,7 +712,8 @@ const isFiltered =
   filtered.length < payslips.length ||
   filterYear !== 'all' ||
   filterType !== 'all' ||
-  filterMonth !== 'all'
+  filterMonth !== 'all' ||
+  searchQuery.trim() !== ''
 
 // 集計
 const filteredNetPayTotal = filtered.reduce((sum, p) => sum + p.summary.netPay, 0)
@@ -724,6 +725,75 @@ const filteredNetPayAvg = filtered.length > 0 ? Math.round(filteredNetPayTotal /
 
 - `filtered.length === 0` のとき「条件に一致する明細がありません」が表示されるためサマリーバーは非表示
 - `filterYear === 'all'` のとき月フィルターは非表示だが、`filterType !== 'all'` 選択時は年別グループビューの下にサマリーが現れる（全体合計として自然な挙動）
+
+### PayslipsPage のフリーテキスト検索パターン
+
+`searchQuery` state + `matchesSearch()` で年月・金額・氏名・ラベルを横断検索する。
+
+```typescript
+const [searchQuery, setSearchQuery] = useState('')
+
+function matchesSearch(p: Payslip): boolean {
+  const q = searchQuery.trim().toLowerCase()
+  if (!q) return true
+
+  // 年月マッチ: "2026年5月" / "2026/05"
+  const yearMonthFull = `${p.year}年${p.month}月`
+  const yearMonthSlash = `${p.year}/${String(p.month).padStart(2, '0')}`
+  if (yearMonthFull.includes(q) || yearMonthSlash.includes(q)) return true
+  if (`${p.year}`.startsWith(q) || `${p.month}月` === q) return true
+
+  // 金額マッチ: 4桁以上の数字列で総支給・手取りを部分一致
+  const qDigits = q.replace(/[^0-9]/g, '')
+  if (qDigits.length >= 4) {
+    if (String(p.income.total).includes(qDigits)) return true
+    if (String(p.summary.netPay).includes(qDigits)) return true
+  }
+
+  // テキストマッチ
+  if (p.employeeName?.toLowerCase().includes(q)) return true
+  if (p.companyName?.toLowerCase().includes(q)) return true
+  if (p.payslipLabel?.toLowerCase().includes(q)) return true
+
+  return false
+}
+```
+
+- 検索 UI: 虫眼鏡 SVG アイコン（`absolute left-3`）付きの `<input type="text">` をフィルター行の下に配置
+- `isFiltered` 判定に `searchQuery.trim() !== ''` を含める（サマリーバー表示に影響）
+
+### AnnualSummaryPage の CSV エクスポートパターン
+
+各年カードのヘッダー右端に CSV ダウンロードボタンを配置する。
+
+```typescript
+function exportCsv(year: number, slips: Payslip[]) {
+  const headers = ['年月', '種別', '総支給', '控除合計', '手取り', '残業時間']
+  const rows = [...slips]
+    .sort((a, b) => a.month - b.month)
+    .map((p) => [
+      `${p.year}/${String(p.month).padStart(2, '0')}`,
+      p.payslipType === 'bonus' ? (p.payslipLabel ?? '賞与') : '給与',
+      p.income.total,
+      p.deductions.total,
+      p.summary.netPay,
+      p.attendance.overtimeHours,
+    ])
+  const csv = [headers, ...rows].map((r) => r.join(',')).join('\n')
+  // BOM付き UTF-8 で Excel 文字化け防止
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `payslip_${year}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+```
+
+- ヘッダー行レイアウト: 展開トグルボタン（`flex-1`）+ CSV ボタンの横並び `<div className="flex items-center gap-2">`
+- CSV ボタンスタイル: `text-brand-600 border border-brand-200 rounded-lg hover:bg-brand-50`
+- ファイル名: `payslip_YYYY.csv`
 
 ### PayslipDetailPage の前月比サマリー
 

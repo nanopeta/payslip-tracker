@@ -151,7 +151,7 @@ export default function PayslipDetailPage() {
           />
         </div>
       ) : (
-        <PayslipDetailView payslip={payslip} />
+        <PayslipDetailView payslip={payslip} prev={prev} />
       )}
     </div>
   )

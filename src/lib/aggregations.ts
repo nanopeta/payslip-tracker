@@ -114,6 +114,8 @@ export interface AnnualTotals {
   totalDeductions: number
   totalNetPay: number
   totalOvertime: number
+  totalIncomeTax: number
+  totalResidentTax: number
   monthCount: number
   monthlyMonthCount: number
   avgMonthlyNetPay: number
@@ -157,6 +159,8 @@ export function annualTotals(payslips: Payslip[], year: number): AnnualTotals {
     totalDeductions: filtered.reduce((s, p) => s + p.deductions.total, 0),
     totalNetPay: filtered.reduce((s, p) => s + p.summary.netPay, 0),
     totalOvertime: filtered.reduce((s, p) => s + p.income.overtime, 0),
+    totalIncomeTax: filtered.reduce((s, p) => s + p.deductions.incomeTax, 0),
+    totalResidentTax: filtered.reduce((s, p) => s + p.deductions.residentTax, 0),
     monthCount: filtered.length,
     monthlyMonthCount: new Set(monthlySlips.map((p) => p.month)).size,
     avgMonthlyNetPay,

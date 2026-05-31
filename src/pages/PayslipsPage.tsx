@@ -14,15 +14,39 @@ export default function PayslipsPage() {
   const [filterYear, setFilterYear] = useState<number | 'all'>('all')
   const [filterMonth, setFilterMonth] = useState<number | 'all'>('all')
   const [filterType, setFilterType] = useState<'all' | 'monthly' | 'bonus'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const years = [...new Set(payslips.map((p) => p.year))].sort((a, b) => b - a)
   const hasBonusData = payslips.some((p) => p.payslipType === 'bonus')
+
+  function matchesSearch(p: typeof sorted[0]): boolean {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return true
+
+    const yearMonthFull = `${p.year}年${p.month}月`
+    const yearMonthSlash = `${p.year}/${String(p.month).padStart(2, '0')}`
+    if (yearMonthFull.includes(q) || yearMonthSlash.includes(q)) return true
+    if (`${p.year}`.startsWith(q) || `${p.month}月` === q) return true
+
+    const qDigits = q.replace(/[^0-9]/g, '')
+    if (qDigits.length >= 4) {
+      if (String(p.income.total).includes(qDigits)) return true
+      if (String(p.summary.netPay).includes(qDigits)) return true
+    }
+
+    if (p.employeeName?.toLowerCase().includes(q)) return true
+    if (p.companyName?.toLowerCase().includes(q)) return true
+    if (p.payslipLabel?.toLowerCase().includes(q)) return true
+
+    return false
+  }
 
   const filtered = sorted.filter((p) => {
     if (filterYear !== 'all' && p.year !== filterYear) return false
     if (filterMonth !== 'all' && p.month !== filterMonth) return false
     if (filterType === 'monthly' && p.payslipType === 'bonus') return false
     if (filterType === 'bonus' && p.payslipType !== 'bonus') return false
+    if (!matchesSearch(p)) return false
     return true
   })
 
@@ -47,7 +71,7 @@ export default function PayslipsPage() {
 
   const filteredIndexMap = new Map(filtered.map((p, i) => [p.id, i]))
 
-  const isFiltered = filtered.length < payslips.length || filterYear !== 'all' || filterType !== 'all' || filterMonth !== 'all'
+  const isFiltered = filtered.length < payslips.length || filterYear !== 'all' || filterType !== 'all' || filterMonth !== 'all' || searchQuery.trim() !== ''
   const filteredNetPayTotal = filtered.reduce((sum, p) => sum + p.summary.netPay, 0)
   const filteredNetPayAvg = filtered.length > 0 ? Math.round(filteredNetPayTotal / filtered.length) : 0
 
@@ -123,6 +147,7 @@ export default function PayslipsPage() {
 
       {/* Filters */}
       {payslips.length > 0 && (
+        <div className="space-y-2">
         <div className="flex flex-wrap gap-2 items-center">
           <select
             value={filterYear}
@@ -170,6 +195,29 @@ export default function PayslipsPage() {
               ))}
             </div>
           )}
+        </div>
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="年月・金額・氏名で検索 (例: 2026年5月 / 300000)"
+            className="w-full pl-9 pr-8 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
         </div>
       )}
 

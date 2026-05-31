@@ -8,20 +8,34 @@ interface RowProps {
   value: number
   bold?: boolean
   accent?: string
+  delta?: number
+  deltaInvert?: boolean
 }
 
-function Row({ label, value, bold, accent }: RowProps) {
+function Row({ label, value, bold, accent, delta, deltaInvert }: RowProps) {
   if (value === 0) return null
+  const showDelta = delta !== undefined && delta !== 0
+  const deltaColor = showDelta
+    ? (deltaInvert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868'
+    : undefined
   return (
     <div className={`flex justify-between py-2 border-b border-gray-100 ${bold ? 'font-bold' : ''}`}>
       <span className={`text-sm ${accent ?? 'text-gray-600'}`}>{label}</span>
-      <span className={`text-sm tabular-nums ${accent ?? 'text-gray-900'}`}>{formatYen(value)}</span>
+      <span className="flex items-center gap-1.5">
+        <span className={`text-sm tabular-nums ${accent ?? 'text-gray-900'}`}>{formatYen(value)}</span>
+        {showDelta && (
+          <span className="text-xs tabular-nums" style={{ color: deltaColor }}>
+            {delta! > 0 ? '+' : '-'}{formatYen(Math.abs(delta!))}
+          </span>
+        )}
+      </span>
     </div>
   )
 }
 
 interface Props {
   payslip: Payslip
+  prev?: Payslip | null
 }
 
 function calcIncomeSum(income: Payslip['income']): number {
@@ -43,8 +57,10 @@ function calcDeductionSum(deductions: Payslip['deductions']): number {
   )
 }
 
-export default function PayslipDetailView({ payslip }: Props) {
+export default function PayslipDetailView({ payslip, prev }: Props) {
   const { income, deductions, attendance, summary } = payslip
+  const pi = prev?.income
+  const pd = prev?.deductions
   const settings = useStore((s) => s.overtimeSettings)
 
   const incomeSum = calcIncomeSum(income)
@@ -90,18 +106,20 @@ export default function PayslipDetailView({ payslip }: Props) {
             内訳合計 {formatYen(incomeSum)} ≠ 総支給金額 {formatYen(income.total)}
           </div>
         )}
-        <Row label="基本給" value={income.basicSalary} />
-        <Row label="ワークライフバランス手当" value={income.wlbAllowance} />
-        <Row label="みなし残業" value={income.deemedOvertime} />
-        <Row label="ライフプラン手当" value={income.lifePlanAllowance} />
-        <Row label="通勤費調整" value={income.commuteAdjustment} />
-        <Row label="サンキュー手当" value={income.thankYouAllowance} />
-        <Row label="ZOOM手当" value={income.zoomAllowance} />
-        <Row label="調整給" value={income.adjustmentSalary} />
-        <Row label="通勤手当" value={income.commuteAllowance} />
-        <Row label="課税通勤手当" value={income.taxableCommuteAllowance} />
-        {Object.entries(income.otherIncome).map(([k, v]) => <Row key={k} label={k} value={v} />)}
-        <Row label="総支給金額" value={income.total} bold accent="text-brand-700" />
+        <Row label="基本給" value={income.basicSalary} delta={pi ? income.basicSalary - pi.basicSalary : undefined} />
+        <Row label="ワークライフバランス手当" value={income.wlbAllowance} delta={pi ? income.wlbAllowance - pi.wlbAllowance : undefined} />
+        <Row label="みなし残業" value={income.deemedOvertime} delta={pi ? income.deemedOvertime - pi.deemedOvertime : undefined} />
+        <Row label="ライフプラン手当" value={income.lifePlanAllowance} delta={pi ? income.lifePlanAllowance - pi.lifePlanAllowance : undefined} />
+        <Row label="通勤費調整" value={income.commuteAdjustment} delta={pi ? income.commuteAdjustment - pi.commuteAdjustment : undefined} />
+        <Row label="サンキュー手当" value={income.thankYouAllowance} delta={pi ? income.thankYouAllowance - pi.thankYouAllowance : undefined} />
+        <Row label="ZOOM手当" value={income.zoomAllowance} delta={pi ? income.zoomAllowance - pi.zoomAllowance : undefined} />
+        <Row label="調整給" value={income.adjustmentSalary} delta={pi ? income.adjustmentSalary - pi.adjustmentSalary : undefined} />
+        <Row label="通勤手当" value={income.commuteAllowance} delta={pi ? income.commuteAllowance - pi.commuteAllowance : undefined} />
+        <Row label="課税通勤手当" value={income.taxableCommuteAllowance} delta={pi ? income.taxableCommuteAllowance - pi.taxableCommuteAllowance : undefined} />
+        {Object.entries(income.otherIncome).map(([k, v]) => (
+          <Row key={k} label={k} value={v} delta={pi ? v - (pi.otherIncome[k] ?? 0) : undefined} />
+        ))}
+        <Row label="総支給金額" value={income.total} bold accent="text-brand-700" delta={pi ? income.total - pi.total : undefined} />
         {Object.keys(income.detailIncome ?? {}).length > 0 && (
           <div className="mt-3 pt-2 border-t border-gray-200">
             <p className="text-xs text-gray-400 mb-1">内訳（合計に含まず）</p>
@@ -154,20 +172,22 @@ export default function PayslipDetailView({ payslip }: Props) {
             内訳合計 {formatYen(dedSum)} ≠ 控除合計額 {formatYen(deductions.total)}
           </div>
         )}
-        <Row label="健康保険料" value={deductions.healthInsurance} />
-        <Row label="介護保険料" value={deductions.longTermCareInsurance} />
-        <Row label="厚生年金保険" value={deductions.pensionInsurance} />
-        <Row label="雇用保険料" value={deductions.employmentInsurance} />
-        <Row label="所得税" value={deductions.incomeTax} />
-        <Row label="住民税" value={deductions.residentTax} />
-        <Row label="預り金" value={deductions.deposit} />
-        <Row label="税還付" value={deductions.taxRefund} />
-        <Row label="経費精算" value={deductions.expenseReimbursement} />
-        <Row label="健保給付金" value={deductions.healthInsuranceBenefit} />
-        <Row label="一時保育料" value={deductions.temporaryChildcare} />
-        <Row label="仮払金" value={deductions.advance} />
-        {Object.entries(deductions.otherDeductions).map(([k, v]) => <Row key={k} label={k} value={v} />)}
-        <Row label="控除合計額" value={deductions.total} bold accent="text-red-600" />
+        <Row label="健康保険料" value={deductions.healthInsurance} delta={pd ? deductions.healthInsurance - pd.healthInsurance : undefined} deltaInvert />
+        <Row label="介護保険料" value={deductions.longTermCareInsurance} delta={pd ? deductions.longTermCareInsurance - pd.longTermCareInsurance : undefined} deltaInvert />
+        <Row label="厚生年金保険" value={deductions.pensionInsurance} delta={pd ? deductions.pensionInsurance - pd.pensionInsurance : undefined} deltaInvert />
+        <Row label="雇用保険料" value={deductions.employmentInsurance} delta={pd ? deductions.employmentInsurance - pd.employmentInsurance : undefined} deltaInvert />
+        <Row label="所得税" value={deductions.incomeTax} delta={pd ? deductions.incomeTax - pd.incomeTax : undefined} deltaInvert />
+        <Row label="住民税" value={deductions.residentTax} delta={pd ? deductions.residentTax - pd.residentTax : undefined} deltaInvert />
+        <Row label="預り金" value={deductions.deposit} delta={pd ? deductions.deposit - pd.deposit : undefined} deltaInvert />
+        <Row label="税還付" value={deductions.taxRefund} delta={pd ? deductions.taxRefund - pd.taxRefund : undefined} />
+        <Row label="経費精算" value={deductions.expenseReimbursement} delta={pd ? deductions.expenseReimbursement - pd.expenseReimbursement : undefined} />
+        <Row label="健保給付金" value={deductions.healthInsuranceBenefit} delta={pd ? deductions.healthInsuranceBenefit - pd.healthInsuranceBenefit : undefined} />
+        <Row label="一時保育料" value={deductions.temporaryChildcare} delta={pd ? deductions.temporaryChildcare - pd.temporaryChildcare : undefined} deltaInvert />
+        <Row label="仮払金" value={deductions.advance} delta={pd ? deductions.advance - pd.advance : undefined} deltaInvert />
+        {Object.entries(deductions.otherDeductions).map(([k, v]) => (
+          <Row key={k} label={k} value={v} delta={pd ? v - (pd.otherDeductions[k] ?? 0) : undefined} deltaInvert />
+        ))}
+        <Row label="控除合計額" value={deductions.total} bold accent="text-red-600" delta={pd ? deductions.total - pd.total : undefined} deltaInvert />
       </div>
 
       {/* Attendance */}
