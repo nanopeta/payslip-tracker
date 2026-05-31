@@ -41,7 +41,7 @@ const sprintSize = parseInt(
   cliArgs.find(a => a.startsWith('--sprint-size='))?.split('=')[1] ?? '5'
 )
 const maxSprints = parseInt(
-  cliArgs.find(a => a.startsWith('--max-sprints='))?.split('=')[1] ?? '0'
+  cliArgs.find(a => a.startsWith('--max-sprints='))?.split('=')[1] ?? '2'
 )
 const modelArg = cliArgs.find(a => a.startsWith('--model='))?.split('=')[1]
 // --fast は --no-review + --no-doc-update のショートカット
@@ -143,7 +143,8 @@ ${BASE_CONSTRAINTS}
 
 {"backlog":["タスク1（対象ファイル・内容）","タスク2",...]}
 
-選定基準: git logに無い / 既存データで実現可能 / 1〜3ファイル変更規模`
+選定基準: git logに無い / 既存データで実現可能 / 1〜3ファイル変更規模
+種別: 新機能・バグ修正・UI/UX改善・レイアウト修正をバランスよく混在させる`
 
 const DEV_SYSTEM = `payslip-tracker フロントエンドエンジニア。
 ${BASE_CONSTRAINTS}
