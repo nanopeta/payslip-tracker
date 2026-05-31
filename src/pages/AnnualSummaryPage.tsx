@@ -247,15 +247,24 @@ export default function AnnualSummaryPage() {
 
                   {/* Monthly stats: avg / max / min + bar chart */}
                   {monthlySlips.length > 0 && (() => {
-                    const chartData = monthlySlips
-                      .reduce<{ month: number; netPay: number }[]>((acc, p) => {
+                    const chartData = yearSlips
+                      .reduce<{ month: number; monthlyNetPay: number; bonusNetPay: number }[]>((acc, p) => {
                         const existing = acc.find((d) => d.month === p.month)
-                        if (existing) existing.netPay += p.summary.netPay
-                        else acc.push({ month: p.month, netPay: p.summary.netPay })
+                        const isBonus = p.payslipType === 'bonus'
+                        if (existing) {
+                          if (isBonus) existing.bonusNetPay += p.summary.netPay
+                          else existing.monthlyNetPay += p.summary.netPay
+                        } else {
+                          acc.push({
+                            month: p.month,
+                            monthlyNetPay: isBonus ? 0 : p.summary.netPay,
+                            bonusNetPay: isBonus ? p.summary.netPay : 0,
+                          })
+                        }
                         return acc
                       }, [])
                       .sort((a, b) => a.month - b.month)
-                      .map((d) => ({ label: `${d.month}月`, netPay: d.netPay }))
+                      .map((d) => ({ label: `${d.month}月`, monthlyNetPay: d.monthlyNetPay, bonusNetPay: d.bonusNetPay }))
                     return (
                       <div className="border-t border-gray-100 pt-3">
                         <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
@@ -276,7 +285,7 @@ export default function AnnualSummaryPage() {
                           </div>
                         </div>
                         {chartData.length >= 2 && (
-                          <div className="mt-3" style={{ height: 160 }}>
+                          <div className="mt-3" style={{ height: hasBonus ? 180 : 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -294,10 +303,34 @@ export default function AnnualSummaryPage() {
                                   width={62}
                                 />
                                 <Tooltip
-                                  formatter={(v: number) => [formatYen(v), '手取り']}
+                                  formatter={(v: number, name: string) => [
+                                    formatYen(v),
+                                    name === 'monthlyNetPay' ? '給与手取り' : '賞与手取り',
+                                  ]}
                                   contentStyle={{ fontSize: 12, borderRadius: '8px' }}
                                 />
-                                <Bar dataKey="netPay" fill="#5fad9b" radius={[3, 3, 0, 0]} />
+                                {hasBonus && (
+                                  <Legend
+                                    formatter={(value) => value === 'monthlyNetPay' ? '給与' : '賞与'}
+                                    wrapperStyle={{ fontSize: 12 }}
+                                  />
+                                )}
+                                <Bar
+                                  dataKey="monthlyNetPay"
+                                  name="monthlyNetPay"
+                                  stackId="a"
+                                  fill="#5fad9b"
+                                  radius={hasBonus ? [0, 0, 0, 0] : [3, 3, 0, 0]}
+                                />
+                                {hasBonus && (
+                                  <Bar
+                                    dataKey="bonusNetPay"
+                                    name="bonusNetPay"
+                                    stackId="a"
+                                    fill="#f59e0b"
+                                    radius={[3, 3, 0, 0]}
+                                  />
+                                )}
                               </BarChart>
                             </ResponsiveContainer>
                           </div>
