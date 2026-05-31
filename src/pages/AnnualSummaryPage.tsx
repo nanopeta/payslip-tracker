@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import useStore from '../store/useStore'
 import WithholdingCard from '../components/withholding/WithholdingCard'
@@ -51,6 +51,58 @@ export default function AnnualSummaryPage() {
           <p className="text-sm mt-1">源泉徴収票のPDFをアップロードしてください</p>
         </div>
       )}
+
+      {/* Annual trend bar chart */}
+      {years.length >= 2 && (() => {
+        const chartData = [...years]
+          .sort((a, b) => a - b)
+          .map((year) => {
+            const totals = annualTotals(payslips, year)
+            return {
+              label: `${year}年`,
+              totalIncome: totals.totalIncome,
+              totalNetPay: totals.totalNetPay,
+            }
+          })
+        return (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-4">
+            <p className="text-sm font-semibold text-gray-700 mb-3">年別推移</p>
+            <div style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: '#6b7280' }}
+                    interval={0}
+                    angle={-30}
+                    textAnchor="end"
+                    height={48}
+                  />
+                  <YAxis
+                    tickFormatter={(v) => `¥${(v / 10000).toFixed(0)}万`}
+                    tick={{ fontSize: 11, fill: '#6b7280' }}
+                    width={62}
+                  />
+                  <Tooltip
+                    formatter={(v: number, name: string) => [
+                      formatYen(v),
+                      name === 'totalIncome' ? '総支給' : '差引支給',
+                    ]}
+                    contentStyle={{ fontSize: 12, borderRadius: '8px' }}
+                  />
+                  <Legend
+                    formatter={(value) => value === 'totalIncome' ? '総支給' : '差引支給'}
+                    wrapperStyle={{ fontSize: 12 }}
+                  />
+                  <Bar dataKey="totalIncome" name="totalIncome" fill="#5b8fa8" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="totalNetPay" name="totalNetPay" fill="#5fad9b" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Withholding certs */}
       {withholdingCerts.length > 0 && (
