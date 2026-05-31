@@ -17,20 +17,20 @@ export default function PayslipCard({ payslip, prevNetPay }: Props) {
     >
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-gray-500">{formatYearMonth(payslip.year, payslip.month)}</p>
-            {payslip.payslipType === 'bonus' && (
-              <span className="text-xs font-medium bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
-                {payslip.payslipLabel ?? '賞与'}
-              </span>
-            )}
-          </div>
+          <p className="text-sm text-gray-500">{formatYearMonth(payslip.year, payslip.month)}</p>
           <p className="text-xl font-bold tabular-nums text-gray-900 mt-0.5">
             {formatYen(payslip.summary.netPay)}
           </p>
           <p className="text-xs text-gray-400 mt-0.5">差引支給額</p>
         </div>
         <div className="text-right space-y-1">
+          {payslip.payslipType === 'bonus' && (
+            <p>
+              <span className="rounded-full text-xs px-2 py-0.5 bg-brand-100 text-brand-700">
+                {payslip.payslipLabel ?? '賞与'}
+              </span>
+            </p>
+          )}
           <div>
             <p className="text-xs text-gray-400">総支給</p>
             <p className="text-sm font-medium tabular-nums text-gray-700">{formatYen(payslip.income.total)}</p>

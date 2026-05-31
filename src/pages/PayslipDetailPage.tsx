@@ -14,6 +14,11 @@ export default function PayslipDetailPage() {
   const payslip = payslips.find((p) => p.id === id)
   const [editing, setEditing] = useState(false)
 
+  const sorted = [...payslips].sort((a, b) => b.year * 100 + b.month - (a.year * 100 + a.month))
+  const currentIdx = sorted.findIndex((p) => p.id === id)
+  const prevPayslip = currentIdx < sorted.length - 1 ? sorted[currentIdx + 1] : null
+  const nextPayslip = currentIdx > 0 ? sorted[currentIdx - 1] : null
+
   if (!payslip) {
     return (
       <div className="text-center py-16 text-gray-400">
@@ -62,6 +67,35 @@ export default function PayslipDetailPage() {
             削除
           </button>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        {prevPayslip ? (
+          <button
+            onClick={() => navigate(`/payslips/${prevPayslip.id}`)}
+            className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            前の明細
+          </button>
+        ) : (
+          <span />
+        )}
+        {nextPayslip ? (
+          <button
+            onClick={() => navigate(`/payslips/${nextPayslip.id}`)}
+            className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 transition-colors"
+          >
+            次の明細
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        ) : (
+          <span />
+        )}
       </div>
 
       {editing ? (
