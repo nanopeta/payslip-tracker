@@ -12,6 +12,7 @@ export default function PayslipsPage() {
   const [selecting, setSelecting] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [filterYear, setFilterYear] = useState<number | 'all'>('all')
+  const [filterMonth, setFilterMonth] = useState<number | 'all'>('all')
   const [filterType, setFilterType] = useState<'all' | 'monthly' | 'bonus'>('all')
 
   const years = [...new Set(payslips.map((p) => p.year))].sort((a, b) => b - a)
@@ -19,6 +20,7 @@ export default function PayslipsPage() {
 
   const filtered = sorted.filter((p) => {
     if (filterYear !== 'all' && p.year !== filterYear) return false
+    if (filterMonth !== 'all' && p.month !== filterMonth) return false
     if (filterType === 'monthly' && p.payslipType === 'bonus') return false
     if (filterType === 'bonus' && p.payslipType !== 'bonus') return false
     return true
@@ -120,7 +122,11 @@ export default function PayslipsPage() {
         <div className="flex flex-wrap gap-2 items-center">
           <select
             value={filterYear}
-            onChange={(e) => setFilterYear(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+            onChange={(e) => {
+              const val = e.target.value === 'all' ? 'all' : Number(e.target.value)
+              setFilterYear(val)
+              if (val === 'all') setFilterMonth('all')
+            }}
             className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
           >
             <option value="all">すべての年</option>
@@ -137,6 +143,25 @@ export default function PayslipsPage() {
                   className={`px-3 py-1.5 transition-colors ${filterType === t ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
                   {t === 'all' ? 'すべて' : t === 'monthly' ? '給与' : '賞与'}
+                </button>
+              ))}
+            </div>
+          )}
+          {filterYear !== 'all' && (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setFilterMonth('all')}
+                className={`px-2.5 py-1 rounded-full text-sm transition-colors ${filterMonth === 'all' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+              >
+                すべて
+              </button>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setFilterMonth(m)}
+                  className={`px-2.5 py-1 rounded-full text-sm transition-colors ${filterMonth === m ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                >
+                  {m}月
                 </button>
               ))}
             </div>
