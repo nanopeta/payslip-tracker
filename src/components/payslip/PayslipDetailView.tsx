@@ -25,7 +25,7 @@ function Row({ label, value, bold, accent, delta, deltaInvert }: RowProps) {
         <span className={`text-sm tabular-nums ${accent ?? 'text-gray-900'}`}>{formatYen(value)}</span>
         {showDelta && (
           <span className="text-xs tabular-nums" style={{ color: deltaColor }}>
-            {delta! > 0 ? '+' : ''}{formatYen(delta!)}
+            {delta! > 0 ? '+' : '-'}{formatYen(Math.abs(delta!))}
           </span>
         )}
       </span>
