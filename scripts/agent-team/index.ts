@@ -9,19 +9,19 @@
  * 使い方:
  *   npm run agent-team
  *   npm run agent-team -- --sprint-size=3
+ *   npm run agent-team -- --max-sprints=5
+ *   npm run agent-team -- --fast            # Reviewer・ドキュメント更新をスキップ
+ *   npm run agent-team -- --no-push         # スプリント完了後のプッシュを省略
  */
 
 import { spawnSync, execSync } from 'child_process'
 import path from 'path'
-import os from 'os'
 import { fileURLToPath } from 'url'
 
 // ─── 定数 ────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const PROJECT_ROOT = path.resolve(__dirname, '../..')
-
-// PROJECT_ROOT から起動（Windows ではTEMPからだとプロジェクトへのアクセスがブロックされる）
 const AGENT_CWD = PROJECT_ROOT
 
 const C = {
@@ -45,9 +45,10 @@ const maxSprints = parseInt(
 )
 const modelArg = cliArgs.find(a => a.startsWith('--model='))?.split('=')[1]
 // --fast は --no-review + --no-doc-update のショートカット
-const fast = cliArgs.includes('--fast')
+const fast         = cliArgs.includes('--fast')
 const skipReview    = fast || cliArgs.includes('--no-review')
 const skipDocUpdate = fast || cliArgs.includes('--no-doc-update')
+const skipPush      = cliArgs.includes('--no-push')
 
 // ─── claude CLI の存在確認 ────────────────────────────
 const claudeCheck = spawnSync('claude', ['--version'], { encoding: 'utf-8', shell: true })
@@ -78,8 +79,10 @@ function logPreview(text: string) {
   console.log(`  ${C.gray}→ ${preview}${text.length > 300 ? '...' : ''}${C.reset}`)
 }
 
-// ─── Claude CLI 呼び出し ──────────────────────────────
-function callClaude(prompt: string): string {
+// ─── Claude CLI 呼び出し（リトライ付き）──────────────
+const CLAUDE_TIMEOUT_MS = 600_000  // 10 分
+
+function callClaude(prompt: string, attempt = 1): string {
   const args = ['--print', '--allowedTools', 'Read,Write,Edit,Bash']
   if (modelArg) args.push('--model', modelArg)
 
@@ -87,16 +90,26 @@ function callClaude(prompt: string): string {
     input: prompt,
     cwd: AGENT_CWD,
     encoding: 'utf-8',
-    timeout: 300_000,
+    timeout: CLAUDE_TIMEOUT_MS,
     maxBuffer: 10 * 1024 * 1024,
     shell: true,
   })
 
+  // タイムアウト・一時エラーは1回だけリトライ
   if (result.error) {
-    throw new Error(`Claude CLI エラー: ${result.error.message}`)
+    const msg = result.error.message
+    if (attempt === 1 && (msg.includes('ETIMEDOUT') || msg.includes('ESRCH') || msg.includes('EPIPE'))) {
+      console.warn(`  ${C.yellow}⚠ Claude CLI エラー (${msg})、リトライ中...${C.reset}`)
+      return callClaude(prompt, 2)
+    }
+    throw new Error(`Claude CLI エラー: ${msg}`)
   }
   if (result.status !== 0) {
     const stderr = (result.stderr ?? '').slice(0, 500)
+    if (attempt === 1 && result.status === 1) {
+      console.warn(`  ${C.yellow}⚠ Claude CLI 終了コード 1、リトライ中...${C.reset}`)
+      return callClaude(prompt, 2)
+    }
     throw new Error(`Claude CLI 終了コード ${result.status}: ${stderr}`)
   }
   return result.stdout ?? ''
@@ -129,10 +142,11 @@ function runAgent(
 }
 
 // ─── システムプロンプト ───────────────────────────────
-const R = PROJECT_ROOT  // 短縮エイリアス
+const R = PROJECT_ROOT
 
 const BASE_CONSTRAINTS = `プロジェクト: ${R}
-制約: Tailwind 3.4.19固定 / brand-600=#5b8fa8 / success=#5fad9b / danger=#d06868 / TSストリクト / git操作禁止 / 変更禁止: types/payslip.ts,lib/storage.ts,lib/mhtParser.ts`
+制約: Tailwind 3.4.19固定 / brand-600=#5b8fa8 / success=#5fad9b / danger=#d06868 / TSストリクト
+変更禁止ファイル: types/payslip.ts, lib/storage.ts, lib/mhtParser.ts`
 
 const PM_SYSTEM = `payslip-tracker PM。バックログ作成専任。
 ${BASE_CONSTRAINTS}
@@ -148,21 +162,24 @@ ${BASE_CONSTRAINTS}
 
 const DEV_SYSTEM = `payslip-tracker フロントエンドエンジニア。
 ${BASE_CONSTRAINTS}
+git commit/push/checkout は一切実行しない（スクリプトが管理）
 
 実装: 対象ファイルをReadで確認→Edit/Writeで実装→\`cd ${R} && npm run build\`でエラー確認→修正
 - 新Chartは ${R}/src/components/charts/ に作成
 - Recharts: interval={0}, angle={-30}, Y軸は万単位
-- git操作は一切実行しない`
+- useState などの Hook 宣言は、そのstateを使う計算より必ず先に書く（TDZ回避）`
 
 const REVIEWER_SYSTEM = `payslip-tracker コードレビュアー。
 ${BASE_CONSTRAINTS}
+git commit/push/checkout は一切実行しない（スクリプトが管理）
 
-1. \`cd ${R} && git diff HEAD\` で変更確認
-2. TS型安全性 / ブランドカラー遵守 / 既存パターン整合性 をチェック
+1. \`cd ${R} && git diff HEAD\` で変更確認（git diff は読み取りのみなので実行してよい）
+2. TS型安全性 / ブランドカラー遵守 / 既存パターン整合性 / Hook宣言順序（TDZ違反がないか）をチェック
 3. 問題なし→最後に「LGTM」と明記 / 問題あり→「LGTM」を書かず修正箇所を列挙`
 
 const DOC_UPDATE_SYSTEM = `payslip-tracker ドキュメント管理者。
 ${BASE_CONSTRAINTS}
+git commit/push/checkout は一切実行しない（スクリプトが管理）
 
 1. \`cd ${R} && git diff HEAD\` で変更確認
 2. 新コンポーネント・新パターンがあれば ${R}/CLAUDE.md をEditで更新（既存スタイル維持）
@@ -171,8 +188,14 @@ ${BASE_CONSTRAINTS}
 // ─── Git ヘルパー ─────────────────────────────────────
 function gitCommit(message: string) {
   try {
-    execSync('git add -A', { cwd: PROJECT_ROOT })
-    execSync(`git commit -m ${JSON.stringify(message)} --allow-empty`, { cwd: PROJECT_ROOT })
+    execSync('git add -A', { cwd: PROJECT_ROOT, stdio: 'pipe' })
+    // 変更がなければコミットをスキップ
+    const status = execSync('git status --porcelain', { cwd: PROJECT_ROOT, encoding: 'utf-8' })
+    if (!status.trim()) {
+      console.log(`  ${C.gray}（変更なし、スキップ）${C.reset}`)
+      return
+    }
+    execSync(`git commit -m ${JSON.stringify(message)}`, { cwd: PROJECT_ROOT, stdio: 'pipe' })
     const firstLine = message.split('\n')[0]!
     console.log(`  ${C.green}✅ コミット: ${firstLine.slice(0, 60)}${C.reset}`)
   } catch (e: unknown) {
@@ -180,12 +203,39 @@ function gitCommit(message: string) {
   }
 }
 
+function gitPush(branchName: string) {
+  if (skipPush) {
+    console.log(`  ${C.gray}--no-push 指定のためプッシュをスキップ${C.reset}`)
+    return
+  }
+  console.log(`\n${C.cyan}📤 ブランチをプッシュ中...${C.reset}`)
+  const maxRetries = 4
+  const delays = [2000, 4000, 8000, 16000]
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      execSync(`git push -u origin ${branchName}`, { cwd: PROJECT_ROOT, stdio: 'pipe' })
+      console.log(`${C.green}✅ プッシュ完了: ${branchName}${C.reset}`)
+      return
+    } catch (e) {
+      if (i < maxRetries - 1) {
+        const delay = delays[i]!
+        console.warn(`  ${C.yellow}プッシュ失敗、${delay / 1000}秒後にリトライ...${C.reset}`)
+        const wait = spawnSync('sleep', [String(delay / 1000)], { shell: true })
+        void wait
+      } else {
+        console.error(`  ${C.red}プッシュに失敗しました: ${e}${C.reset}`)
+      }
+    }
+  }
+}
+
 // ─── メイン ───────────────────────────────────────────
 function main() {
   const flags = [
-    modelArg    ? `model=${modelArg}`   : '',
-    skipReview    ? 'no-review'         : '',
-    skipDocUpdate ? 'no-doc-update'     : '',
+    modelArg      ? `model=${modelArg}`  : '',
+    skipReview    ? 'no-review'          : '',
+    skipDocUpdate ? 'no-doc-update'      : '',
+    skipPush      ? 'no-push'            : '',
   ].filter(Boolean).join(' / ') || 'standard'
 
   console.log(`${C.cyan}${C.bold}
@@ -204,15 +254,8 @@ function main() {
 
   // Ctrl+C ハンドラ
   process.on('SIGINT', () => {
-    console.log(`\n${C.yellow}⏹ 停止中... ブランチをプッシュしています${C.reset}`)
-    try {
-      execSync(`git push -u origin ${branchName}`, { cwd: PROJECT_ROOT })
-      console.log(`${C.green}✅ プッシュ完了`)
-      console.log(`PR を作成してください:`)
-      console.log(`  gh pr create --draft --head ${branchName} --base main${C.reset}`)
-    } catch (e) {
-      console.error(`${C.red}プッシュエラー: ${e}${C.reset}`)
-    }
+    console.log(`\n${C.yellow}⏹ 停止中...${C.reset}`)
+    gitPush(branchName)
     process.exit(0)
   })
 
@@ -223,12 +266,20 @@ function main() {
     console.log(`${'═'.repeat(54)}${C.reset}`)
 
     // PM: バックログ作成
-    const planningResult = runAgent(
-      'PM',
-      PM_SYSTEM,
-      sharedHistory,
-      `スプリント ${sprintNo} のバックログを ${sprintSize} 件 JSON 形式で作成してください。`,
-    )
+    let planningResult: string
+    try {
+      planningResult = runAgent(
+        'PM',
+        PM_SYSTEM,
+        sharedHistory,
+        `スプリント ${sprintNo} のバックログを ${sprintSize} 件 JSON 形式で作成してください。`,
+      )
+    } catch (e) {
+      log('System', `${C.red}PM エラー: ${e}。スプリントをスキップします。${C.reset}`)
+      sprintNo++
+      if (maxSprints > 0 && sprintNo > maxSprints) break
+      continue
+    }
 
     // JSON パース（ブレースの対応を数えて正確に抽出）
     let backlog: string[] = []
@@ -247,6 +298,7 @@ function main() {
     } catch {
       log('System', `${C.red}PM の出力を JSON としてパースできませんでした。スプリントをスキップします。${C.reset}`)
       sprintNo++
+      if (maxSprints > 0 && sprintNo > maxSprints) break
       continue
     }
 
@@ -270,68 +322,89 @@ function main() {
       console.log(`${'─'.repeat(54)}${C.reset}`)
 
       // Dev: 実装
-      const implText = runAgent(
-        'Dev',
-        DEV_SYSTEM,
-        sharedHistory,
-        `次のタスクを実装してください:\n\n${task}`,
-      )
+      let implText: string
+      try {
+        implText = runAgent(
+          'Dev',
+          DEV_SYSTEM,
+          sharedHistory,
+          `次のタスクを実装してください:\n\n${task}`,
+        )
+      } catch (e) {
+        log('System', `${C.red}Dev エラー: ${e}。タスクをスキップします。${C.reset}`)
+        continue
+      }
       sharedHistory.push(`[Dev — タスク${itemNo + 1}]\n${implText}`)
 
       // Reviewer: レビュー（--no-review / --fast でスキップ）
       if (!skipReview) {
-        const reviewText = runAgent(
-          'Reviewer',
-          REVIEWER_SYSTEM,
-          sharedHistory,
-          'Dev の実装をレビューしてください。',
-        )
+        let reviewText: string
+        try {
+          reviewText = runAgent(
+            'Reviewer',
+            REVIEWER_SYSTEM,
+            sharedHistory,
+            'Dev の実装をレビューしてください。',
+          )
+        } catch (e) {
+          log('System', `${C.yellow}Reviewer エラー: ${e}。レビューをスキップしてコミットします。${C.reset}`)
+          gitCommit(task.slice(0, 72))
+          continue
+        }
         const approved = reviewText.toLowerCase().includes('lgtm')
         sharedHistory.push(`[Reviewer — タスク${itemNo + 1}]\n${reviewText}`)
 
         // 修正が必要な場合（1回まで）
         if (!approved) {
           log('System', 'Reviewer から修正指示あり → Dev が対応します')
-          const revisionText = runAgent(
-            'Dev',
-            DEV_SYSTEM,
-            sharedHistory,
-            'Reviewer の指摘に対応して修正してください。',
-          )
-          sharedHistory.push(`[Dev — 修正]\n${revisionText}`)
+          try {
+            const revisionText = runAgent(
+              'Dev',
+              DEV_SYSTEM,
+              sharedHistory,
+              'Reviewer の指摘に対応して修正してください。',
+            )
+            sharedHistory.push(`[Dev — 修正]\n${revisionText}`)
+          } catch (e) {
+            log('System', `${C.yellow}Dev 修正エラー: ${e}。修正をスキップしてコミットします。${C.reset}`)
+          }
         }
       }
 
       // タスクごとにコミット
-      const commitMsg =
-        `${task.slice(0, 72)}\n\nhttps://claude.ai/code/session_01PqsriuZUFvNfoZUk8KksSp`
-      gitCommit(commitMsg)
+      gitCommit(task.slice(0, 72))
     }
 
     // ─── ドキュメント更新（--no-doc-update / --fast でスキップ）─
     if (!skipDocUpdate) {
       log('System', 'CLAUDE.md を最新状態に更新中...')
-      const docText = runAgent(
-        'Dev',
-        DOC_UPDATE_SYSTEM,
-        sharedHistory,
-        'このスプリントの変更内容を CLAUDE.md に反映してください。',
-      )
-      sharedHistory.push(`[ドキュメント更新 — スプリント${sprintNo}]\n${docText}`)
-      if (!docText.includes('更新不要')) {
-        gitCommit(
-          `ドキュメント更新（スプリント${sprintNo}）\n\nhttps://claude.ai/code/session_01PqsriuZUFvNfoZUk8KksSp`
+      try {
+        const docText = runAgent(
+          'Dev',
+          DOC_UPDATE_SYSTEM,
+          sharedHistory,
+          'このスプリントの変更内容を CLAUDE.md に反映してください。',
         )
+        sharedHistory.push(`[ドキュメント更新 — スプリント${sprintNo}]\n${docText}`)
+        if (!docText.includes('更新不要')) {
+          gitCommit(`ドキュメント更新（スプリント${sprintNo}）`)
+        }
+      } catch (e) {
+        log('System', `${C.yellow}ドキュメント更新エラー: ${e}。スキップします。${C.reset}`)
       }
     }
 
     if (maxSprints > 0 && sprintNo >= maxSprints) {
-      console.log(`\n${C.cyan}✅ 指定スプリント数（${maxSprints}）完了。終了します。${C.reset}`)
+      console.log(`\n${C.cyan}✅ 指定スプリント数（${maxSprints}）完了。${C.reset}`)
       break
     }
     sprintNo++
     console.log(`\n${C.cyan}🔄 スプリント ${sprintNo} を開始します... (Ctrl+C で停止)${C.reset}`)
   }
+
+  // 全スプリント完了後に自動プッシュ
+  gitPush(branchName)
+  console.log(`\n${C.cyan}ブランチ: ${branchName}${C.reset}`)
 }
 
 main()
