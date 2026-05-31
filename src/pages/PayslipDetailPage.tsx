@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import PayslipDetailView from '../components/payslip/PayslipDetailView'
 import PayslipReviewForm from '../components/upload/PayslipReviewForm'
+import { previousPayslip, nextPayslip } from '../lib/aggregations'
 import type { Payslip } from '../types/payslip'
 
 export default function PayslipDetailPage() {
@@ -13,6 +14,9 @@ export default function PayslipDetailPage() {
   const updatePayslip = useStore((s) => s.updatePayslip)
   const payslip = payslips.find((p) => p.id === id)
   const [editing, setEditing] = useState(false)
+
+  const prev = payslip ? previousPayslip(payslips, payslip) : null
+  const next = payslip ? nextPayslip(payslips, payslip) : null
 
   if (!payslip) {
     return (
@@ -63,6 +67,33 @@ export default function PayslipDetailPage() {
           </button>
         </div>
       </div>
+
+      {(prev || next) && (
+        <div className="flex items-center justify-between">
+          {prev ? (
+            <button
+              onClick={() => navigate(`/payslips/${prev.id}`)}
+              className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              {prev.year}年{prev.month}月
+            </button>
+          ) : <div />}
+          {next ? (
+            <button
+              onClick={() => navigate(`/payslips/${next.id}`)}
+              className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 transition-colors"
+            >
+              {next.year}年{next.month}月
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          ) : <div />}
+        </div>
+      )}
 
       {editing ? (
         <div className="space-y-4">

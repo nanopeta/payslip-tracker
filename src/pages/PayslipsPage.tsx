@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import PayslipCard from '../components/payslip/PayslipCard'
+import { formatYen } from '../lib/formatters'
 
 export default function PayslipsPage() {
   const payslips = useStore((s) => s.payslips)
@@ -22,6 +23,27 @@ export default function PayslipsPage() {
     if (filterType === 'bonus' && p.payslipType !== 'bonus') return false
     return true
   })
+
+  // filterYear === 'all' のとき年別グループを生成
+  const groupedByYear = filterYear === 'all'
+    ? (() => {
+        const yearMap = new Map<number, typeof filtered>()
+        for (const p of filtered) {
+          if (!yearMap.has(p.year)) yearMap.set(p.year, [])
+          yearMap.get(p.year)!.push(p)
+        }
+        return [...yearMap.entries()]
+          .sort(([a], [b]) => b - a)
+          .map(([year, items]) => ({
+            year,
+            items,
+            count: items.length,
+            totalNetPay: items.reduce((sum, p) => sum + p.summary.netPay, 0),
+          }))
+      })()
+    : null
+
+  const filteredIndexMap = new Map(filtered.map((p, i) => [p.id, i]))
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -132,6 +154,54 @@ export default function PayslipsPage() {
           ) : (
             <p>条件に一致する明細がありません</p>
           )}
+        </div>
+      ) : groupedByYear ? (
+        <div className="space-y-6">
+          {groupedByYear.map(({ year, items, count, totalNetPay }) => (
+            <div key={year}>
+              <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-gray-200">
+                <span className="font-semibold text-gray-700">{year}年</span>
+                <span className="text-gray-400 text-sm">·</span>
+                <span className="text-gray-500 text-sm">{count}件</span>
+                <span className="text-gray-400 text-sm">·</span>
+                <span className="text-gray-500 text-sm">手取合計 <span className="font-medium text-gray-700">{formatYen(totalNetPay)}</span></span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {items.map((p) => {
+                  const fi = filteredIndexMap.get(p.id)!
+                  return (
+                    <div key={p.id} className="relative">
+                      {selecting && (
+                        <button
+                          onClick={() => toggleSelect(p.id)}
+                          className={`absolute top-2 left-2 z-10 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                            selectedIds.has(p.id)
+                              ? 'bg-brand-600 border-brand-600'
+                              : 'bg-white border-gray-300'
+                          }`}
+                        >
+                          {selectedIds.has(p.id) && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                      <div
+                        onClick={selecting ? () => toggleSelect(p.id) : undefined}
+                        className={selecting ? 'cursor-pointer' : ''}
+                      >
+                        <PayslipCard
+                          payslip={p}
+                          prevNetPay={sorted[fi + 1]?.summary.netPay}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -115,10 +115,41 @@ export interface AnnualTotals {
   totalNetPay: number
   totalOvertime: number
   monthCount: number
+  avgMonthlyNetPay: number
+  maxMonthNetPay: number
+  maxMonthLabel: string
+  minMonthNetPay: number
+  minMonthLabel: string
 }
 
 export function annualTotals(payslips: Payslip[], year: number): AnnualTotals {
   const filtered = payslips.filter((p) => p.year === year)
+  const monthlySlips = filtered.filter((p) => !p.payslipType || p.payslipType === 'monthly')
+
+  // 月ごとに手取りを合算してから avg/max/min を計算
+  const monthNetMap = new Map<number, number>()
+  for (const p of monthlySlips) {
+    monthNetMap.set(p.month, (monthNetMap.get(p.month) ?? 0) + p.summary.netPay)
+  }
+  const monthEntries = Array.from(monthNetMap.entries())
+
+  let avgMonthlyNetPay = 0
+  let maxMonthNetPay = 0
+  let maxMonthLabel = ''
+  let minMonthNetPay = 0
+  let minMonthLabel = ''
+
+  if (monthEntries.length > 0) {
+    const total = monthEntries.reduce((s, [, v]) => s + v, 0)
+    avgMonthlyNetPay = Math.round(total / monthEntries.length)
+    const maxEntry = monthEntries.reduce((best, cur) => cur[1] > best[1] ? cur : best)
+    const minEntry = monthEntries.reduce((best, cur) => cur[1] < best[1] ? cur : best)
+    maxMonthNetPay = maxEntry[1]
+    maxMonthLabel = `${maxEntry[0]}月`
+    minMonthNetPay = minEntry[1]
+    minMonthLabel = `${minEntry[0]}月`
+  }
+
   return {
     year,
     totalIncome: filtered.reduce((s, p) => s + p.income.total, 0),
@@ -126,6 +157,11 @@ export function annualTotals(payslips: Payslip[], year: number): AnnualTotals {
     totalNetPay: filtered.reduce((s, p) => s + p.summary.netPay, 0),
     totalOvertime: filtered.reduce((s, p) => s + p.income.overtime, 0),
     monthCount: filtered.length,
+    avgMonthlyNetPay,
+    maxMonthNetPay,
+    maxMonthLabel,
+    minMonthNetPay,
+    minMonthLabel,
   }
 }
 
@@ -136,12 +172,25 @@ export function latestPayslip(payslips: Payslip[]): Payslip | null {
   )[0] ?? null
 }
 
+// 月単位で前後を探し、同月複数明細があれば monthly を優先
+function pickMonthlyFirst(candidates: Payslip[]): Payslip | null {
+  return candidates.find((p) => !p.payslipType || p.payslipType === 'monthly') ?? candidates[0] ?? null
+}
+
 export function previousPayslip(payslips: Payslip[], current: Payslip): Payslip | null {
-  const sorted = [...payslips].sort(
-    (a, b) => b.year * 100 + b.month - (a.year * 100 + a.month),
-  )
-  const idx = sorted.findIndex((p) => p.id === current.id)
-  return idx >= 0 && idx + 1 < sorted.length ? (sorted[idx + 1] ?? null) : null
+  const currentKey = current.year * 100 + current.month
+  const earlier = payslips.filter((p) => p.year * 100 + p.month < currentKey)
+  if (earlier.length === 0) return null
+  const maxKey = Math.max(...earlier.map((p) => p.year * 100 + p.month))
+  return pickMonthlyFirst(earlier.filter((p) => p.year * 100 + p.month === maxKey))
+}
+
+export function nextPayslip(payslips: Payslip[], current: Payslip): Payslip | null {
+  const currentKey = current.year * 100 + current.month
+  const later = payslips.filter((p) => p.year * 100 + p.month > currentKey)
+  if (later.length === 0) return null
+  const minKey = Math.min(...later.map((p) => p.year * 100 + p.month))
+  return pickMonthlyFirst(later.filter((p) => p.year * 100 + p.month === minKey))
 }
 
 export function uniqueYears(payslips: Payslip[]): number[] {
@@ -161,4 +210,53 @@ export function paidLeaveTrend(payslips: Payslip[]): LeaveTrendPoint[] {
       label: `${p.year}/${String(p.month).padStart(2, '0')}`,
       remaining: p.attendance.paidLeaveRemaining,
     }))
+}
+
+export interface PaidLeaveStats {
+  remaining: number
+  label: string
+  delta: number | null
+}
+
+export function latestPaidLeave(payslips: Payslip[]): PaidLeaveStats | null {
+  const trend = paidLeaveTrend(payslips)
+  if (trend.length === 0) return null
+  const last = trend[trend.length - 1]!
+  const prev = trend.length >= 2 ? trend[trend.length - 2]! : null
+  return {
+    remaining: last.remaining,
+    label: last.label,
+    delta: prev !== null ? last.remaining - prev.remaining : null,
+  }
+}
+
+export interface SocialInsuranceStats {
+  total: number
+  label: string
+  delta: number | null
+}
+
+function calcSocialInsuranceTotal(p: Payslip): number {
+  return (
+    p.deductions.healthInsurance +
+    p.deductions.longTermCareInsurance +
+    p.deductions.pensionInsurance +
+    p.deductions.employmentInsurance
+  )
+}
+
+export function latestSocialInsurance(payslips: Payslip[]): SocialInsuranceStats | null {
+  const monthly = [...payslips]
+    .filter((p) => !p.payslipType || p.payslipType === 'monthly')
+    .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
+  if (monthly.length === 0) return null
+  const last = monthly[monthly.length - 1]!
+  const prev = monthly.length >= 2 ? monthly[monthly.length - 2]! : null
+  const total = calcSocialInsuranceTotal(last)
+  const prevTotal = prev !== null ? calcSocialInsuranceTotal(prev) : null
+  return {
+    total,
+    label: `${last.year}/${String(last.month).padStart(2, '0')}`,
+    delta: prevTotal !== null ? total - prevTotal : null,
+  }
 }

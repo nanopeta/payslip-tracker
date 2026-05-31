@@ -20,8 +20,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const PROJECT_ROOT = path.resolve(__dirname, '../..')
 
-// エージェントは /tmp から起動（PROJECT_ROOT の CLAUDE.md を読み込まないため）
-const AGENT_CWD = '/tmp'
+// PROJECT_ROOT から起動（Windows ではTEMPからだとプロジェクトへのアクセスがブロックされる）
+const AGENT_CWD = PROJECT_ROOT
 
 const C = {
   reset:  '\x1b[0m',
@@ -41,7 +41,7 @@ const sprintSize = parseInt(
 )
 
 // ─── claude CLI の存在確認 ────────────────────────────
-const claudeCheck = spawnSync('claude', ['--version'], { encoding: 'utf-8' })
+const claudeCheck = spawnSync('claude', ['--version'], { encoding: 'utf-8', shell: true })
 if (claudeCheck.error || claudeCheck.status !== 0) {
   console.error(`${C.red}エラー: claude コマンドが見つかりません${C.reset}`)
   console.error('  Claude Code CLI をインストールしてください:')
@@ -81,6 +81,7 @@ function callClaude(prompt: string): string {
       encoding: 'utf-8',
       timeout: 300_000,
       maxBuffer: 10 * 1024 * 1024,
+      shell: true,
     }
   )
 

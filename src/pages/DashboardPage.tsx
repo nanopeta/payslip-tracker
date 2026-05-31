@@ -8,7 +8,7 @@ import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, getIncomeValueByLabel, annualTotals } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, latestPaidLeave, getIncomeValueByLabel, annualTotals, latestSocialInsurance } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 type PeriodFilter = 'all' | 'year' | '6m' | '12m'
@@ -60,6 +60,10 @@ export default function DashboardPage() {
 
   // 有給残日数推移
   const leaveTrend = paidLeaveTrend(payslips)
+  const paidLeaveStats = latestPaidLeave(payslips)
+
+  // 4保険合計
+  const socialInsuranceStats = latestSocialInsurance(payslips)
 
   // みなし残業効率（給与明細のみ対象）
   const monthlyPayslips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
@@ -148,6 +152,24 @@ export default function DashboardPage() {
             sub="差引支給額 ÷ 総支給金額"
             deltaText={rateChange !== null ? `${rateChange >= 0 ? '+' : ''}${rateChange.toFixed(1)}pt` : undefined}
             deltaPositive={rateChange !== null && rateChange >= 0}
+          />
+        )}
+        {paidLeaveStats !== null && (
+          <StatCard
+            title="有給残日数"
+            value={`${paidLeaveStats.remaining}日`}
+            sub={paidLeaveStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
+            deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
+            deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
+          />
+        )}
+        {socialInsuranceStats !== null && (
+          <StatCard
+            title="4保険合計"
+            value={formatYen(socialInsuranceStats.total)}
+            sub={socialInsuranceStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
+            deltaText={socialInsuranceStats.delta !== null ? `${socialInsuranceStats.delta >= 0 ? '+' : '-'}¥${Math.abs(socialInsuranceStats.delta).toLocaleString('ja-JP')}` : undefined}
+            deltaPositive={socialInsuranceStats.delta !== null && socialInsuranceStats.delta <= 0}
           />
         )}
       </div>
