@@ -121,6 +121,7 @@ export default function DashboardPage() {
     : null
   const bonusDelta = prevYearBonusTotal !== null ? currentYearBonusTotal - prevYearBonusTotal : null
 
+  const [showExtraCards, setShowExtraCards] = useState(false)
   const [showAllRecent, setShowAllRecent] = useState(false)
   const recent = showAllRecent ? sorted : sorted.slice(0, 5)
 
@@ -170,50 +171,78 @@ export default function DashboardPage() {
             delta={latestMonth && prevMonth ? latestMonth.totalDeductions - prevMonth.totalDeductions : undefined}
           />
         </div>
-        {takeHomeRate !== null && (
-          <StatCard
-            title="手取り率"
-            value={`${takeHomeRate.toFixed(1)}%`}
-            sub="差引支給額 ÷ 総支給金額"
-            deltaText={rateChange !== null ? `${rateChange >= 0 ? '+' : ''}${rateChange.toFixed(1)}pt` : undefined}
-            deltaPositive={rateChange !== null && rateChange >= 0}
-          />
-        )}
-        {paidLeaveStats !== null && (
-          <StatCard
-            title="有給残日数"
-            value={`${paidLeaveStats.remaining}日`}
-            sub={paidLeaveStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
-            deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
-            deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
-          />
-        )}
-        {socialInsuranceStats !== null && (
-          <StatCard
-            title="4保険合計"
-            value={formatYen(socialInsuranceStats.total)}
-            sub={socialInsuranceStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
-            deltaText={socialInsuranceStats.delta !== null ? `${socialInsuranceStats.delta >= 0 ? '+' : '-'}${formatYen(Math.abs(socialInsuranceStats.delta))}` : undefined}
-            deltaPositive={socialInsuranceStats.delta !== null && socialInsuranceStats.delta <= 0}
-          />
-        )}
-        {hasYtdData && ytdTaxTotal > 0 && (
-          <StatCard
-            title="今年の税負担"
-            value={formatYen(ytdTaxTotal)}
-            sub={`${currentYear}年累計（所得税＋住民税）`}
-            delta={taxDelta !== null ? taxDelta : undefined}
-            deltaLabel="前年比"
-          />
-        )}
-        {hasBonusData && currentYearBonusTotal > 0 && (
-          <StatCard
-            title="今年の賞与"
-            value={formatYen(currentYearBonusTotal)}
-            sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
-            delta={bonusDelta !== null ? bonusDelta : undefined}
-            deltaLabel="前年比"
-          />
+
+        {/* Toggle button */}
+        <button
+          onClick={() => setShowExtraCards((v) => !v)}
+          className="flex items-center justify-center gap-1 text-xs text-brand-500 hover:text-brand-700 py-0.5 transition-colors"
+        >
+          {showExtraCards ? (
+            <>
+              詳細を隠す
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+            </>
+          ) : (
+            <>
+              詳細を見る
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </>
+          )}
+        </button>
+
+        {/* Extra cards (collapsible) */}
+        {showExtraCards && (
+          <div className="grid grid-cols-1 gap-3">
+            {socialInsuranceStats !== null && (
+              <StatCard
+                title="4保険合計"
+                value={formatYen(socialInsuranceStats.total)}
+                sub={socialInsuranceStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
+                deltaText={socialInsuranceStats.delta !== null ? `${socialInsuranceStats.delta >= 0 ? '+' : '-'}${formatYen(Math.abs(socialInsuranceStats.delta))}` : undefined}
+                deltaPositive={socialInsuranceStats.delta !== null && socialInsuranceStats.delta <= 0}
+              />
+            )}
+            {takeHomeRate !== null && (
+              <StatCard
+                title="手取り率"
+                value={`${takeHomeRate.toFixed(1)}%`}
+                sub="差引支給額 ÷ 総支給金額"
+                deltaText={rateChange !== null ? `${rateChange >= 0 ? '+' : ''}${rateChange.toFixed(1)}pt` : undefined}
+                deltaPositive={rateChange !== null && rateChange >= 0}
+              />
+            )}
+            {paidLeaveStats !== null && (
+              <StatCard
+                title="有給残日数"
+                value={`${paidLeaveStats.remaining}日`}
+                sub={paidLeaveStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
+                deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
+                deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
+              />
+            )}
+            {hasYtdData && ytdTaxTotal > 0 && (
+              <StatCard
+                title="今年の税負担"
+                value={formatYen(ytdTaxTotal)}
+                sub={`${currentYear}年累計（所得税＋住民税）`}
+                delta={taxDelta !== null ? taxDelta : undefined}
+                deltaLabel="前年比"
+              />
+            )}
+            {hasBonusData && currentYearBonusTotal > 0 && (
+              <StatCard
+                title="今年の賞与"
+                value={formatYen(currentYearBonusTotal)}
+                sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
+                delta={bonusDelta !== null ? bonusDelta : undefined}
+                deltaLabel="前年比"
+              />
+            )}
+          </div>
         )}
       </div>
 
@@ -227,7 +256,7 @@ export default function DashboardPage() {
 
       {/* YTD summary */}
       {hasYtdData && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-brand-50 rounded-xl border border-brand-100 p-4">
           <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
           <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
           <div className="grid grid-cols-3 gap-3">
@@ -270,7 +299,7 @@ export default function DashboardPage() {
 
       {/* Overtime gain — unified card */}
       {showGainSection && latestMonthly && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-brand-50 rounded-xl border border-brand-100 p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
