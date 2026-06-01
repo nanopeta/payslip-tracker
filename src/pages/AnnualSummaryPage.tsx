@@ -183,7 +183,7 @@ export default function AnnualSummaryPage() {
                           className="text-xs font-medium ml-2"
                           style={{ color: yoyDelta >= 0 ? '#5fad9b' : '#d06868' }}
                         >
-                          {yoyDelta >= 0 ? '+' : '-'}¥{Math.round(Math.abs(yoyDelta) / 10000)}万
+                          {yoyDelta >= 0 ? '+' : '-'}¥{(Math.abs(yoyDelta) / 10000).toFixed(1)}万
                         </span>
                       )}
                     </p>
