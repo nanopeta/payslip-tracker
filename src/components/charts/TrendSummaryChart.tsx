@@ -55,7 +55,11 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
           name="総支給額"
           stroke="#5b8fa8"
           strokeWidth={2}
-          dot={{ fill: '#5b8fa8', r: 3 }}
+          dot={(props: { cx?: number; cy?: number }) => {
+            const { cx, cy } = props
+            if (cx == null || cy == null) return <circle r={0} />
+            return <circle key={`ti-${cx}-${cy}`} cx={cx} cy={cy} r={3} fill="#5b8fa8" />
+          }}
           strokeDasharray="5 3"
         />
         <Line
@@ -64,7 +68,11 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
           name="総手取り"
           stroke="#5fad9b"
           strokeWidth={2.5}
-          dot={{ fill: '#5fad9b', r: 4 }}
+          dot={(props: { cx?: number; cy?: number }) => {
+            const { cx, cy } = props
+            if (cx == null || cy == null) return <circle r={0} />
+            return <circle key={`np-${cx}-${cy}`} cx={cx} cy={cy} r={4} fill="#5fad9b" />
+          }}
           activeDot={{ r: 6 }}
         />
         {showMonthlyLine && (
@@ -74,7 +82,11 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
             name="給与のみ総支給額"
             stroke="#4a7a93"
             strokeWidth={2}
-            dot={{ fill: '#4a7a93', r: 3 }}
+            dot={(props: { cx?: number; cy?: number }) => {
+              const { cx, cy } = props
+              if (cx == null || cy == null) return <circle r={0} />
+              return <circle key={`mti-${cx}-${cy}`} cx={cx} cy={cy} r={3} fill="#4a7a93" />
+            }}
             strokeDasharray="5 3"
           />
         )}
@@ -85,7 +97,11 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
             name="給与のみ手取り"
             stroke="#2d8a7a"
             strokeWidth={2}
-            dot={{ fill: '#2d8a7a', r: 3 }}
+            dot={(props: { cx?: number; cy?: number }) => {
+              const { cx, cy } = props
+              if (cx == null || cy == null) return <circle r={0} />
+              return <circle key={`mnp-${cx}-${cy}`} cx={cx} cy={cy} r={3} fill="#2d8a7a" />
+            }}
             strokeDasharray="3 2"
           />
         )}

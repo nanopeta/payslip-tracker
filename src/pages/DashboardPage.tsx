@@ -122,8 +122,7 @@ export default function DashboardPage() {
   const bonusDelta = prevYearBonusTotal !== null ? currentYearBonusTotal - prevYearBonusTotal : null
 
   const [showExtraCards, setShowExtraCards] = useState(false)
-  const [showAllRecent, setShowAllRecent] = useState(false)
-  const recent = showAllRecent ? sorted : sorted.slice(0, 5)
+  const recent = sorted.slice(0, 3)
 
   if (payslips.length === 0) {
     return (
@@ -462,13 +461,13 @@ export default function DashboardPage() {
             />
           ))}
         </div>
-        {sorted.length > 5 && (
-          <button
-            onClick={() => setShowAllRecent((v) => !v)}
-            className="mt-3 w-full py-2 text-xs font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-xl border border-brand-200 transition-colors"
+        {sorted.length > 3 && (
+          <Link
+            to="/payslips"
+            className="mt-3 flex items-center justify-center gap-1 w-full py-2 text-xs font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-xl border border-brand-200 transition-colors"
           >
-            {showAllRecent ? `折りたたむ ▲` : `もっと見る（残り ${sorted.length - 5} 件）▼`}
-          </button>
+            全件を見る（{sorted.length} 件）→
+          </Link>
         )}
       </div>
     </div>

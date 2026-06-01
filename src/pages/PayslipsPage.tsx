@@ -84,6 +84,11 @@ export default function PayslipsPage() {
 
   const filteredIndexMap = new Map(filtered.map((p, i) => [p.id, i]))
 
+  function resetSelection() {
+    setSelectedIds(new Set())
+    setSelecting(false)
+  }
+
   const isFiltered = filtered.length < payslips.length || filterYear !== 'all' || filterType !== 'all' || filterMonth !== 'all' || searchQuery.trim() !== ''
   const filteredNetPayTotal = filtered.reduce((sum, p) => sum + p.summary.netPay, 0)
   const filteredNetPayAvg = filtered.length > 0 ? Math.round(filteredNetPayTotal / filtered.length) : 0
@@ -168,6 +173,7 @@ export default function PayslipsPage() {
               const val = e.target.value === 'all' ? 'all' : Number(e.target.value)
               setFilterYear(val)
               if (val === 'all') setFilterMonth('all')
+              resetSelection()
             }}
             className="flex-shrink-0 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
           >
@@ -181,7 +187,7 @@ export default function PayslipsPage() {
               {(['all', 'monthly', 'bonus'] as const).map((t) => (
                 <button
                   key={t}
-                  onClick={() => setFilterType(t)}
+                  onClick={() => { setFilterType(t); resetSelection() }}
                   className={`px-3 py-1.5 transition-colors ${filterType === t ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
                   {t === 'all' ? 'すべて' : t === 'monthly' ? '給与' : '賞与'}
@@ -200,7 +206,7 @@ export default function PayslipsPage() {
             ).map(({ key, label }) => (
               <button
                 key={key}
-                onClick={() => setSortOrder(key)}
+                onClick={() => { setSortOrder(key); resetSelection() }}
                 className={`px-3 py-1.5 transition-colors ${sortOrder === key ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
               >
                 {label}
@@ -211,7 +217,7 @@ export default function PayslipsPage() {
         {filterYear !== 'all' && (
           <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1">
             <button
-              onClick={() => setFilterMonth('all')}
+              onClick={() => { setFilterMonth('all'); resetSelection() }}
               className={`flex-shrink-0 px-2.5 py-1 rounded-full text-sm transition-colors ${filterMonth === 'all' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
             >
               すべて
@@ -219,7 +225,7 @@ export default function PayslipsPage() {
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
               <button
                 key={m}
-                onClick={() => setFilterMonth(m)}
+                onClick={() => { setFilterMonth(m); resetSelection() }}
                 className={`flex-shrink-0 px-2.5 py-1 rounded-full text-sm transition-colors ${filterMonth === m ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
               >
                 {m}月
@@ -234,13 +240,13 @@ export default function PayslipsPage() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); resetSelection() }}
             placeholder="年月・金額・氏名で検索 (例: 2026年5月 / 300000)"
             className="w-full pl-9 pr-8 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => { setSearchQuery(''); resetSelection() }}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
