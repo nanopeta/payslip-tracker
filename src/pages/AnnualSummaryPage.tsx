@@ -166,6 +166,19 @@ export default function AnnualSummaryPage() {
             const bonusIncome = bonusSlips.reduce((s, p) => s + p.income.total, 0)
             const bonusNetPay = bonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
             const isExpanded = expandedYears.has(year)
+            const socialInsuranceTotal = yearSlips.reduce(
+              (s, p) =>
+                s +
+                p.deductions.healthInsurance +
+                p.deductions.longTermCareInsurance +
+                p.deductions.pensionInsurance +
+                p.deductions.employmentInsurance,
+              0
+            )
+            const taxRate =
+              totals.totalIncome > 0
+                ? ((totals.totalIncomeTax + totals.totalResidentTax) / totals.totalIncome) * 100
+                : 0
 
             return (
               <div key={year} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -225,37 +238,22 @@ export default function AnnualSummaryPage() {
                   </div>
 
                   {/* Tax & social insurance breakdown */}
-                  {(() => {
-                    const incomeTaxTotal = yearSlips.reduce((s, p) => s + p.deductions.incomeTax, 0)
-                    const residentTaxTotal = yearSlips.reduce((s, p) => s + p.deductions.residentTax, 0)
-                    const socialInsuranceTotal = yearSlips.reduce(
-                      (s, p) =>
-                        s +
-                        p.deductions.healthInsurance +
-                        p.deductions.longTermCareInsurance +
-                        p.deductions.pensionInsurance +
-                        p.deductions.employmentInsurance,
-                      0
-                    )
-                    return (
-                      <div className="border-t border-gray-100 pt-3">
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <p className="text-xs text-gray-400">所得税合計</p>
-                            <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(incomeTaxTotal)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-400">住民税合計</p>
-                            <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(residentTaxTotal)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-400">社会保険料合計</p>
-                            <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(socialInsuranceTotal)}</p>
-                          </div>
-                        </div>
+                  <div className="border-t border-gray-100 pt-3">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-400">所得税合計</p>
+                        <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.totalIncomeTax)}</p>
                       </div>
-                    )
-                  })()}
+                      <div>
+                        <p className="text-xs text-gray-400">住民税合計</p>
+                        <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.totalResidentTax)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">社会保険料合計</p>
+                        <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(socialInsuranceTotal)}</p>
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Monthly stats: avg / max / min + bar chart */}
                   {monthlySlips.length > 0 && (() => {
@@ -342,7 +340,23 @@ export default function AnnualSummaryPage() {
 
                   {/* Annual detail — expanded */}
                   {isExpanded && (
-                    <div className="border-t border-gray-100 pt-4">
+                    <div className="border-t border-gray-100 pt-4 space-y-4">
+                      {/* Tax burden rate */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-xs font-medium text-brand-700">税負担率（所得税＋住民税）</p>
+                          <p className="text-sm font-bold tabular-nums text-brand-700">{taxRate.toFixed(1)}%</p>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-2">
+                          <div
+                            className="bg-brand-400 h-2 rounded-full"
+                            style={{ width: `${Math.min(taxRate, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {formatYen(totals.totalIncomeTax + totals.totalResidentTax)} ÷ {formatYen(totals.totalIncome)}
+                        </p>
+                      </div>
                       <AnnualDetailView year={year} payslips={yearSlips} />
                     </div>
                   )}
