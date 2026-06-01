@@ -12,6 +12,10 @@
  *   npm run agent-team -- --max-sprints=5
  *   npm run agent-team -- --fast            # Reviewer・ドキュメント更新をスキップ
  *   npm run agent-team -- --no-push         # スプリント完了後のプッシュを省略
+ *   npm run agent-team -- --no-merge        # gh CLI があっても自動マージしない
+ *
+ * gh CLI が利用可能な場合（ローカルPC等）は、スプリント完了後に自動で
+ * PR 作成 → スカッシュマージ → ブランチ削除 まで行います。
  */
 
 import { spawnSync, execSync } from 'child_process'
@@ -49,6 +53,7 @@ const fast         = cliArgs.includes('--fast')
 const skipReview    = fast || cliArgs.includes('--no-review')
 const skipDocUpdate = fast || cliArgs.includes('--no-doc-update')
 const skipPush      = cliArgs.includes('--no-push')
+const skipMerge     = cliArgs.includes('--no-merge')
 
 // ─── claude CLI の存在確認 ────────────────────────────
 const claudeCheck = spawnSync('claude', ['--version'], { encoding: 'utf-8', shell: true })
@@ -185,6 +190,58 @@ git commit/push/checkout は一切実行しない（スクリプトが管理）
 2. 新コンポーネント・新パターンがあれば ${R}/CLAUDE.md をEditで更新（既存スタイル維持）
 3. 更新不要なら「更新不要」とだけ返す`
 
+// ─── GitHub PR 作成・マージ（gh CLI が必要） ─────────
+function ghAutoMerge(branchName: string) {
+  if (skipMerge) {
+    console.log(`  ${C.gray}--no-merge 指定のため PR作成・マージをスキップ${C.reset}`)
+    return
+  }
+
+  const ghCheck = spawnSync('gh', ['--version'], { encoding: 'utf-8', shell: true })
+  if (ghCheck.error || ghCheck.status !== 0) {
+    console.log(`\n  ${C.gray}gh CLI が見つからないため PR作成・マージをスキップします${C.reset}`)
+    console.log(`  ${C.gray}手動でPRを作成してください: ${branchName}${C.reset}`)
+    return
+  }
+
+  const date = new Date().toISOString().slice(0, 10)
+  const title = `エージェントチーム: 自律改善 ${date}`
+  const body = [
+    'エージェントチーム（PM / Dev / Reviewer）による自律改善スプリント。',
+    '',
+    `- スプリント数: ${maxSprints}`,
+    `- タスク数/スプリント: ${sprintSize}`,
+  ].join('\n')
+
+  console.log(`\n${C.cyan}📋 PR を作成中...${C.reset}`)
+  try {
+    const prUrl = execSync(
+      `gh pr create --head "${branchName}" --base main --title "${title}" --body "${body}"`,
+      { cwd: PROJECT_ROOT, encoding: 'utf-8' }
+    ).trim()
+    console.log(`  ${C.green}✅ PR 作成: ${prUrl}${C.reset}`)
+  } catch (e: unknown) {
+    const msg = String(e)
+    if (msg.includes('already exists')) {
+      console.log(`  ${C.gray}PR は既に存在しています${C.reset}`)
+    } else {
+      console.error(`  ${C.red}PR 作成エラー: ${msg.slice(0, 300)}${C.reset}`)
+      return
+    }
+  }
+
+  console.log(`${C.cyan}🔀 スカッシュマージ中...${C.reset}`)
+  try {
+    execSync(
+      `gh pr merge "${branchName}" --squash --delete-branch --yes`,
+      { cwd: PROJECT_ROOT, encoding: 'utf-8' }
+    )
+    console.log(`${C.green}✅ マージ完了 → main${C.reset}`)
+  } catch (e) {
+    console.error(`  ${C.red}マージエラー: ${String(e).slice(0, 300)}${C.reset}`)
+  }
+}
+
 // ─── Git ヘルパー ─────────────────────────────────────
 function gitCommit(message: string) {
   try {
@@ -236,6 +293,7 @@ function main() {
     skipReview    ? 'no-review'          : '',
     skipDocUpdate ? 'no-doc-update'      : '',
     skipPush      ? 'no-push'            : '',
+    skipMerge     ? 'no-merge'           : '',
   ].filter(Boolean).join(' / ') || 'standard'
 
   console.log(`${C.cyan}${C.bold}
@@ -256,6 +314,7 @@ function main() {
   process.on('SIGINT', () => {
     console.log(`\n${C.yellow}⏹ 停止中...${C.reset}`)
     gitPush(branchName)
+    ghAutoMerge(branchName)
     process.exit(0)
   })
 
@@ -402,9 +461,9 @@ function main() {
     console.log(`\n${C.cyan}🔄 スプリント ${sprintNo} を開始します... (Ctrl+C で停止)${C.reset}`)
   }
 
-  // 全スプリント完了後に自動プッシュ
+  // 全スプリント完了後に自動プッシュ → gh があればPR作成・マージ
   gitPush(branchName)
-  console.log(`\n${C.cyan}ブランチ: ${branchName}${C.reset}`)
+  ghAutoMerge(branchName)
 }
 
 main()
