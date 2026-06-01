@@ -51,10 +51,10 @@ export default function OvertimeHoursChart({ data, deemedHours = 45 }: Props) {
         />
         <ReferenceLine
           y={80}
-          stroke="#b91c1c"
+          stroke="#d06868"
           strokeDasharray="4 2"
           strokeWidth={1.5}
-          label={{ value: '80h', position: 'right', fontSize: 10, fill: '#b91c1c' }}
+          label={{ value: '80h', position: 'right', fontSize: 10, fill: '#d06868' }}
         />
         <Bar dataKey="overtimeHours" name="残業時間" fill="#5b8fa8" radius={[3, 3, 0, 0]} />
       </BarChart>
