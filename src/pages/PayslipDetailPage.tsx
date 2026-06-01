@@ -5,7 +5,7 @@ import PayslipDetailView from '../components/payslip/PayslipDetailView'
 import PayslipReviewForm from '../components/upload/PayslipReviewForm'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import { previousPayslip, nextPayslip } from '../lib/aggregations'
-import { formatYen } from '../lib/formatters'
+import { formatYen, formatHoursMinutes } from '../lib/formatters'
 import type { Payslip } from '../types/payslip'
 
 export default function PayslipDetailPage() {
@@ -122,22 +122,53 @@ export default function PayslipDetailPage() {
 
       {!editing && prev && (
         <div className="bg-white rounded-xl p-4 shadow-sm border border-brand-200">
-          <p className="text-xs text-gray-400 mb-3">勤怠（前月比）</p>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: '残業時間', delta: payslip.attendance.overtimeHours - prev.attendance.overtimeHours, unit: 'h', invert: true },
-              { label: '有給残', delta: payslip.attendance.paidLeaveRemaining - prev.attendance.paidLeaveRemaining, unit: '日', invert: false },
-            ].map(({ label, delta, unit, invert }) => (
-              <div key={label} className="text-center">
-                <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                <p
-                  className="text-sm font-semibold tabular-nums"
-                  style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}
-                >
-                  {delta > 0 ? '+' : ''}{delta.toFixed(1)} {unit}
-                </p>
-              </div>
-            ))}
+          <p className="text-xs text-gray-400 mb-3">勤怠（{prev.year}年{prev.month}月との比較）</p>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              {
+                label: '出勤日数',
+                value: payslip.attendance.workDays,
+                prevValue: prev.attendance.workDays,
+                display: `${payslip.attendance.workDays}日`,
+                invert: false,
+                isHours: false,
+              },
+              {
+                label: '残業時間',
+                value: payslip.attendance.overtimeHours,
+                prevValue: prev.attendance.overtimeHours,
+                display: formatHoursMinutes(payslip.attendance.overtimeHours),
+                invert: true,
+                isHours: true,
+              },
+              {
+                label: '有給残日数',
+                value: payslip.attendance.paidLeaveRemaining,
+                prevValue: prev.attendance.paidLeaveRemaining,
+                display: `${payslip.attendance.paidLeaveRemaining}日`,
+                invert: false,
+                isHours: false,
+              },
+            ] as { label: string; value: number; prevValue: number; display: string; invert: boolean; isHours: boolean }[]).map(
+              ({ label, value, prevValue, display, invert, isHours }) => {
+                const delta = value - prevValue
+                const deltaColor = (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868'
+                const deltaStr = isHours
+                  ? `${delta > 0 ? '+' : ''}${delta.toFixed(1)}h`
+                  : `${delta > 0 ? '+' : ''}${delta}日`
+                return (
+                  <div key={label} className="text-center">
+                    <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                    <p className="text-base font-semibold tabular-nums text-gray-900">{display}</p>
+                    {delta !== 0 && (
+                      <p className="text-xs tabular-nums mt-0.5" style={{ color: deltaColor }}>
+                        {deltaStr}
+                      </p>
+                    )}
+                  </div>
+                )
+              },
+            )}
           </div>
         </div>
       )}
