@@ -100,7 +100,7 @@ src/
 │   │   ├── TrendSummaryChart.tsx      # 支給・手取りの推移（折れ線）★メイン
 │   │   ├── PaidLeaveTrendChart.tsx    # 有給残日数の推移（棒グラフ）
 │   │   ├── DeductionDonutChart.tsx    # 控除内訳ドーナツチャート（最新月）
-│   │   ├── OvertimeHoursChart.tsx     # 残業時間推移（棒グラフ・45h参照線付き）
+│   │   ├── OvertimeHoursChart.tsx     # 残業時間推移（棒グラフ・45h参照線・80h過労ライン付き）
 │   │   ├── SocialInsuranceTrendChart.tsx  # 4保険合計の月次推移（折れ線）
 │   │   ├── MonthlyNetPayBarChart.tsx  # 年間集計の月次手取り棒グラフ（給与/賞与スタック）
 │   │   ├── NetPayTrendChart.tsx       # 旧・未使用
@@ -521,6 +521,8 @@ interface SocialInsuranceStats {
 | スマホ（`< md`） | BottomNav（4タブ） + コンテンツフル幅 |
 | PC（`md:` 以上） | Sidebar 左固定（`w-56`）+ `ml-56` でコンテンツをオフセット |
 
+BottomNav のタブラベル: ホーム・明細・アップロード・**年次**（旧: 源泉）。
+
 ---
 
 ## デプロイ
@@ -721,7 +723,27 @@ const INCOME_LABELS: Record<string, string> = {
 5. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
 6. **有給残日数の推移** — `PaidLeaveTrendChart`（2件以上ある場合のみ）
 7. **控除内訳ドーナツチャート** — `DeductionDonutChart`（最新給与月のデータ）
-8. **最近の給与明細** — 直近5件のカードリスト
+8. **最近の給与明細** — 直近3件のカードリスト（「全件を見る」リンク付き）
+
+### DashboardPage の StatCard 折りたたみパターン
+
+差引支給額・総支給・控除合計の3枚を常時表示し、残り（手取り率・有給残・4保険・税負担・賞与）は `showExtraCards` state でトグル展開する。
+
+```typescript
+const [showExtraCards, setShowExtraCards] = useState(false)
+// トグルボタン
+<button onClick={() => setShowExtraCards(v => !v)}>
+  {showExtraCards ? '▲ 閉じる' : '▼ もっと見る'}
+</button>
+{showExtraCards && (
+  <>
+    {/* 手取り率・有給残・4保険・税負担・賞与 StatCards */}
+  </>
+)}
+```
+
+- 常時表示3枚は `highlight` フラグなし（グラデーション背景なし）
+- YTD・みなし残業セクションの背景は `bg-brand-50` で色分けし視覚階層を明確化
 
 ### PayslipsPage の年別グループ表示パターン
 
@@ -831,6 +853,87 @@ function matchesSearch(p: Payslip): boolean {
 
 - 検索 UI: 虫眼鏡 SVG アイコン（`absolute left-3`）付きの `<input type="text">` をフィルター行の下に配置
 - `isFiltered` 判定に `searchQuery.trim() !== ''` を含める（サマリーバー表示に影響）
+
+### OvertimeHoursChart の参照線仕様
+
+残業時間棒グラフには2本の参照線を表示する。
+
+| 参照線 | y値 | 色 | strokeDasharray | strokeWidth | ラベル |
+|---|---|---|---|---|---|
+| みなし残業上限 | 45 | `#5b8fa8`（brand-600）| `"4 2"` | 1.5 | `'45h'` |
+| 過労ライン | 80 | `#d06868`（--danger）| `"4 2"` | 1.5 | `'80h'` |
+
+```tsx
+<ReferenceLine y={45} stroke="#5b8fa8" strokeDasharray="4 2" strokeWidth={1.5}
+  label={{ value: '45h', position: 'right', fontSize: 10, fill: '#5b8fa8' }} />
+<ReferenceLine y={80} stroke="#d06868" strokeDasharray="4 2" strokeWidth={1.5}
+  label={{ value: '80h', position: 'right', fontSize: 10, fill: '#d06868' }} />
+```
+
+- 過労ラインに `#b94040` など brand パレット外の色は使わない。必ず `--danger: #d06868`
+
+### TrendSummaryChart の dot カスタムレンダラー
+
+データ点が 1〜2 件のときに Recharts の `dot` オブジェクト指定では点が描画されないケースがある。
+カスタム関数レンダラーで明示的に `<circle>` を返すことで確実に表示する。
+
+```tsx
+dot={(props: { cx?: number; cy?: number }) => {
+  const { cx, cy } = props
+  if (cx == null || cy == null) return <circle r={0} />
+  return <circle key={`np-${cx}-${cy}`} cx={cx} cy={cy} r={4} fill="#5fad9b" />
+}}
+```
+
+- `key` を `cx-cy` ベースで付与して React の reconciliation 警告を防ぐ
+- `cx/cy` が `null/undefined` のときは `r={0}` の空 circle を返す（null は型エラーになる）
+
+### AnnualSummaryPage の年カード前年比表示
+
+各年カードの展開ヘッダー右端に前年比手取り差額（±¥XX万）を表示する。
+
+```tsx
+// 前年データがある場合のみ表示
+const prevYearTotal = groupedYears.find(g => g.year === year - 1)?.totalNetPay
+const yoyDelta = prevYearTotal != null ? totalNetPay - prevYearTotal : null
+
+{yoyDelta !== null && (
+  <span style={{ color: yoyDelta >= 0 ? '#5fad9b' : '#d06868', fontSize: 13 }}>
+    {yoyDelta >= 0 ? '+' : ''}{formatYen(yoyDelta)}
+  </span>
+)}
+```
+
+- 前年データが存在しない最古年では表示しない
+- ヘッダー row: `展開トグルボタン（flex-1）+ 前年比テキスト + CSV ボタン` の横並び
+
+### PayslipsPage フィルター変更時の選択リセット
+
+フィルター（年・月・種別）またはソート順を変更したとき、一括選択の `selectedIds` と `selecting` モードを自動リセットする。
+
+```typescript
+// フィルター変更時に選択状態をリセット
+function handleFilterChange(newFilter: ...) {
+  setSelectedIds(new Set())
+  setSelecting(false)
+  setFilterYear(newFilter)  // など
+}
+```
+
+- フィルター変更後に前の選択が残ると「見えないアイテムが選択中」になる誤操作を防ぐ
+
+### PayslipDetailView / AnnualDetailView のセクションヘッダー
+
+セクションヘッダー（支給明細・控除明細など）に左側アクセントバーを付与し視認性を高める。
+
+```tsx
+<div className="flex items-center gap-2 mb-3">
+  <div className="w-1 h-5 rounded-full bg-brand-600" />  {/* アクセントバー */}
+  <h3 className="font-semibold text-brand-800 text-sm">{title}</h3>
+</div>
+```
+
+- 合計行（支給合計・控除合計）には `bg-gray-50` の背景色を追加して通常行と区別する
 
 ### AnnualSummaryPage の CSV エクスポートパターン
 
