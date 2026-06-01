@@ -182,8 +182,9 @@ export default function AnnualSummaryPage() {
                         <span
                           className="text-xs font-medium ml-2"
                           style={{ color: yoyDelta >= 0 ? '#5fad9b' : '#d06868' }}
+                          title="前年比 年間手取差額"
                         >
-                          {yoyDelta >= 0 ? '+' : '-'}¥{(Math.abs(yoyDelta) / 10000).toFixed(1)}万
+                          前年比 {yoyDelta >= 0 ? '+' : '-'}¥{(Math.abs(yoyDelta) / 10000).toFixed(1)}万
                         </span>
                       )}
                     </p>

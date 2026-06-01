@@ -84,14 +84,14 @@ export default function PayslipsPage() {
 
   const filteredIndexMap = new Map(filtered.map((p, i) => [p.id, i]))
 
-  const isFiltered = filtered.length < payslips.length || filterYear !== 'all' || filterType !== 'all' || filterMonth !== 'all' || searchQuery.trim() !== ''
-  const filteredNetPayTotal = filtered.reduce((sum, p) => sum + p.summary.netPay, 0)
-  const filteredNetPayAvg = filtered.length > 0 ? Math.round(filteredNetPayTotal / filtered.length) : 0
-
   function resetSelection() {
     setSelectedIds(new Set())
     setSelecting(false)
   }
+
+  const isFiltered = filtered.length < payslips.length || filterYear !== 'all' || filterType !== 'all' || filterMonth !== 'all' || searchQuery.trim() !== ''
+  const filteredNetPayTotal = filtered.reduce((sum, p) => sum + p.summary.netPay, 0)
+  const filteredNetPayAvg = filtered.length > 0 ? Math.round(filteredNetPayTotal / filtered.length) : 0
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
