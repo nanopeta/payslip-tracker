@@ -308,6 +308,7 @@ export default function PayslipsPage() {
                         <PayslipCard
                           payslip={p}
                           prevNetPay={sortOrder === 'date-desc' ? filtered[fi + 1]?.summary.netPay : undefined}
+                          searchQuery={searchQuery}
                         />
                       </div>
                     </div>
@@ -344,6 +345,7 @@ export default function PayslipsPage() {
                 <PayslipCard
                   payslip={p}
                   prevNetPay={sortOrder === 'date-desc' ? filtered[i + 1]?.summary.netPay : undefined}
+                  searchQuery={searchQuery}
                 />
               </div>
             </div>
