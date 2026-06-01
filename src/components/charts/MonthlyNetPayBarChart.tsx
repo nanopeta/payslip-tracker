@@ -49,7 +49,7 @@ export default function MonthlyNetPayBarChart({ data, hasBonus }: Props) {
           dataKey="monthlyNetPay"
           name="monthlyNetPay"
           stackId="a"
-          fill="#5b8fa8"
+          fill="#5fad9b"
           radius={hasBonus ? [0, 0, 0, 0] : [3, 3, 0, 0]}
         />
         {hasBonus && (
@@ -57,7 +57,7 @@ export default function MonthlyNetPayBarChart({ data, hasBonus }: Props) {
             dataKey="bonusNetPay"
             name="bonusNetPay"
             stackId="a"
-            fill="#f0a060"
+            fill="#f59e0b"
             radius={[3, 3, 0, 0]}
           />
         )}
