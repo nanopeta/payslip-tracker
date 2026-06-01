@@ -6,6 +6,7 @@ import {
 import useStore from '../store/useStore'
 import WithholdingCard from '../components/withholding/WithholdingCard'
 import AnnualDetailView from '../components/payslip/AnnualDetailView'
+import MonthlyNetPayBarChart from '../components/charts/MonthlyNetPayBarChart'
 import { annualTotals, uniqueYears } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 import type { Payslip } from '../types/payslip'
@@ -285,54 +286,8 @@ export default function AnnualSummaryPage() {
                           </div>
                         </div>
                         {chartData.length >= 2 && (
-                          <div className="mt-3" style={{ height: hasBonus ? 180 : 160 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis
-                                  dataKey="label"
-                                  tick={{ fontSize: 11, fill: '#6b7280' }}
-                                  interval={0}
-                                  angle={-30}
-                                  textAnchor="end"
-                                  height={48}
-                                />
-                                <YAxis
-                                  tickFormatter={(v) => `¥${(v / 10000).toFixed(1)}万`}
-                                  tick={{ fontSize: 11, fill: '#6b7280' }}
-                                  width={62}
-                                />
-                                <Tooltip
-                                  formatter={(v: number, name: string) => [
-                                    formatYen(v),
-                                    name === 'monthlyNetPay' ? '給与手取り' : '賞与手取り',
-                                  ]}
-                                  contentStyle={{ fontSize: 12, borderRadius: '8px' }}
-                                />
-                                {hasBonus && (
-                                  <Legend
-                                    formatter={(value) => value === 'monthlyNetPay' ? '給与' : '賞与'}
-                                    wrapperStyle={{ fontSize: 12 }}
-                                  />
-                                )}
-                                <Bar
-                                  dataKey="monthlyNetPay"
-                                  name="monthlyNetPay"
-                                  stackId="a"
-                                  fill="#5fad9b"
-                                  radius={hasBonus ? [0, 0, 0, 0] : [3, 3, 0, 0]}
-                                />
-                                {hasBonus && (
-                                  <Bar
-                                    dataKey="bonusNetPay"
-                                    name="bonusNetPay"
-                                    stackId="a"
-                                    fill="#f59e0b"
-                                    radius={[3, 3, 0, 0]}
-                                  />
-                                )}
-                              </BarChart>
-                            </ResponsiveContainer>
+                          <div className="mt-3" style={{ height: hasBonus ? 200 : 180 }}>
+                            <MonthlyNetPayBarChart data={chartData} hasBonus={hasBonus} />
                           </div>
                         )}
                       </div>

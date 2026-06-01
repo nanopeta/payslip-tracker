@@ -193,7 +193,7 @@ export default function DashboardPage() {
             title="4保険合計"
             value={formatYen(socialInsuranceStats.total)}
             sub={socialInsuranceStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
-            deltaText={socialInsuranceStats.delta !== null ? `${socialInsuranceStats.delta >= 0 ? '+' : '-'}¥${Math.abs(socialInsuranceStats.delta).toLocaleString('ja-JP')}` : undefined}
+            deltaText={socialInsuranceStats.delta !== null ? `${socialInsuranceStats.delta >= 0 ? '+' : '-'}${formatYen(Math.abs(socialInsuranceStats.delta))}` : undefined}
             deltaPositive={socialInsuranceStats.delta !== null && socialInsuranceStats.delta <= 0}
           />
         )}
@@ -311,12 +311,12 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-0.5">残業時給</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">¥{overtimeHourlyRate.toLocaleString('ja-JP')}/h</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(overtimeHourlyRate)}/h</p>
             </div>
             {basicHourlyRate > 0 && (
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">基本時給</p>
-                <p className="text-sm font-semibold tabular-nums text-gray-900">¥{basicHourlyRate.toLocaleString('ja-JP')}/h</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(basicHourlyRate)}/h</p>
               </div>
             )}
           </div>
@@ -361,7 +361,7 @@ export default function DashboardPage() {
                     width={62}
                   />
                   <Tooltip
-                    formatter={(v: number) => [`${v >= 0 ? '+' : ''}${v.toLocaleString('ja-JP')}円`, '差額']}
+                    formatter={(v: number) => [`${v >= 0 ? '+' : '-'}${formatYen(Math.abs(v))}`, '差額']}
                     contentStyle={{ fontSize: 12, borderRadius: '8px' }}
                   />
                   <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="3 3" />

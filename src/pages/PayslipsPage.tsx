@@ -161,7 +161,7 @@ export default function PayslipsPage() {
       {/* Filters */}
       {payslips.length > 0 && (
         <div className="space-y-2">
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-nowrap md:flex-wrap gap-2 items-center overflow-x-auto pb-1 md:pb-0">
           <select
             value={filterYear}
             onChange={(e) => {
@@ -169,7 +169,7 @@ export default function PayslipsPage() {
               setFilterYear(val)
               if (val === 'all') setFilterMonth('all')
             }}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
+            className="flex-shrink-0 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
           >
             <option value="all">すべての年</option>
             {years.map((y) => (
@@ -177,7 +177,7 @@ export default function PayslipsPage() {
             ))}
           </select>
           {hasBonusData && (
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+            <div className="flex-shrink-0 flex rounded-lg border border-gray-200 overflow-hidden text-sm">
               {(['all', 'monthly', 'bonus'] as const).map((t) => (
                 <button
                   key={t}
@@ -189,7 +189,7 @@ export default function PayslipsPage() {
               ))}
             </div>
           )}
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm ml-auto">
+          <div className="flex-shrink-0 flex rounded-lg border border-gray-200 overflow-hidden text-sm md:ml-auto">
             {(
               [
                 { key: 'date-desc', label: '新しい順' },
@@ -207,26 +207,26 @@ export default function PayslipsPage() {
               </button>
             ))}
           </div>
-          {filterYear !== 'all' && (
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={() => setFilterMonth('all')}
-                className={`px-2.5 py-1 rounded-full text-sm transition-colors ${filterMonth === 'all' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-              >
-                すべて
-              </button>
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setFilterMonth(m)}
-                  className={`px-2.5 py-1 rounded-full text-sm transition-colors ${filterMonth === m ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                >
-                  {m}月
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+        {filterYear !== 'all' && (
+          <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1">
+            <button
+              onClick={() => setFilterMonth('all')}
+              className={`flex-shrink-0 px-2.5 py-1 rounded-full text-sm transition-colors ${filterMonth === 'all' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+            >
+              すべて
+            </button>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <button
+                key={m}
+                onClick={() => setFilterMonth(m)}
+                className={`flex-shrink-0 px-2.5 py-1 rounded-full text-sm transition-colors ${filterMonth === m ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+              >
+                {m}月
+              </button>
+            ))}
+          </div>
+        )}
         <div className="relative">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />

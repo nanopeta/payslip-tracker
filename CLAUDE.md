@@ -102,6 +102,7 @@ src/
 │   │   ├── DeductionDonutChart.tsx    # 控除内訳ドーナツチャート（最新月）
 │   │   ├── OvertimeHoursChart.tsx     # 残業時間推移（棒グラフ・45h参照線付き）
 │   │   ├── SocialInsuranceTrendChart.tsx  # 4保険合計の月次推移（折れ線）
+│   │   ├── MonthlyNetPayBarChart.tsx  # 年間集計の月次手取り棒グラフ（給与/賞与スタック）
 │   │   ├── NetPayTrendChart.tsx       # 旧・未使用
 │   │   └── IncomeDeductionChart.tsx   # 旧・未使用
 │   ├── payslip/
@@ -114,7 +115,7 @@ src/
     ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳・4保険合計）
     ├── PayslipsPage.tsx    # 給与明細一覧（ソート切り替え・年別グループ・月フィルター・フリーテキスト検索・一括削除）
     ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション・前月比サマリー・控除内訳ドーナツチャート）
-    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月・税/社保内訳・棒グラフ給与/賞与色分け・CSV エクスポート）
+    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月・税/社保内訳・MonthlyNetPayBarChart・CSV エクスポート）
     ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定（試算プレビュー付き）・JSON バックアップ/復元・CSV エクスポート
 ```
@@ -339,6 +340,29 @@ formatYen(n) → '¥1,234,567'
 - チャートデータは **左が古い・右が最新** の時系列順にソートして渡す
 - Y軸の単位は `万` を使う（`k` は使わない）
 - 複数の折れ線: 色は `#5b8fa8`（支給）、`#5fad9b`（手取り）、`#4a7a93`（給与のみ支給）、`#2d8a7a`（給与のみ手取り）
+
+### MonthlyNetPayBarChart（年間集計 棒グラフ）
+
+`AnnualSummaryPage.tsx` の各年カード内に埋め込む月次手取り棒グラフ。
+
+```typescript
+export interface MonthlyNetPayBarChartPoint {
+  label: string         // "MM月" 形式
+  monthlyNetPay: number
+  bonusNetPay: number
+}
+
+interface Props {
+  data: MonthlyNetPayBarChartPoint[]
+  hasBonus: boolean     // true のとき賞与バーを追加・凡例表示
+}
+```
+
+- 棒は `stackId="a"` でスタック
+- 色: 給与手取り `#5fad9b`（success）、賞与手取り `#f59e0b`（amber）
+- `hasBonus === false` のとき棒の上部角丸 `radius={[3,3,0,0]}`、`true` のとき給与バーは角丸なし
+- Tooltip ラベル: `'monthlyNetPay'` → `'給与手取り'`、`'bonusNetPay'` → `'賞与手取り'`
+- `hasBonus === true` のときのみ Legend を表示
 
 ### 期間フィルターパターン
 
@@ -583,6 +607,30 @@ git push --force-with-lease origin <branch>
 
 ---
 
+### DeductionDonutChart の凡例でレイアウト崩れ
+
+**原因**: 健康保険・厚生年金等の長いラベルが凡例に並ぶとチャートエリアを圧迫する。
+
+**対処**: `<Legend wrapperStyle={{ fontSize: 10 }} />` でフォントを縮小し、各 `<Cell>` に `legendType="square"` を付与。→ **実装済み（DeductionDonutChart.tsx）**
+
+---
+
+### みなし残業差額ツールチップの金額表示が `¥` なしになる
+
+**原因**: `formatter` に `formatYen` を使わず文字列テンプレートで組み立てていた。
+
+**対処**: `formatter={(v: number) => [\`${v >= 0 ? '+' : '-'}${formatYen(Math.abs(v))}\`, '差額']}` に統一。→ **実装済み（DashboardPage.tsx）**
+
+---
+
+### PayslipsPage のフィルター行がモバイルで折り返す
+
+**原因**: フィルター pill ボタンが折り返して縦に重なる。
+
+**対処**: フィルター行ラッパーを `flex flex-nowrap overflow-x-auto pb-1` にして横スクロール可能にし、各ボタンに `flex-shrink-0` を付与。→ **実装済み（PayslipsPage.tsx）**
+
+---
+
 ## 開発時の注意点
 
 ### 新しい支給・控除項目を追加したいとき
@@ -703,6 +751,26 @@ if (val === 'all') setFilterMonth('all')
 
 - `filterYear === 'all'` のとき月フィルターは非表示（`groupedByYear` と排他）
 - スタイルは期間フィルターと同一（選択中: `bg-brand-600 text-white`、未選択: `bg-gray-100 text-gray-500`）
+- 月フィルターの pill ボタン行は `flex flex-nowrap gap-1.5 overflow-x-auto pb-1` でモバイル横スクロール対応
+
+### PayslipsPage のモバイル横スクロールフィルターパターン
+
+フィルター行全体をモバイルで横スクロール可能にする実装パターン:
+
+```tsx
+{/* フィルター行ラッパー: モバイルは横スクロール、PC は折り返し */}
+<div className="flex flex-nowrap md:flex-wrap gap-2 items-center overflow-x-auto pb-1 md:pb-0">
+  {/* 各フィルターボタン/select に flex-shrink-0 を付与 */}
+  <select className="flex-shrink-0 ..." />
+  <div className="flex-shrink-0 flex rounded-lg ...">
+    {/* pill ボタン群 */}
+  </div>
+</div>
+```
+
+- `flex-nowrap` + `overflow-x-auto` でモバイル横スクロールを実現
+- `md:flex-wrap` + `md:pb-0` で PC では折り返しに戻す
+- 子要素すべてに `flex-shrink-0` を付けて幅が縮まないようにする
 
 ### PayslipsPage の絞り込みサマリーバー
 
@@ -796,6 +864,31 @@ function exportCsv(year: number, slips: Payslip[]) {
 - ヘッダー行レイアウト: 展開トグルボタン（`flex-1`）+ CSV ボタンの横並び `<div className="flex items-center gap-2">`
 - CSV ボタンスタイル: `text-brand-600 border border-brand-200 rounded-lg hover:bg-brand-50`
 - ファイル名: `payslip_YYYY.csv`
+
+### AnnualSummaryPage の月次手取り棒グラフ埋め込みパターン
+
+各年カード内の月次明細一覧の上に `MonthlyNetPayBarChart` を埋め込む。
+
+```typescript
+// chartData を作成（月順ソート、1〜12月ラベル）
+const chartData: MonthlyNetPayBarChartPoint[] = Array.from(
+  { length: 12 }, (_, i) => {
+    const m = i + 1
+    const monthly = slips.find(p => p.month === m && p.payslipType !== 'bonus')
+    const bonus = slips.filter(p => p.month === m && p.payslipType === 'bonus')
+    return {
+      label: `${m}月`,
+      monthlyNetPay: monthly?.summary.netPay ?? 0,
+      bonusNetPay: bonus.reduce((s, p) => s + p.summary.netPay, 0),
+    }
+  }
+).filter(d => d.monthlyNetPay > 0 || d.bonusNetPay > 0)
+
+const hasBonus = slips.some(p => p.payslipType === 'bonus')
+```
+
+- グラフ高さ: `hasBonus ? 200 : 180`
+- `slips.length > 0` のときのみ表示（データなし年はグラフ非表示）
 
 ### PayslipDetailPage の前月比サマリー
 

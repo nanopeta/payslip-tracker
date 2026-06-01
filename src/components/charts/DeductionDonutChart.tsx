@@ -44,6 +44,7 @@ export default function DeductionDonutChart({ deductions }: Props) {
           outerRadius={80}
           paddingAngle={2}
           dataKey="value"
+          legendType="square"
         >
           {data.map((entry, index) => (
             <Cell key={index} fill={entry.color} />
@@ -56,7 +57,7 @@ export default function DeductionDonutChart({ deductions }: Props) {
           ]}
           contentStyle={{ fontSize: 12, borderRadius: '8px' }}
         />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
+        <Legend wrapperStyle={{ fontSize: 10 }} />
       </PieChart>
     </ResponsiveContainer>
   )
