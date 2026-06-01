@@ -266,6 +266,37 @@ export function socialInsuranceTrend(payslips: Payslip[]): SocialInsuranceTrendP
     }))
 }
 
+export interface OvertimeHoursStats {
+  total: number
+  monthCount: number
+  prevYtdTotal: number | null
+  delta: number | null
+}
+
+export function ytdOvertimeHoursStats(payslips: Payslip[], year: number): OvertimeHoursStats {
+  const monthly = payslips.filter(
+    (p) => p.year === year && (!p.payslipType || p.payslipType === 'monthly'),
+  )
+  const total = monthly.reduce((s, p) => s + p.attendance.overtimeHours, 0)
+  const monthCount = monthly.length
+  const currentMonths = new Set(monthly.map((p) => p.month))
+  const prevMonthly = payslips.filter(
+    (p) =>
+      p.year === year - 1 &&
+      (!p.payslipType || p.payslipType === 'monthly') &&
+      currentMonths.has(p.month),
+  )
+  const prevYtdTotal = prevMonthly.length === monthly.length
+    ? prevMonthly.reduce((s, p) => s + p.attendance.overtimeHours, 0)
+    : null
+  return {
+    total,
+    monthCount,
+    prevYtdTotal,
+    delta: prevYtdTotal !== null ? total - prevYtdTotal : null,
+  }
+}
+
 export function latestSocialInsurance(payslips: Payslip[]): SocialInsuranceStats | null {
   const monthly = [...payslips]
     .filter((p) => !p.payslipType || p.payslipType === 'monthly')

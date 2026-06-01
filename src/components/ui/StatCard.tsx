@@ -33,7 +33,7 @@ export default function StatCard({ title, value, sub, delta, deltaLabel, deltaTe
       {deltaText !== undefined && (
         <p className="text-xs mt-1 font-medium" style={{ color: deltaPositive ? SUCCESS : DANGER }}>
           {deltaText}
-          <span className="font-normal ml-1" style={{ color: highlight ? 'rgba(255,255,255,0.6)' : '#9ca3af' }}>前月比</span>
+          <span className="font-normal ml-1" style={{ color: highlight ? 'rgba(255,255,255,0.6)' : '#9ca3af' }}>{deltaLabel ?? '前月比'}</span>
         </p>
       )}
     </div>
