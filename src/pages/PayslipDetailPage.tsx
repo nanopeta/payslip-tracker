@@ -40,6 +40,35 @@ export default function PayslipDetailPage() {
     setEditing(false)
   }
 
+  const attendanceItems = prev
+    ? [
+        {
+          label: '出勤日数',
+          value: payslip!.attendance.workDays,
+          prevValue: prev.attendance.workDays,
+          display: `${payslip!.attendance.workDays}日`,
+          invert: false,
+          fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日`,
+        },
+        {
+          label: '残業時間',
+          value: payslip!.attendance.overtimeHours,
+          prevValue: prev.attendance.overtimeHours,
+          display: formatHoursMinutes(payslip!.attendance.overtimeHours),
+          invert: true,
+          fmt: (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}h`,
+        },
+        {
+          label: '有給残日数',
+          value: payslip!.attendance.paidLeaveRemaining,
+          prevValue: prev.attendance.paidLeaveRemaining,
+          display: `${payslip!.attendance.paidLeaveRemaining}日`,
+          invert: false,
+          fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日`,
+        },
+      ]
+    : null
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -120,55 +149,25 @@ export default function PayslipDetailPage() {
         </div>
       )}
 
-      {!editing && prev && (
+      {!editing && attendanceItems && (
         <div className="bg-white rounded-xl p-4 shadow-sm border border-brand-200">
-          <p className="text-xs text-gray-400 mb-3">勤怠（{prev.year}年{prev.month}月との比較）</p>
+          <p className="text-xs text-gray-400 mb-3">勤怠（{prev!.year}年{prev!.month}月との比較）</p>
           <div className="grid grid-cols-3 gap-3">
-            {([
-              {
-                label: '出勤日数',
-                value: payslip.attendance.workDays,
-                prevValue: prev.attendance.workDays,
-                display: `${payslip.attendance.workDays}日`,
-                invert: false,
-                isHours: false,
-              },
-              {
-                label: '残業時間',
-                value: payslip.attendance.overtimeHours,
-                prevValue: prev.attendance.overtimeHours,
-                display: formatHoursMinutes(payslip.attendance.overtimeHours),
-                invert: true,
-                isHours: true,
-              },
-              {
-                label: '有給残日数',
-                value: payslip.attendance.paidLeaveRemaining,
-                prevValue: prev.attendance.paidLeaveRemaining,
-                display: `${payslip.attendance.paidLeaveRemaining}日`,
-                invert: false,
-                isHours: false,
-              },
-            ] as { label: string; value: number; prevValue: number; display: string; invert: boolean; isHours: boolean }[]).map(
-              ({ label, value, prevValue, display, invert, isHours }) => {
-                const delta = value - prevValue
-                const deltaColor = (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868'
-                const deltaStr = isHours
-                  ? `${delta > 0 ? '+' : ''}${delta.toFixed(1)}h`
-                  : `${delta > 0 ? '+' : ''}${delta}日`
-                return (
-                  <div key={label} className="text-center">
-                    <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                    <p className="text-base font-semibold tabular-nums text-gray-900">{display}</p>
-                    {delta !== 0 && (
-                      <p className="text-xs tabular-nums mt-0.5" style={{ color: deltaColor }}>
-                        {deltaStr}
-                      </p>
-                    )}
-                  </div>
-                )
-              },
-            )}
+            {attendanceItems.map(({ label, value, prevValue, display, invert, fmt }) => {
+              const delta = value - prevValue
+              const deltaColor = (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868'
+              return (
+                <div key={label} className="text-center">
+                  <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                  <p className="text-base font-semibold tabular-nums text-gray-900">{display}</p>
+                  {delta !== 0 && (
+                    <p className="text-xs tabular-nums mt-0.5" style={{ color: deltaColor }}>
+                      {fmt(delta)}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
