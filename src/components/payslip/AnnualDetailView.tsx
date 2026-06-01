@@ -8,12 +8,13 @@ interface RowProps {
   value: number
   bold?: boolean
   accent?: string
+  isTotal?: boolean
 }
 
-function Row({ label, value, bold, accent }: RowProps) {
+function Row({ label, value, bold, accent, isTotal }: RowProps) {
   if (value === 0) return null
   return (
-    <div className={`flex justify-between py-2 border-b border-gray-100 ${bold ? 'font-bold' : ''}`}>
+    <div className={`flex justify-between py-2 ${isTotal ? 'bg-gray-50 rounded px-2 -mx-2 mt-1 font-semibold' : 'border-b border-gray-100'} ${bold ? 'font-bold' : ''}`}>
       <span className={`text-sm ${accent ?? 'text-gray-600'}`}>{label}</span>
       <span className={`text-sm tabular-nums ${accent ?? 'text-gray-900'}`}>{formatYen(value)}</span>
     </div>
@@ -123,7 +124,10 @@ export default function AnnualDetailView({ year, payslips }: Props) {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand-600 mb-2">支給（年間合計）</p>
+        <p className="text-sm font-bold text-brand-700 mb-3 flex items-center gap-2">
+          <span className="w-1 h-4 bg-brand-500 rounded-full inline-block"></span>
+          支給（年間合計）
+        </p>
         <Row label="基本給" value={inc.basicSalary} />
         <Row label="ワークライフバランス手当" value={inc.wlbAllowance} />
         <Row label="みなし残業" value={inc.deemedOvertime} />
@@ -135,7 +139,7 @@ export default function AnnualDetailView({ year, payslips }: Props) {
         <Row label="通勤手当" value={inc.commuteAllowance} />
         <Row label="課税通勤手当" value={inc.taxableCommuteAllowance} />
         {Object.entries(inc.otherIncome).map(([k, v]) => <Row key={k} label={k} value={v} />)}
-        <Row label="総支給金額" value={inc.total} bold accent="text-brand-700" />
+        <Row label="総支給金額" value={inc.total} bold isTotal accent="text-brand-700" />
         {Object.keys(inc.detailIncome).length > 0 && (
           <div className="mt-3 pt-2 border-t border-gray-200">
             <p className="text-xs text-gray-400 mb-1">内訳（合計に含まず）</p>
@@ -151,7 +155,10 @@ export default function AnnualDetailView({ year, payslips }: Props) {
 
       {showGain && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">みなし残業 効率（年間）</p>
+          <p className="text-sm font-bold text-indigo-600 mb-3 flex items-center gap-2">
+            <span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>
+            みなし残業 効率（年間）
+          </p>
           <div className="flex justify-between py-1.5">
             <span className="text-sm text-gray-600">{settings.deemedLabel}（年間）</span>
             <span className="text-sm tabular-nums text-gray-900">{formatYen(deemedTotal)}</span>
@@ -180,7 +187,10 @@ export default function AnnualDetailView({ year, payslips }: Props) {
       )}
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-red-500 mb-2">控除（年間合計）</p>
+        <p className="text-sm font-bold text-red-600 mb-3 flex items-center gap-2">
+          <span className="w-1 h-4 bg-red-400 rounded-full inline-block"></span>
+          控除（年間合計）
+        </p>
         <Row label="健康保険料" value={ded.healthInsurance} />
         <Row label="介護保険料" value={ded.longTermCareInsurance} />
         <Row label="厚生年金保険" value={ded.pensionInsurance} />
@@ -194,12 +204,15 @@ export default function AnnualDetailView({ year, payslips }: Props) {
         <Row label="一時保育料" value={ded.temporaryChildcare} />
         <Row label="仮払金" value={ded.advance} />
         {Object.entries(ded.otherDeductions).map(([k, v]) => <Row key={k} label={k} value={v} />)}
-        <Row label="控除合計額" value={ded.total} bold accent="text-red-600" />
+        <Row label="控除合計額" value={ded.total} bold isTotal accent="text-red-600" />
       </div>
 
       {showAttendance && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">勤怠（年間合計）</p>
+          <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+            <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
+            勤怠（年間合計）
+          </p>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: '出勤日数', value: workDays, display: `${workDays}日` },

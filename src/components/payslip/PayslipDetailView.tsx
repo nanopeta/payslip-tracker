@@ -10,16 +10,17 @@ interface RowProps {
   accent?: string
   delta?: number
   deltaInvert?: boolean
+  isTotal?: boolean
 }
 
-function Row({ label, value, bold, accent, delta, deltaInvert }: RowProps) {
+function Row({ label, value, bold, accent, delta, deltaInvert, isTotal }: RowProps) {
   if (value === 0) return null
   const showDelta = delta !== undefined && delta !== 0
   const deltaColor = showDelta
     ? (deltaInvert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868'
     : undefined
   return (
-    <div className={`flex justify-between py-2 border-b border-gray-100 ${bold ? 'font-bold' : ''}`}>
+    <div className={`flex justify-between py-2 ${isTotal ? 'bg-gray-50 rounded px-2 -mx-2 mt-1 font-semibold' : 'border-b border-gray-100'} ${bold ? 'font-bold' : ''}`}>
       <span className={`text-sm ${accent ?? 'text-gray-600'}`}>{label}</span>
       <span className="flex items-center gap-1.5">
         <span className={`text-sm tabular-nums ${accent ?? 'text-gray-900'}`}>{formatYen(value)}</span>
@@ -100,7 +101,10 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
 
       {/* Income */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand-600 mb-2">支給</p>
+        <p className="text-sm font-bold text-brand-700 mb-3 flex items-center gap-2">
+          <span className="w-1 h-4 bg-brand-500 rounded-full inline-block"></span>
+          支給
+        </p>
         {incomeWarning && (
           <div className="mb-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
             内訳合計 {formatYen(incomeSum)} ≠ 総支給金額 {formatYen(income.total)}
@@ -119,7 +123,7 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
         {Object.entries(income.otherIncome).map(([k, v]) => (
           <Row key={k} label={k} value={v} delta={pi ? v - (pi.otherIncome[k] ?? 0) : undefined} />
         ))}
-        <Row label="総支給金額" value={income.total} bold accent="text-brand-700" delta={pi ? income.total - pi.total : undefined} />
+        <Row label="総支給金額" value={income.total} bold isTotal accent="text-brand-700" delta={pi ? income.total - pi.total : undefined} />
         {Object.keys(income.detailIncome ?? {}).length > 0 && (
           <div className="mt-3 pt-2 border-t border-gray-200">
             <p className="text-xs text-gray-400 mb-1">内訳（合計に含まず）</p>
@@ -136,7 +140,10 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
       {/* Overtime gain */}
       {showGain && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">みなし残業 効率</p>
+          <p className="text-sm font-bold text-indigo-600 mb-3 flex items-center gap-2">
+          <span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>
+          みなし残業 効率
+        </p>
           <div className="flex justify-between py-1.5">
             <span className="text-sm text-gray-600">{settings.deemedLabel}</span>
             <span className="text-sm tabular-nums text-gray-900">{formatYen(deemedAmt)}</span>
@@ -166,7 +173,10 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
 
       {/* Deductions */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-red-500 mb-2">控除</p>
+        <p className="text-sm font-bold text-red-600 mb-3 flex items-center gap-2">
+          <span className="w-1 h-4 bg-red-400 rounded-full inline-block"></span>
+          控除
+        </p>
         {dedWarning && (
           <div className="mb-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
             内訳合計 {formatYen(dedSum)} ≠ 控除合計額 {formatYen(deductions.total)}
@@ -187,13 +197,16 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
         {Object.entries(deductions.otherDeductions).map(([k, v]) => (
           <Row key={k} label={k} value={v} delta={pd ? v - (pd.otherDeductions[k] ?? 0) : undefined} deltaInvert />
         ))}
-        <Row label="控除合計額" value={deductions.total} bold accent="text-red-600" delta={pd ? deductions.total - pd.total : undefined} deltaInvert />
+        <Row label="控除合計額" value={deductions.total} bold isTotal accent="text-red-600" delta={pd ? deductions.total - pd.total : undefined} deltaInvert />
       </div>
 
       {/* Attendance */}
       {(attendance.workDays > 0 || attendance.workHours > 0) && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">勤怠</p>
+          <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+            <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
+            勤怠
+          </p>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: '出勤日数', value: attendance.workDays, display: `${attendance.workDays}日` },
