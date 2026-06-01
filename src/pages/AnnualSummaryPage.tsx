@@ -152,6 +152,8 @@ export default function AnnualSummaryPage() {
           <p className="text-sm font-semibold text-gray-700">給与明細から集計した年次合計</p>
           {years.map((year) => {
             const totals = annualTotals(payslips, year)
+            const prevYearTotals = years.includes(year - 1) ? annualTotals(payslips, year - 1) : null
+            const yoyDelta = prevYearTotals !== null ? totals.totalNetPay - prevYearTotals.totalNetPay : null
             const yearSlips = payslips
               .filter((p) => p.year === year)
               .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
@@ -176,6 +178,14 @@ export default function AnnualSummaryPage() {
                     <p className="font-bold text-gray-900">
                       {year}年
                       <span className="text-sm font-normal text-gray-400 ml-2">{monthlyCount}ヶ月分{hasBonus ? `・賞与${bonusSlips.length}件` : ''}</span>
+                      {yoyDelta !== null && (
+                        <span
+                          className="text-xs font-medium ml-2"
+                          style={{ color: yoyDelta >= 0 ? '#5fad9b' : '#d06868' }}
+                        >
+                          {yoyDelta >= 0 ? '+' : '-'}¥{Math.round(Math.abs(yoyDelta) / 10000)}万
+                        </span>
+                      )}
                     </p>
                     <svg
                       className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
