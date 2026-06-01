@@ -361,7 +361,7 @@ export default function DashboardPage() {
                     width={62}
                   />
                   <Tooltip
-                    formatter={(v: number) => [`${v >= 0 ? '+' : ''}${v.toLocaleString('ja-JP')}円`, '差額']}
+                    formatter={(v: number) => [`${v >= 0 ? '+' : '-'}${formatYen(Math.abs(v))}`, '差額']}
                     contentStyle={{ fontSize: 12, borderRadius: '8px' }}
                   />
                   <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="3 3" />
