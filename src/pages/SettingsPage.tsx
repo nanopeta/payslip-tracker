@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const [actualLabels, setActualLabels] = useState<string[]>(settings.actualLabels)
   const [saved, setSaved] = useState(false)
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleSave() {
@@ -34,9 +35,7 @@ export default function SettingsPage() {
     exportCSV(payslips)
   }
 
-  function handleImportJSON(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  function processJSONFile(file: File) {
     const reader = new FileReader()
     reader.onload = () => {
       try {
@@ -64,6 +63,35 @@ export default function SettingsPage() {
       }
     }
     reader.readAsText(file)
+  }
+
+  function handleImportJSON(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    processJSONFile(file)
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file || !file.name.endsWith('.json')) {
+      setImportStatus('error')
+      setTimeout(() => setImportStatus('idle'), 4000)
+      return
+    }
+    setImportStatus('idle')
+    processJSONFile(file)
   }
 
   function handleReset() {
@@ -255,13 +283,22 @@ export default function SettingsPage() {
             className="hidden"
             onChange={handleImportJSON}
           />
-          <button
+          <div
             onClick={() => { setImportStatus('idle'); fileInputRef.current?.click() }}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border text-sm cursor-pointer transition-colors select-none ${
+              isDragging
+                ? 'border-dashed border-brand-400 bg-brand-50 text-brand-700'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+            }`}
           >
             <span>JSONから復元</span>
-            <span className="text-xs text-gray-400">バックアップファイルを選択</span>
-          </button>
+            <span className={`text-xs ${isDragging ? 'text-brand-500' : 'text-gray-400'}`}>
+              {isDragging ? 'ドロップして復元' : 'ファイルを選択またはドロップ'}
+            </span>
+          </div>
           {importStatus === 'success' && (
             <p className="text-xs px-1" style={{ color: '#5fad9b' }}>復元が完了しました</p>
           )}

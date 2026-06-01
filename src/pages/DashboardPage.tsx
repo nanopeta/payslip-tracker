@@ -9,7 +9,7 @@ import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
 import SocialInsuranceTrendChart from '../components/charts/SocialInsuranceTrendChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, latestPaidLeave, getIncomeValueByLabel, annualTotals, latestSocialInsurance, socialInsuranceTrend } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, latestPaidLeave, getIncomeValueByLabel, annualTotals, latestSocialInsurance, socialInsuranceTrend, ytdOvertimeHoursStats } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 type PeriodFilter = 'all' | 'year' | '6m' | '12m'
@@ -107,6 +107,9 @@ export default function DashboardPage() {
   const prevYtd = annualTotals(payslips, currentYear - 1)
   const prevYtdTaxTotal = prevYtd.monthCount > 0 ? prevYtd.totalIncomeTax + prevYtd.totalResidentTax : null
   const taxDelta = prevYtdTaxTotal !== null ? ytdTaxTotal - prevYtdTaxTotal : null
+
+  // 累計残業時間（月次6件以上の場合のみ StatCard 表示）
+  const ytdOvertime = ytdOvertimeHoursStats(payslips, currentYear)
 
   // 今年の賞与合計
   const currentYearBonusSlips = payslips.filter(
@@ -221,6 +224,16 @@ export default function DashboardPage() {
                 sub={paidLeaveStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
                 deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
                 deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
+              />
+            )}
+            {ytdOvertime.monthCount >= 6 && (
+              <StatCard
+                title="累計残業時間"
+                value={`${ytdOvertime.total.toFixed(1)}h`}
+                sub={`${currentYear}年 ${ytdOvertime.monthCount}ヶ月分`}
+                deltaText={ytdOvertime.delta !== null ? `${ytdOvertime.delta >= 0 ? '+' : ''}${ytdOvertime.delta.toFixed(1)}h` : undefined}
+                deltaLabel="前年同月比"
+                deltaPositive={ytdOvertime.delta !== null && ytdOvertime.delta <= 0}
               />
             )}
             {hasYtdData && ytdTaxTotal > 0 && (
