@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import type { PayslipDeductions } from '../../types/payslip'
 import { formatYen } from '../../lib/formatters'
 
@@ -34,31 +34,50 @@ export default function DeductionDonutChart({ deductions }: Props) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={55}
-          outerRadius={80}
-          paddingAngle={2}
-          dataKey="value"
-          legendType="square"
-        >
-          {data.map((entry, index) => (
-            <Cell key={index} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip
-          formatter={(v: number, name: string) => [
-            `${formatYen(v)} (${((v / deductions.total) * 100).toFixed(1)}%)`,
-            name,
-          ]}
-          contentStyle={{ fontSize: 12, borderRadius: '8px' }}
-        />
-        <Legend wrapperStyle={{ fontSize: 10 }} />
-      </PieChart>
-    </ResponsiveContainer>
+    <div>
+      <ResponsiveContainer width="100%" height={180}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={50}
+            outerRadius={75}
+            paddingAngle={2}
+            dataKey="value"
+          >
+            {data.map((entry, index) => (
+              <Cell key={index} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(v: number, name: string) => [
+              `${formatYen(v)} (${((v / deductions.total) * 100).toFixed(1)}%)`,
+              name,
+            ]}
+            contentStyle={{ fontSize: 12, borderRadius: '8px' }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+
+      <div className="mt-2 space-y-1.5">
+        {data.map((item) => (
+          <div key={item.name} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: item.color }} />
+              <span className="text-gray-600">{item.name}</span>
+            </div>
+            <div className="flex items-center gap-2 tabular-nums">
+              <span className="text-gray-800 font-medium">{formatYen(item.value)}</span>
+              <span className="text-gray-400 w-10 text-right">{((item.value / deductions.total) * 100).toFixed(1)}%</span>
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-gray-100">
+          <span className="text-gray-500 font-medium">合計</span>
+          <span className="text-gray-800 font-semibold tabular-nums">{formatYen(deductions.total)}</span>
+        </div>
+      </div>
+    </div>
   )
 }
