@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts'
 import useStore from '../store/useStore'
+import GainTrendChart from '../components/charts/GainTrendChart'
 import StatCard from '../components/ui/StatCard'
 import TrendSummaryChart from '../components/charts/TrendSummaryChart'
 import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
@@ -335,37 +335,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={filteredGainRows} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 11, fill: '#6b7280' }}
-                    interval={0}
-                    angle={-30}
-                    textAnchor="end"
-                    height={48}
-                  />
-                  <YAxis
-                    tickFormatter={(v: number) => `${v >= 0 ? '+' : '-'}¥${(Math.abs(v) / 10000).toFixed(1)}万`}
-                    tick={{ fontSize: 11, fill: '#6b7280' }}
-                    width={62}
-                  />
-                  <Tooltip
-                    formatter={(v: number) => [`${v >= 0 ? '+' : '-'}${formatYen(Math.abs(v))}`, '差額']}
-                    contentStyle={{ fontSize: 12, borderRadius: '8px' }}
-                  />
-                  <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="3 3" />
-                  <Line
-                    type="monotone"
-                    dataKey="gain"
-                    stroke="#5fad9b"
-                    strokeWidth={2}
-                    dot={{ fill: '#5fad9b', r: 3 }}
-                    activeDot={{ r: 5 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <GainTrendChart data={filteredGainRows} />
             </div>
           )}
         </div>

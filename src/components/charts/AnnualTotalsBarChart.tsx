@@ -4,18 +4,17 @@ import { formatYen } from '../../lib/formatters'
 
 Chart.register(BarElement, LinearScale, CategoryScale, Tooltip, Legend)
 
-export interface MonthlyNetPayBarChartPoint {
+interface AnnualTotalsPoint {
   label: string
-  monthlyNetPay: number
-  bonusNetPay: number
+  totalIncome: number
+  totalNetPay: number
 }
 
 interface Props {
-  data: MonthlyNetPayBarChartPoint[]
-  hasBonus: boolean
+  data: AnnualTotalsPoint[]
 }
 
-export default function MonthlyNetPayBarChart({ data, hasBonus }: Props) {
+export default function AnnualTotalsBarChart({ data }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
@@ -23,38 +22,32 @@ export default function MonthlyNetPayBarChart({ data, hasBonus }: Props) {
     if (!canvasRef.current) return
     if (chartRef.current) chartRef.current.destroy()
 
-    const datasets = [
-      {
-        label: '給与手取り',
-        data: data.map((d) => d.monthlyNetPay),
-        backgroundColor: '#5fad9b',
-        stack: 'a',
-        borderRadius: hasBonus ? 0 : 3,
-        borderSkipped: false,
-      },
-      ...(hasBonus ? [{
-        label: '賞与手取り',
-        data: data.map((d) => d.bonusNetPay),
-        backgroundColor: '#f59e0b',
-        stack: 'a',
-        borderRadius: 3,
-        borderSkipped: false,
-      }] : []),
-    ]
-
     chartRef.current = new Chart(canvasRef.current, {
       type: 'bar',
       data: {
         labels: data.map((d) => d.label),
-        datasets,
+        datasets: [
+          {
+            label: '総支給',
+            data: data.map((d) => d.totalIncome),
+            backgroundColor: '#5b8fa8',
+            borderRadius: 3,
+            borderSkipped: false,
+          },
+          {
+            label: '差引支給',
+            data: data.map((d) => d.totalNetPay),
+            backgroundColor: '#5fad9b',
+            borderRadius: 3,
+            borderSkipped: false,
+          },
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: hasBonus
-            ? { display: true, labels: { font: { size: 12 }, boxWidth: 12 } }
-            : { display: false },
+          legend: { labels: { font: { size: 12 }, boxWidth: 12 } },
           tooltip: {
             callbacks: {
               label: (ctx) => ` ${ctx.dataset.label}: ${formatYen(ctx.raw as number)}`,
@@ -65,7 +58,6 @@ export default function MonthlyNetPayBarChart({ data, hasBonus }: Props) {
         },
         scales: {
           x: {
-            stacked: true,
             ticks: {
               font: { size: 11 },
               color: '#6b7280',
@@ -75,11 +67,10 @@ export default function MonthlyNetPayBarChart({ data, hasBonus }: Props) {
             grid: { color: '#f0f0f0' },
           },
           y: {
-            stacked: true,
             ticks: {
               font: { size: 11 },
               color: '#6b7280',
-              callback: (v) => `¥${((v as number) / 10000).toFixed(1)}万`,
+              callback: (v) => `¥${((v as number) / 10000).toFixed(0)}万`,
             },
             grid: { color: '#f0f0f0' },
           },
@@ -89,10 +80,10 @@ export default function MonthlyNetPayBarChart({ data, hasBonus }: Props) {
     })
 
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(data), hasBonus])
+  }, [JSON.stringify(data)])
 
   return (
-    <div style={{ height: '100%' }}>
+    <div style={{ height: 220 }}>
       <canvas ref={canvasRef} />
     </div>
   )

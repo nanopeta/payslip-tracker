@@ -1,25 +1,121 @@
+import { useRef, useEffect } from 'react'
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts'
+  Chart, LineElement, PointElement, LinearScale, CategoryScale,
+  Tooltip, Legend, Filler,
+} from 'chart.js'
 import type { TrendPoint } from '../../lib/aggregations'
+
+Chart.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Filler)
 
 interface Props {
   data: TrendPoint[]
   showMonthlyLine: boolean
 }
 
-function formatYen(v: number) {
+function yLabel(v: number) {
   return `¥${(v / 10000).toFixed(1)}万`
 }
 
 export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const chartRef = useRef<Chart | null>(null)
+
+  useEffect(() => {
+    if (!canvasRef.current) return
+    if (chartRef.current) chartRef.current.destroy()
+
+    const labels = data.map((d) => d.label)
+    const datasets = [
+      {
+        label: '総支給額',
+        data: data.map((d) => d.totalIncome),
+        borderColor: '#5b8fa8',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderDash: [5, 3],
+        pointRadius: 3,
+        pointBackgroundColor: '#5b8fa8',
+        tension: 0,
+      },
+      {
+        label: '総手取り',
+        data: data.map((d) => d.netPay),
+        borderColor: '#5fad9b',
+        backgroundColor: 'transparent',
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#5fad9b',
+        pointHoverRadius: 6,
+        tension: 0,
+      },
+      ...(showMonthlyLine ? [
+        {
+          label: '給与のみ総支給額',
+          data: data.map((d) => d.monthlyTotalIncome),
+          borderColor: '#4a7a93',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5, 3],
+          pointRadius: 3,
+          pointBackgroundColor: '#4a7a93',
+          tension: 0,
+        },
+        {
+          label: '給与のみ手取り',
+          data: data.map((d) => d.monthlyNetPay),
+          borderColor: '#2d8a7a',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [3, 2],
+          pointRadius: 3,
+          pointBackgroundColor: '#2d8a7a',
+          tension: 0,
+        },
+      ] : []),
+    ]
+
+    chartRef.current = new Chart(canvasRef.current, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { font: { size: 12 }, boxWidth: 12 } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${(ctx.raw as number).toLocaleString('ja-JP')}円`,
+            },
+            bodyFont: { size: 12 },
+            cornerRadius: 8,
+          },
+        },
+        scales: {
+          x: {
+            ticks: {
+              font: { size: 11 },
+              color: '#6b7280',
+              maxRotation: 30,
+              minRotation: 30,
+            },
+            grid: { color: '#f0f0f0' },
+          },
+          y: {
+            ticks: {
+              font: { size: 11 },
+              color: '#6b7280',
+              callback: (v) => yLabel(v as number),
+            },
+            grid: { color: '#f0f0f0' },
+          },
+        },
+        animation: { duration: 400 },
+      },
+    })
+
+    return () => { chartRef.current?.destroy(); chartRef.current = null }
+  }, [JSON.stringify(data), showMonthlyLine])
+
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
@@ -27,85 +123,10 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
       </div>
     )
   }
+
   return (
-    <ResponsiveContainer width="100%" height={240}>
-      <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis
-          dataKey="label"
-          tick={{ fontSize: 11, fill: '#6b7280' }}
-          interval={0}
-          angle={-30}
-          textAnchor="end"
-          height={48}
-        />
-        <YAxis
-          tickFormatter={formatYen}
-          tick={{ fontSize: 11, fill: '#6b7280' }}
-          width={62}
-        />
-        <Tooltip
-          formatter={(v: number, name: string) => [`${v.toLocaleString('ja-JP')}円`, name]}
-          contentStyle={{ fontSize: 12, borderRadius: '8px' }}
-        />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Line
-          type="monotone"
-          dataKey="totalIncome"
-          name="総支給額"
-          stroke="#5b8fa8"
-          strokeWidth={2}
-          dot={(props: { cx?: number; cy?: number }) => {
-            const { cx, cy } = props
-            if (cx == null || cy == null) return <circle r={0} />
-            return <circle key={`ti-${cx}-${cy}`} cx={cx} cy={cy} r={3} fill="#5b8fa8" />
-          }}
-          strokeDasharray="5 3"
-        />
-        <Line
-          type="monotone"
-          dataKey="netPay"
-          name="総手取り"
-          stroke="#5fad9b"
-          strokeWidth={2.5}
-          dot={(props: { cx?: number; cy?: number }) => {
-            const { cx, cy } = props
-            if (cx == null || cy == null) return <circle r={0} />
-            return <circle key={`np-${cx}-${cy}`} cx={cx} cy={cy} r={4} fill="#5fad9b" />
-          }}
-          activeDot={{ r: 6 }}
-        />
-        {showMonthlyLine && (
-          <Line
-            type="monotone"
-            dataKey="monthlyTotalIncome"
-            name="給与のみ総支給額"
-            stroke="#4a7a93"
-            strokeWidth={2}
-            dot={(props: { cx?: number; cy?: number }) => {
-              const { cx, cy } = props
-              if (cx == null || cy == null) return <circle r={0} />
-              return <circle key={`mti-${cx}-${cy}`} cx={cx} cy={cy} r={3} fill="#4a7a93" />
-            }}
-            strokeDasharray="5 3"
-          />
-        )}
-        {showMonthlyLine && (
-          <Line
-            type="monotone"
-            dataKey="monthlyNetPay"
-            name="給与のみ手取り"
-            stroke="#2d8a7a"
-            strokeWidth={2}
-            dot={(props: { cx?: number; cy?: number }) => {
-              const { cx, cy } = props
-              if (cx == null || cy == null) return <circle r={0} />
-              return <circle key={`mnp-${cx}-${cy}`} cx={cx} cy={cy} r={3} fill="#2d8a7a" />
-            }}
-            strokeDasharray="3 2"
-          />
-        )}
-      </LineChart>
-    </ResponsiveContainer>
+    <div style={{ height: 240 }}>
+      <canvas ref={canvasRef} />
+    </div>
   )
 }
