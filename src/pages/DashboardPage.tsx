@@ -120,7 +120,6 @@ export default function DashboardPage() {
     : null
   const bonusDelta = prevYearBonusTotal !== null ? currentYearBonusTotal - prevYearBonusTotal : null
 
-  const [showExtraCards, setShowExtraCards] = useState(false)
   const recent = sorted.slice(0, 3)
 
   if (payslips.length === 0) {
@@ -149,7 +148,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-3">
+      <div className="space-y-3">
         <StatCard
           title="差引支給額（最新月合計）"
           value={latestMonth ? formatYen(latestMonth.netPay) : '—'}
@@ -168,81 +167,53 @@ export default function DashboardPage() {
             value={latestMonth ? formatYen(latestMonth.totalDeductions) : '—'}
             delta={latestMonth && prevMonth ? latestMonth.totalDeductions - prevMonth.totalDeductions : undefined}
           />
-        </div>
-
-        {/* Toggle button */}
-        <button
-          onClick={() => setShowExtraCards((v) => !v)}
-          className="flex items-center justify-center gap-1 text-xs text-brand-500 hover:text-brand-700 py-0.5 transition-colors"
-        >
-          {showExtraCards ? (
-            <>
-              詳細を隠す
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-            </>
-          ) : (
-            <>
-              詳細を見る
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </>
+          {takeHomeRate !== null && (
+            <StatCard
+              title="手取り率"
+              value={`${takeHomeRate.toFixed(1)}%`}
+              sub="差引支給額 ÷ 総支給金額"
+              deltaText={rateChange !== null ? `${rateChange >= 0 ? '+' : ''}${rateChange.toFixed(1)}pt` : undefined}
+              deltaPositive={rateChange !== null && rateChange >= 0}
+            />
           )}
-        </button>
-
-        {/* Extra cards (collapsible) */}
-        {showExtraCards && (
-          <div className="grid grid-cols-1 gap-3">
-            {takeHomeRate !== null && (
-              <StatCard
-                title="手取り率"
-                value={`${takeHomeRate.toFixed(1)}%`}
-                sub="差引支給額 ÷ 総支給金額"
-                deltaText={rateChange !== null ? `${rateChange >= 0 ? '+' : ''}${rateChange.toFixed(1)}pt` : undefined}
-                deltaPositive={rateChange !== null && rateChange >= 0}
-              />
-            )}
-            {paidLeaveStats !== null && (
-              <StatCard
-                title="有給残日数"
-                value={`${paidLeaveStats.remaining}日`}
-                sub={paidLeaveStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
-                deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
-                deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
-              />
-            )}
-            {ytdOvertime.monthCount >= 6 && (
-              <StatCard
-                title="累計残業時間"
-                value={`${ytdOvertime.total.toFixed(1)}h`}
-                sub={`${currentYear}年 ${ytdOvertime.monthCount}ヶ月分`}
-                deltaText={ytdOvertime.delta !== null ? `${ytdOvertime.delta >= 0 ? '+' : ''}${ytdOvertime.delta.toFixed(1)}h` : undefined}
-                deltaLabel="前年同月比"
-                deltaPositive={ytdOvertime.delta !== null && ytdOvertime.delta <= 0}
-              />
-            )}
-            {hasYtdData && ytdTaxTotal > 0 && (
-              <StatCard
-                title="今年の税負担"
-                value={formatYen(ytdTaxTotal)}
-                sub={`${currentYear}年累計（所得税＋住民税）`}
-                delta={taxDelta !== null ? taxDelta : undefined}
-                deltaLabel="前年比"
-              />
-            )}
-            {hasBonusData && currentYearBonusTotal > 0 && (
-              <StatCard
-                title="今年の賞与"
-                value={formatYen(currentYearBonusTotal)}
-                sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
-                delta={bonusDelta !== null ? bonusDelta : undefined}
-                deltaLabel="前年比"
-              />
-            )}
-          </div>
-        )}
+          {paidLeaveStats !== null && (
+            <StatCard
+              title="有給残日数"
+              value={`${paidLeaveStats.remaining}日`}
+              sub={paidLeaveStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
+              deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
+              deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
+            />
+          )}
+          {hasYtdData && ytdTaxTotal > 0 && (
+            <StatCard
+              title="今年の税負担"
+              value={formatYen(ytdTaxTotal)}
+              sub={`${currentYear}年累計（所得税＋住民税）`}
+              delta={taxDelta !== null ? taxDelta : undefined}
+              deltaLabel="前年比"
+            />
+          )}
+          {hasBonusData && currentYearBonusTotal > 0 && (
+            <StatCard
+              title="今年の賞与"
+              value={formatYen(currentYearBonusTotal)}
+              sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
+              delta={bonusDelta !== null ? bonusDelta : undefined}
+              deltaLabel="前年比"
+            />
+          )}
+          {ytdOvertime.monthCount >= 6 && (
+            <StatCard
+              title="累計残業時間"
+              value={`${ytdOvertime.total.toFixed(1)}h`}
+              sub={`${currentYear}年 ${ytdOvertime.monthCount}ヶ月分`}
+              deltaText={ytdOvertime.delta !== null ? `${ytdOvertime.delta >= 0 ? '+' : ''}${ytdOvertime.delta.toFixed(1)}h` : undefined}
+              deltaLabel="前年同月比"
+              deltaPositive={ytdOvertime.delta !== null && ytdOvertime.delta <= 0}
+            />
+          )}
+        </div>
       </div>
 
       {/* YTD summary */}
