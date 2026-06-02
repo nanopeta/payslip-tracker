@@ -35,14 +35,14 @@ export default function DeductionDonutChart({ deductions }: Props) {
 
   return (
     <div>
-      <ResponsiveContainer width="100%" height={180}>
+      <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie
             data={data}
             cx="50%"
             cy="50%"
-            innerRadius={50}
-            outerRadius={75}
+            innerRadius={65}
+            outerRadius={95}
             paddingAngle={2}
             dataKey="value"
           >
@@ -60,22 +60,22 @@ export default function DeductionDonutChart({ deductions }: Props) {
         </PieChart>
       </ResponsiveContainer>
 
-      <div className="mt-2 space-y-1.5">
+      <div className="mt-1 divide-y divide-gray-100">
         {data.map((item) => (
-          <div key={item.name} className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: item.color }} />
-              <span className="text-gray-600">{item.name}</span>
+          <div key={item.name} className="flex items-center justify-between py-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+              <span className="text-gray-700">{item.name}</span>
             </div>
-            <div className="flex items-center gap-2 tabular-nums">
+            <div className="flex items-center gap-3 tabular-nums">
               <span className="text-gray-800 font-medium">{formatYen(item.value)}</span>
-              <span className="text-gray-400 w-10 text-right">{((item.value / deductions.total) * 100).toFixed(1)}%</span>
+              <span className="text-gray-400 w-11 text-right text-xs">{((item.value / deductions.total) * 100).toFixed(1)}%</span>
             </div>
           </div>
         ))}
-        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-gray-100">
-          <span className="text-gray-500 font-medium">合計</span>
-          <span className="text-gray-800 font-semibold tabular-nums">{formatYen(deductions.total)}</span>
+        <div className="flex items-center justify-between py-2">
+          <span className="text-sm text-gray-500 font-medium">合計</span>
+          <span className="text-sm text-gray-800 font-semibold tabular-nums">{formatYen(deductions.total)}</span>
         </div>
       </div>
     </div>
