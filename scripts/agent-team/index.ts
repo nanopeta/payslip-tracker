@@ -45,7 +45,7 @@ const sprintSize = parseInt(
   cliArgs.find(a => a.startsWith('--sprint-size='))?.split('=')[1] ?? '5'
 )
 const maxSprints = parseInt(
-  cliArgs.find(a => a.startsWith('--max-sprints='))?.split('=')[1] ?? '2'
+  cliArgs.find(a => a.startsWith('--max-sprints='))?.split('=')[1] ?? '1'
 )
 const modelArg = cliArgs.find(a => a.startsWith('--model='))?.split('=')[1]
 // --fast は --no-review + --no-doc-update のショートカット

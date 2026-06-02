@@ -9,8 +9,9 @@
 1. **作業ブランチ**: `claude/<機能名>-<ランダムID>` 形式で作成（例: `claude/fix-parser-a1b2c3`）
 2. **コミット**: 日本語メッセージ、末尾に `https://claude.ai/code/session_...` を付ける
 3. **プッシュ後は必ず PR を作成**（draft でよい）
-4. **マージは確認不要**。PR 作成後そのままマージしてよい
-5. `main` への直接プッシュは禁止。必ずフィーチャーブランチ経由
+4. **PR 作成直後に即マージする**（ユーザー確認・CI 待ち・レビューコメント確認は不要）
+5. **`subscribe_pr_activity` は呼ばない**。PR 監視・CI 自動修正ループは行わない
+6. `main` への直接プッシュは禁止。必ずフィーチャーブランチ経由
 
 ### ビルド確認
 
@@ -44,9 +45,9 @@ npm run build    # 本番ビルド（tsc -b && vite build）
 npm run preview  # ビルド結果をローカルでプレビュー
 
 # エージェントチーム（AI 自律改善）
-npm run agent-team                          # 5タスク×2スプリントで改善（API キー不要）
+npm run agent-team                          # 5タスク×1スプリントで改善（API キー不要）
 npm run agent-team -- --sprint-size=3       # 1スプリント 3件で改善
-npm run agent-team -- --max-sprints=5       # スプリント数を指定（デフォルト: 2）
+npm run agent-team -- --max-sprints=5       # スプリント数を指定（デフォルト: 1）
 npm run agent-team -- --fast                # Reviewer・ドキュメント更新をスキップ（高速・低トークン）
 npm run agent-team -- --no-review          # Reviewer をスキップ
 npm run agent-team -- --no-doc-update      # CLAUDE.md 更新をスキップ
