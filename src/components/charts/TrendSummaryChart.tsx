@@ -1,11 +1,6 @@
 import { useRef, useEffect } from 'react'
-import {
-  Chart, LineElement, PointElement, LinearScale, CategoryScale,
-  Tooltip, Legend, Filler,
-} from 'chart.js'
+import Chart from 'chart.js/auto'
 import type { TrendPoint } from '../../lib/aggregations'
-
-Chart.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Filler)
 
 interface Props {
   data: TrendPoint[]
@@ -22,7 +17,7 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
 
   useEffect(() => {
     if (!canvasRef.current) return
-    if (chartRef.current) chartRef.current.destroy()
+    Chart.getChart(canvasRef.current!)?.destroy(); if (chartRef.current) chartRef.current.destroy()
 
     const labels = data.map((d) => d.label)
     const datasets = [

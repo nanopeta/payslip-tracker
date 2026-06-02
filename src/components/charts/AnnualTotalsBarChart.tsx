@@ -1,8 +1,7 @@
 import { useRef, useEffect } from 'react'
-import { Chart, BarElement, LinearScale, CategoryScale, Tooltip, Legend } from 'chart.js'
+import Chart from 'chart.js/auto'
 import { formatYen } from '../../lib/formatters'
 
-Chart.register(BarElement, LinearScale, CategoryScale, Tooltip, Legend)
 
 interface AnnualTotalsPoint {
   label: string
@@ -20,7 +19,7 @@ export default function AnnualTotalsBarChart({ data }: Props) {
 
   useEffect(() => {
     if (!canvasRef.current) return
-    if (chartRef.current) chartRef.current.destroy()
+    Chart.getChart(canvasRef.current!)?.destroy(); if (chartRef.current) chartRef.current.destroy()
 
     chartRef.current = new Chart(canvasRef.current, {
       type: 'bar',

@@ -1,8 +1,8 @@
 import { useRef, useEffect } from 'react'
-import { Chart, BarElement, LinearScale, CategoryScale, Tooltip } from 'chart.js'
+import Chart from 'chart.js/auto'
 import annotationPlugin from 'chartjs-plugin-annotation'
 
-Chart.register(BarElement, LinearScale, CategoryScale, Tooltip, annotationPlugin)
+Chart.register(annotationPlugin)
 
 interface OvertimePoint {
   label: string
@@ -20,7 +20,7 @@ export default function OvertimeHoursChart({ data, deemedHours = 45 }: Props) {
 
   useEffect(() => {
     if (!canvasRef.current) return
-    if (chartRef.current) chartRef.current.destroy()
+    Chart.getChart(canvasRef.current!)?.destroy(); if (chartRef.current) chartRef.current.destroy()
 
     const annotations: Record<string, object> = {
       deemedLine: {

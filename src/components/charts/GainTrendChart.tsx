@@ -1,9 +1,9 @@
 import { useRef, useEffect } from 'react'
-import { Chart, LineElement, PointElement, LinearScale, CategoryScale, Tooltip } from 'chart.js'
+import Chart from 'chart.js/auto'
 import annotationPlugin from 'chartjs-plugin-annotation'
 import { formatYen } from '../../lib/formatters'
 
-Chart.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, annotationPlugin)
+Chart.register(annotationPlugin)
 
 interface GainPoint {
   label: string
@@ -20,7 +20,7 @@ export default function GainTrendChart({ data }: Props) {
 
   useEffect(() => {
     if (!canvasRef.current) return
-    if (chartRef.current) chartRef.current.destroy()
+    Chart.getChart(canvasRef.current!)?.destroy(); if (chartRef.current) chartRef.current.destroy()
 
     chartRef.current = new Chart(canvasRef.current, {
       type: 'line',
