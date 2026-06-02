@@ -8,7 +8,7 @@ import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, latestPaidLeave, getIncomeValueByLabel, annualTotals, latestSocialInsurance, ytdOvertimeHoursStats } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, latestPaidLeave, getIncomeValueByLabel, annualTotals, ytdOvertimeHoursStats } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 type PeriodFilter = 'all' | 'year' | '6m' | '12m'
@@ -62,8 +62,6 @@ export default function DashboardPage() {
   const leaveTrend = paidLeaveTrend(payslips)
   const paidLeaveStats = latestPaidLeave(payslips)
 
-  // 4保険合計
-  const socialInsuranceStats = latestSocialInsurance(payslips)
 
   // みなし残業効率（給与明細のみ対象）
   const monthlyPayslips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
@@ -197,15 +195,6 @@ export default function DashboardPage() {
         {/* Extra cards (collapsible) */}
         {showExtraCards && (
           <div className="grid grid-cols-1 gap-3">
-            {socialInsuranceStats !== null && (
-              <StatCard
-                title="4保険合計"
-                value={formatYen(socialInsuranceStats.total)}
-                sub={socialInsuranceStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
-                deltaText={socialInsuranceStats.delta !== null ? `${socialInsuranceStats.delta >= 0 ? '+' : '-'}${formatYen(Math.abs(socialInsuranceStats.delta))}` : undefined}
-                deltaPositive={socialInsuranceStats.delta !== null && socialInsuranceStats.delta <= 0}
-              />
-            )}
             {takeHomeRate !== null && (
               <StatCard
                 title="手取り率"
