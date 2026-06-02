@@ -44,9 +44,9 @@ npm run build    # 本番ビルド（tsc -b && vite build）
 npm run preview  # ビルド結果をローカルでプレビュー
 
 # エージェントチーム（AI 自律改善）
-npm run agent-team                          # 5タスク×2スプリントで改善（API キー不要）
+npm run agent-team                          # 5タスク×1スプリントで改善（API キー不要）
 npm run agent-team -- --sprint-size=3       # 1スプリント 3件で改善
-npm run agent-team -- --max-sprints=5       # スプリント数を指定（デフォルト: 2）
+npm run agent-team -- --max-sprints=5       # スプリント数を指定（デフォルト: 1）
 npm run agent-team -- --fast                # Reviewer・ドキュメント更新をスキップ（高速・低トークン）
 npm run agent-team -- --no-review          # Reviewer をスキップ
 npm run agent-team -- --no-doc-update      # CLAUDE.md 更新をスキップ
