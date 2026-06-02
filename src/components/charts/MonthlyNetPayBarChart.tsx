@@ -1,8 +1,7 @@
 import { useRef, useEffect } from 'react'
-import { Chart, BarElement, LinearScale, CategoryScale, Tooltip, Legend } from 'chart.js'
+import Chart from 'chart.js/auto'
 import { formatYen } from '../../lib/formatters'
 
-Chart.register(BarElement, LinearScale, CategoryScale, Tooltip, Legend)
 
 export interface MonthlyNetPayBarChartPoint {
   label: string
@@ -21,7 +20,7 @@ export default function MonthlyNetPayBarChart({ data, hasBonus }: Props) {
 
   useEffect(() => {
     if (!canvasRef.current) return
-    if (chartRef.current) chartRef.current.destroy()
+    Chart.getChart(canvasRef.current!)?.destroy(); if (chartRef.current) chartRef.current.destroy()
 
     const datasets = [
       {

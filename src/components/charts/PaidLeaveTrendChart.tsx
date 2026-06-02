@@ -1,8 +1,7 @@
 import { useRef, useEffect } from 'react'
-import { Chart, BarElement, LinearScale, CategoryScale, Tooltip } from 'chart.js'
+import Chart from 'chart.js/auto'
 import type { LeaveTrendPoint } from '../../lib/aggregations'
 
-Chart.register(BarElement, LinearScale, CategoryScale, Tooltip)
 
 interface Props {
   data: LeaveTrendPoint[]
@@ -14,7 +13,7 @@ export default function PaidLeaveTrendChart({ data }: Props) {
 
   useEffect(() => {
     if (!canvasRef.current) return
-    if (chartRef.current) chartRef.current.destroy()
+    Chart.getChart(canvasRef.current!)?.destroy(); if (chartRef.current) chartRef.current.destroy()
 
     chartRef.current = new Chart(canvasRef.current, {
       type: 'bar',

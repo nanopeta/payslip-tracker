@@ -1,9 +1,8 @@
 import { useRef, useEffect } from 'react'
-import { Chart, ArcElement, Tooltip, Legend } from 'chart.js'
+import Chart from 'chart.js/auto'
 import type { PayslipDeductions } from '../../types/payslip'
 import { formatYen } from '../../lib/formatters'
 
-Chart.register(ArcElement, Tooltip, Legend)
 
 const SLICES: { key: keyof PayslipDeductions; label: string; color: string }[] = [
   { key: 'healthInsurance',       label: '健康保険',  color: '#5b8fa8' },
@@ -33,9 +32,8 @@ export default function DeductionDonutChart({ deductions }: Props) {
 
   useEffect(() => {
     if (!canvasRef.current) return
-    if (chartRef.current) {
-      chartRef.current.destroy()
-    }
+    Chart.getChart(canvasRef.current!)?.destroy()
+    if (chartRef.current) chartRef.current.destroy()
     chartRef.current = new Chart(canvasRef.current, {
       type: 'doughnut',
       data: {
