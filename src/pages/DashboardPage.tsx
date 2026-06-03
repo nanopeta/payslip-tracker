@@ -194,9 +194,8 @@ export default function DashboardPage() {
       {/* Stat cards */}
       <div className="space-y-2">
         <StatCard
-          title="差引支給額（最新月合計）"
+          title={latestMonth ? `差引支給額（${latestMonth.year}年${latestMonth.month}月）` : '差引支給額'}
           value={latestMonth ? formatYen(latestMonth.netPay) : '—'}
-          sub={latestMonth ? `${latestMonth.year}年${latestMonth.month}月` : undefined}
           delta={latestMonth && prevMonth ? latestMonth.netPay - prevMonth.netPay : undefined}
           highlight
         />
@@ -215,7 +214,6 @@ export default function DashboardPage() {
             <StatCard
               title="手取り率"
               value={`${takeHomeRate.toFixed(1)}%`}
-              sub="差引支給額 ÷ 総支給金額"
               deltaText={rateChange !== null ? `${rateChange >= 0 ? '+' : ''}${rateChange.toFixed(1)}pt` : undefined}
               deltaPositive={rateChange !== null && rateChange >= 0}
             />
@@ -224,7 +222,6 @@ export default function DashboardPage() {
             <StatCard
               title="有給残日数"
               value={`${paidLeaveStats.remaining}日`}
-              sub={paidLeaveStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
               deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
               deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
             />
@@ -473,21 +470,23 @@ export default function DashboardPage() {
             {currentYearBonusSlips.length > 0 && ` 賞与${currentYearBonusSlips.length}件`}
           </p>
 
-          {/* 総支給 / 手取り テーブル */}
-          <div className="grid grid-cols-3 gap-x-2 gap-y-1.5 text-xs mb-0.5">
+          {/* 総支給 / 手取り / 差額 テーブル */}
+          <div className="grid grid-cols-4 gap-x-2 text-xs mb-0.5">
             <div />
-            <p className="text-gray-400 text-center">総支給</p>
-            <p className="text-gray-400 text-center">手取り</p>
+            <p className="text-gray-400 text-right">総支給</p>
+            <p className="text-gray-400 text-right">手取り</p>
+            <p className="text-gray-400 text-right">差額</p>
           </div>
           {currentYearMonthlySlips.length > 0 && (
-            <div className="grid grid-cols-3 gap-x-2 gap-y-1 items-center py-1 border-b border-gray-100">
+            <div className="grid grid-cols-4 gap-x-2 items-center py-1 border-b border-gray-100">
               <p className="text-xs text-gray-500">給与</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{formatYen(currentYearMonthlyIncome)}</p>
               <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#5fad9b' }}>{formatYen(currentYearMonthlyNetPay)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#d06868' }}>-{formatYen(currentYearMonthlyIncome - currentYearMonthlyNetPay)}</p>
             </div>
           )}
           {currentYearBonusSlips.length > 0 && (
-            <div className="grid grid-cols-3 gap-x-2 gap-y-1 items-center py-1 border-b border-gray-100">
+            <div className="grid grid-cols-4 gap-x-2 items-center py-1 border-b border-gray-100">
               <p className="text-xs text-gray-500">
                 賞与
                 {bonusDelta !== null && (
@@ -498,12 +497,14 @@ export default function DashboardPage() {
               </p>
               <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{formatYen(currentYearBonusIncome)}</p>
               <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#f59e0b' }}>{formatYen(currentYearBonusTotal)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#d06868' }}>-{formatYen(currentYearBonusIncome - currentYearBonusTotal)}</p>
             </div>
           )}
-          <div className="grid grid-cols-3 gap-x-2 gap-y-1 items-center pt-1.5">
+          <div className="grid grid-cols-4 gap-x-2 items-center pt-1.5">
             <p className="text-xs font-medium text-gray-700">合計</p>
             <p className="text-sm font-bold tabular-nums text-gray-900 text-right">{formatYen(ytd.totalIncome)}</p>
             <p className="text-sm font-bold tabular-nums text-right" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
+            <p className="text-sm font-bold tabular-nums text-right" style={{ color: '#d06868' }}>-{formatYen(ytd.totalDeductions)}</p>
           </div>
 
           {currentYearMonthlySlips.length > 0 && (
