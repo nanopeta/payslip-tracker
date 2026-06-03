@@ -91,7 +91,8 @@ src/
 │   ├── mhtParser.ts        # MHTファイル解析（メイン）
 │   ├── pdfParser.ts        # PDF解析（旧・ほぼ未使用）
 │   ├── formatters.ts       # 円表示・和暦・時間フォーマット
-│   └── aggregations.ts     # 月次集計・年次集計・みなし残業計算・社会保険料集計・前後明細ナビゲーション
+│   ├── aggregations.ts     # 月次集計・年次集計・みなし残業計算・社会保険料集計・前後明細ナビゲーション
+│   └── furusatoCalc.ts     # ふるさと納税上限額計算（TaxDeductionInputs, FurusatoResult, calcFurusato）
 ├── store/
 │   └── useStore.ts         # Zustand store（localStorage と同期）
 ├── components/
@@ -121,7 +122,7 @@ src/
     ├── DashboardPage.tsx   # ダッシュボード（StatCards・収支内訳タブ・みなし残業効率・今年の累計・チャート群）
     ├── PayslipsPage.tsx    # 給与明細一覧（ソート切り替え・年別グループトグル・月フィルター・フリーテキスト検索・アクティブフィルターチップス・一括削除）
     ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション・前月比サマリー・収支内訳3タブ）
-    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月・税/社保内訳・MonthlyNetPayBarChart・CSV エクスポート）
+    ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月・税/社保内訳・MonthlyNetPayBarChart・CSV エクスポート・シミュレーターカード）
     ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定（試算プレビュー付き）・JSON バックアップ/復元・CSV エクスポート
 ```
@@ -199,6 +200,7 @@ interface Payslip {
 |---|---|
 | `payslip_tracker_v1` | `StorageState { version, payslips[], withholdingCerts[] }` |
 | `payslip_tracker_settings` | `OvertimeSettings { deemedLabel, actualLabels[] }` |
+| `payslip_tracker_tax_inputs` | `TaxDeductionInputs { ideco, lifeInsurancePremium, earthquakeInsurancePremium, dependents }` |
 
 - バージョンが変わったらデータを空リセット
 - 初回アクセスは空状態スタート（サンプルデータなし）
@@ -1031,6 +1033,82 @@ dot={(props: { cx?: number; cy?: number }) => {
 
 - `key` を `cx-cy` ベースで付与して React の reconciliation 警告を防ぐ
 - `cx/cy` が `null/undefined` のときは `r={0}` の空 circle を返す（null は型エラーになる）
+
+### AnnualSummaryPage のシミュレーターカード（ふるさと納税・年収試算）
+
+`AnnualSummaryPage.tsx` の先頭カード。年選択ドロップダウン付き。
+
+#### 年収試算の計算仕様
+
+```typescript
+// 実績Nヶ月 + 月平均×残りMヶ月 で12ヶ月分を推計
+const simRemainingMonths = Math.max(0, 12 - simMonthlyCount)
+
+// 総支給
+const simProjectedMonthlyIncome = simMonthlyIncomeSum + simMonthlyIncomeAvg * simRemainingMonths
+const simIncome = simProjectedMonthlyIncome + simBonusIncomeSum
+
+// 社会保険料（ふるさと納税計算にも使用）
+const simProjectedMonthlySI = simMonthlySISum + simMonthlySIAvg * simRemainingMonths
+const simSocialInsurance = simProjectedMonthlySI + simBonusSISum  // 賞与分も加算
+
+// 所得税・住民税
+const simProjectedMonthlyIncomeTax = simMonthlyIncomeTaxSum + simMonthlyIncomeTaxAvg * simRemainingMonths
+const simProjectedMonthlyResidentTax = simMonthlyResidentTaxSum + simMonthlyResidentTaxAvg * simRemainingMonths
+
+// 手取り
+const simProjectedMonthlyNetPay = simMonthlyNetPaySum + simMonthlyNetPayAvg * simRemainingMonths
+const simProjectedNetPay = simProjectedMonthlyNetPay + simBonusNetPaySum
+
+// 控除の整合（税還付・経費精算などマイナス調整を「その他・調整」として表示）
+const simImpliedDeductions = simIncome - simProjectedNetPay
+const simShownDeductions = simProjectedMonthlySI + simBonusSISum + ...  // SI+税の合計
+const simDeductionAdjustment = simImpliedDeductions - simShownDeductions  // 負値 = クレジット
+```
+
+- `simIsProjected = simRemainingMonths > 0`（12ヶ月揃っていれば試算行を非表示）
+- 賞与の社保・所得税も別行で表示（`simBonusSISum > 0` のときのみ）
+- `simDeductionAdjustment !== 0` のとき「その他・調整」行を表示して合計を `simImpliedDeductions` に一致させる
+
+#### ふるさと納税計算（furusatoCalc.ts）
+
+```typescript
+// src/lib/furusatoCalc.ts
+interface TaxDeductionInputs {
+  ideco: number                     // iDeCo年額
+  lifeInsurancePremium: number      // 生命保険料年額
+  earthquakeInsurancePremium: number // 地震保険料年額
+  dependents: number                // 扶養人数
+}
+
+interface FurusatoResult {
+  employmentIncomeDeduction: number  // 給与所得控除
+  employmentIncome: number           // 給与所得
+  taxableIncome: number              // 課税所得（所得税）
+  incomeTaxRate: number              // 所得税率
+  taxableIncomeResident: number      // 課税所得（住民税）
+  residentTaxDividend: number        // 住民税所得割（10%）
+  furusatoLimit: number              // 推定上限額（自己負担2,000円含む）
+}
+
+// 計算式
+furusatoLimit = floor(residentTaxDividend * 0.2 / (1 - incomeTaxRate * 1.021 - 0.1)) + 2000
+```
+
+- `calcFurusato(annualIncome, socialInsurance, inputs)` → `FurusatoResult`
+- localStorage `payslip_tracker_tax_inputs` に入力値を永続化（データ削除しても保持）
+
+#### シミュレーターカードのUI構成
+
+1. **年収試算セクション**（`simMonthlyCount > 0` のときのみ表示）
+   - 3列グリッド: 総支給 / 手取り / 控除合計
+   - 「内訳」トグル（`showIncomeDetail` state）→ 総支給・控除・手取りの詳細行
+   - 内訳の各行: `実績（Nヶ月）` + `月平均×残りMヶ月` + 賞与実績 + 合計
+2. 区切り線
+3. **ふるさと納税シミュレーター**ラベル
+4. 2列グリッド: 給与収入（自動）/ 社会保険料（自動）
+5. 2列グリッド: iDeCo / 生命保険料 / 地震保険料 / 扶養人数（手動入力）
+6. 上限額表示カード + 「計算内訳」トグル（`showSimDetail` state）
 
 ### AnnualSummaryPage の年カード前年比表示
 
