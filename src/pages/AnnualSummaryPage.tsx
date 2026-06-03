@@ -62,22 +62,24 @@ export default function AnnualSummaryPage() {
     ? Math.round(simMonthlyIncomeSum / simMonthlyCount) * 12
     : 0
   const simIncome = simProjectedMonthlyIncome + simBonusIncomeSum
-  const simMonthlySISum = simMonthlySlips.reduce(
-    (s, p) => s + p.deductions.healthInsurance + p.deductions.longTermCareInsurance + p.deductions.pensionInsurance + p.deductions.employmentInsurance,
-    0
-  )
-  const simSocialInsurance = simMonthlyCount > 0
-    ? Math.round(simMonthlySISum / simMonthlyCount) * 12
-    : 0
+  const calcSI = (p: Payslip) =>
+    p.deductions.healthInsurance + p.deductions.longTermCareInsurance +
+    p.deductions.pensionInsurance + p.deductions.employmentInsurance
+  const simMonthlySISum = simMonthlySlips.reduce((s, p) => s + calcSI(p), 0)
+  const simBonusSISum = simBonusSlips.reduce((s, p) => s + calcSI(p), 0)
+  const simProjectedMonthlySI = simMonthlyCount > 0 ? Math.round(simMonthlySISum / simMonthlyCount) * 12 : 0
+  const simSocialInsurance = simProjectedMonthlySI + simBonusSISum
   const simIsProjected = simMonthlyCount > 0 && simMonthlyCount < 12
   const simMonthlyNetPaySum = simMonthlySlips.reduce((s, p) => s + p.summary.netPay, 0)
   const simBonusNetPaySum = simBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
   const simProjectedMonthlyNetPay = simMonthlyCount > 0 ? Math.round(simMonthlyNetPaySum / simMonthlyCount) * 12 : 0
   const simProjectedNetPay = simProjectedMonthlyNetPay + simBonusNetPaySum
   const simMonthlyIncomeTaxSum = simMonthlySlips.reduce((s, p) => s + p.deductions.incomeTax, 0)
+  const simBonusIncomeTaxSum = simBonusSlips.reduce((s, p) => s + p.deductions.incomeTax, 0)
   const simMonthlyResidentTaxSum = simMonthlySlips.reduce((s, p) => s + p.deductions.residentTax, 0)
-  const simProjectedIncomeTax = simMonthlyCount > 0 ? Math.round(simMonthlyIncomeTaxSum / simMonthlyCount) * 12 : 0
-  const simProjectedResidentTax = simMonthlyCount > 0 ? Math.round(simMonthlyResidentTaxSum / simMonthlyCount) * 12 : 0
+  const simBonusResidentTaxSum = simBonusSlips.reduce((s, p) => s + p.deductions.residentTax, 0)
+  const simProjectedMonthlyIncomeTax = simMonthlyCount > 0 ? Math.round(simMonthlyIncomeTaxSum / simMonthlyCount) * 12 : 0
+  const simProjectedMonthlyResidentTax = simMonthlyCount > 0 ? Math.round(simMonthlyResidentTaxSum / simMonthlyCount) * 12 : 0
   const simResult = simIncome > 0 ? calcFurusato(simIncome, simSocialInsurance, taxInputs) : null
 
   function updateTaxInput(key: keyof TaxDeductionInputs, value: number) {
@@ -206,20 +208,40 @@ export default function AnnualSummaryPage() {
                       <p className="text-gray-500 font-medium mb-1.5">控除</p>
                       <div className="space-y-1 pl-2">
                         <div className="flex justify-between">
-                          <span className="text-gray-400">社会保険料（×12）</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simSocialInsurance)}</span>
+                          <span className="text-gray-400">社会保険料（給与×12）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlySI)}</span>
                         </div>
+                        {simBonusSISum > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">社会保険料（賞与）</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simBonusSISum)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
-                          <span className="text-gray-400">所得税（×12）</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedIncomeTax)}</span>
+                          <span className="text-gray-400">所得税（給与×12）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlyIncomeTax)}</span>
                         </div>
+                        {simBonusIncomeTaxSum > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">所得税（賞与）</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simBonusIncomeTaxSum)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
-                          <span className="text-gray-400">住民税（×12）</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedResidentTax)}</span>
+                          <span className="text-gray-400">住民税（給与×12）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlyResidentTax)}</span>
                         </div>
+                        {simBonusResidentTaxSum > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">住民税（賞与）</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simBonusResidentTaxSum)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
                           <span className="text-gray-600">合計</span>
-                          <span className="tabular-nums" style={{ color: '#d06868' }}>{formatYen(simSocialInsurance + simProjectedIncomeTax + simProjectedResidentTax)}</span>
+                          <span className="tabular-nums" style={{ color: '#d06868' }}>
+                            {formatYen(simProjectedMonthlySI + simBonusSISum + simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum + simProjectedMonthlyResidentTax + simBonusResidentTaxSum)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -267,7 +289,7 @@ export default function AnnualSummaryPage() {
               </div>
               <div className="bg-gray-50 rounded-lg p-2.5">
                 <p className="text-xs text-gray-400 mb-0.5">
-                  社会保険料（自動{simIsProjected ? `・月平均×12` : ''}）
+                  社会保険料（自動{simIsProjected ? `・月平均×12+賞与` : ''}）
                 </p>
                 <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simSocialInsurance)}</p>
                 {simIsProjected && (
