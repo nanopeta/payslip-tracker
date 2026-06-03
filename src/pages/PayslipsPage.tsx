@@ -15,6 +15,7 @@ export default function PayslipsPage() {
   const [filterType, setFilterType] = useState<'all' | 'monthly' | 'bonus'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc' | 'netpay-desc' | 'income-desc'>('date-desc')
+  const [groupByYear, setGroupByYear] = useState(true)
 
   const sorted = [...payslips].sort((a, b) => {
     switch (sortOrder) {
@@ -63,8 +64,8 @@ export default function PayslipsPage() {
     return true
   })
 
-  // filterYear === 'all' かつ日付ソートのとき年別グループを生成
-  const groupedByYear = filterYear === 'all' && sortOrder.startsWith('date')
+  // filterYear === 'all' かつ groupByYear のとき年別グループを生成
+  const groupedByYear = filterYear === 'all' && groupByYear
     ? (() => {
         const yearMap = new Map<number, typeof filtered>()
         for (const p of filtered) {
@@ -72,7 +73,7 @@ export default function PayslipsPage() {
           yearMap.get(p.year)!.push(p)
         }
         return [...yearMap.entries()]
-          .sort(([a], [b]) => b - a)
+          .sort(([a], [b]) => sortOrder === 'date-asc' ? a - b : b - a)
           .map(([year, items]) => ({
             year,
             items,
@@ -194,6 +195,21 @@ export default function PayslipsPage() {
                 </button>
               ))}
             </div>
+          )}
+          {filterYear === 'all' && (
+            <button
+              onClick={() => setGroupByYear((v) => !v)}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                groupByYear
+                  ? 'bg-brand-100 text-brand-700 border-brand-300'
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h8M4 18h8" />
+              </svg>
+              年別
+            </button>
           )}
           <div className="flex-shrink-0 flex rounded-lg border border-gray-200 overflow-hidden text-sm md:ml-auto">
             {(
