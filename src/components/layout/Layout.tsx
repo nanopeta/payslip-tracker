@@ -12,7 +12,7 @@ export default function Layout() {
 
       {/* Main content */}
       <main className="md:ml-56 min-h-screen pb-20 md:pb-0">
-        <div className="p-4 md:p-6 max-w-6xl">
+        <div className="p-3 md:p-5 max-w-6xl">
           <Outlet />
         </div>
       </main>

@@ -78,9 +78,9 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
   const showGain = deemedAmt > 0 || actualAmt > 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header */}
-      <div className="bg-brand-700 text-white rounded-xl px-5 py-5">
+      <div className="bg-brand-700 text-white rounded-xl px-4 py-3">
         <div className="flex items-center gap-2">
           <p className="text-brand-200 text-sm">
             {formatYearMonth(payslip.year, payslip.month)}分 支給明細
@@ -100,8 +100,8 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
       </div>
 
       {/* Income */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <p className="text-sm font-bold text-brand-700 mb-3 flex items-center gap-2">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+        <p className="text-sm font-bold text-brand-700 mb-2 flex items-center gap-2">
           <span className="w-1 h-4 bg-brand-500 rounded-full inline-block"></span>
           支給
         </p>
@@ -139,8 +139,8 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
 
       {/* Overtime gain */}
       {showGain && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-sm font-bold text-indigo-600 mb-3 flex items-center gap-2">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+          <p className="text-sm font-bold text-indigo-600 mb-2 flex items-center gap-2">
           <span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>
           みなし残業 効率
         </p>
@@ -172,8 +172,8 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
       )}
 
       {/* Deductions */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <p className="text-sm font-bold text-red-600 mb-3 flex items-center gap-2">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+        <p className="text-sm font-bold text-red-600 mb-2 flex items-center gap-2">
           <span className="w-1 h-4 bg-red-400 rounded-full inline-block"></span>
           控除
         </p>
@@ -202,12 +202,12 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
 
       {/* Attendance */}
       {(attendance.workDays > 0 || attendance.workHours > 0) && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+          <p className="text-sm font-bold text-gray-600 mb-2 flex items-center gap-2">
             <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
             勤怠
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {[
               { label: '出勤日数', value: attendance.workDays, display: `${attendance.workDays}日` },
               { label: '有休', value: attendance.paidLeave, display: `${attendance.paidLeave}日` },

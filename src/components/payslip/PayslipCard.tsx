@@ -37,9 +37,9 @@ export default function PayslipCard({ payslip, prevNetPay, searchQuery = '' }: P
   return (
     <Link
       to={`/payslips/${payslip.id}`}
-      className="block bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:border-brand-300 hover:shadow-md transition-all"
+      className="block bg-white rounded-xl border border-gray-100 shadow-sm p-3 hover:border-brand-300 hover:shadow-md transition-all"
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-1">
         <p className="text-sm text-gray-500">
           <Highlight text={formatYearMonth(payslip.year, payslip.month)} query={searchQuery} />
         </p>
@@ -49,7 +49,7 @@ export default function PayslipCard({ payslip, prevNetPay, searchQuery = '' }: P
           </span>
         )}
       </div>
-      <div className="flex flex-col items-center text-center py-1">
+      <div className="flex flex-col items-center text-center py-0.5">
         <p className="text-2xl font-bold tabular-nums text-gray-900">
           {netPayMatch ? (
             <mark className="bg-brand-100 text-brand-700 rounded-sm px-0.5 not-italic font-bold">
@@ -61,7 +61,7 @@ export default function PayslipCard({ payslip, prevNetPay, searchQuery = '' }: P
         </p>
         <p className="text-xs text-gray-400 mt-0.5">差引支給額</p>
       </div>
-      <div className="flex items-center justify-center gap-3 mt-3 text-xs text-gray-500 flex-wrap">
+      <div className="flex items-center justify-center gap-3 mt-1.5 text-xs text-gray-500 flex-wrap">
         <span>
           総支給{' '}
           {incomeTotalMatch ? (

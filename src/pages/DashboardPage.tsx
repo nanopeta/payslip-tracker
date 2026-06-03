@@ -182,14 +182,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <div>
         <h1 className="text-xl font-bold text-gray-900">ダッシュボード</h1>
         <p className="text-gray-500 text-sm mt-0.5">給与データの概要</p>
       </div>
 
       {/* Stat cards */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <StatCard
           title="差引支給額（最新月合計）"
           value={latestMonth ? formatYen(latestMonth.netPay) : '—'}
@@ -241,7 +241,7 @@ export default function DashboardPage() {
 
       {/* 収支内訳ドーナツ（最新月） */}
       {latestMonthly && (latestMonthly.income.total > 0 || latestMonthly.deductions.total > 0) && (
-        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-1">
             <p className="text-sm font-semibold text-gray-700">収支内訳</p>
             <div className="flex items-center gap-2">
@@ -280,7 +280,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-xs text-gray-400 mb-2">
             {donutTab === 'deduction'
               ? `控除合計 ${formatYen(selectedDonutMonthly?.deductions.total ?? 0)}`
               : `総支給 ${formatYen(selectedDonutMonthly?.income.total ?? 0)}`}
@@ -297,8 +297,8 @@ export default function DashboardPage() {
 
       {/* Overtime gain — unified card */}
       {showGainSection && latestMonthly && (
-        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+          <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
             <div className="flex items-center gap-2">
               {gainRows.length > 1 ? (
@@ -320,14 +320,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-baseline gap-2 mb-4">
+          <div className="flex items-baseline gap-2 mb-2">
             <span className="text-2xl font-bold tabular-nums" style={{ color: (latestGain ?? 0) >= 0 ? '#5fad9b' : '#d06868' }}>
               {(latestGain ?? 0) >= 0 ? '+' : ''}{formatYen(latestGain ?? 0)}
             </span>
             <span className="text-xs text-gray-400">差額</span>
           </div>
 
-          <div className="grid grid-cols-4 gap-x-4 gap-y-3 mb-3">
+          <div className="grid grid-cols-4 gap-x-3 gap-y-2 mb-2">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">みなし（{DEEMED_HOURS}h）</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(deemedAmtLatest)}</p>
@@ -462,10 +462,10 @@ export default function DashboardPage() {
 
       {/* YTD summary */}
       {hasYtdData && (
-        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
-          <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
-          <div className="grid grid-cols-3 gap-3">
+          <p className="text-xs text-gray-400 mb-2">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
+          <div className="grid grid-cols-3 gap-2">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">年間総支給額</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytd.totalIncome)}</p>
@@ -480,9 +480,9 @@ export default function DashboardPage() {
             </div>
           </div>
           {currentYearMonthlySlips.length > 0 && (
-            <div className="border-t border-gray-100 pt-3">
+            <div className="border-t border-gray-100 pt-2">
               <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <div>
                   <p className="text-xs text-gray-400">平均月手取</p>
                   <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(ytd.avgMonthlyNetPay)}</p>
@@ -515,9 +515,9 @@ export default function DashboardPage() {
       )}
 
       {/* Charts */}
-      <div className="space-y-4">
-        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-          <div className="flex items-center justify-between mb-3">
+      <div className="space-y-3">
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+          <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-semibold text-gray-700">支給・手取りの推移</p>
             <div className="flex gap-1">
               {PERIOD_FILTERS.map((f) => (
@@ -535,8 +535,8 @@ export default function DashboardPage() {
         </div>
 
         {incomeBreakdownTrend.length >= 2 && (
-          <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-            <div className="mb-3">
+          <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+            <div className="mb-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-gray-700">支給合算の推移</p>
                 <div className="flex gap-1">
@@ -560,11 +560,11 @@ export default function DashboardPage() {
 
       {/* Recent payslips */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-semibold text-gray-700">最近の給与明細</p>
           <Link to="/payslips" className="text-xs text-brand-600 hover:text-brand-700">すべて見る →</Link>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {recent.map((p, i) => (
             <PayslipCard
               key={p.id}
