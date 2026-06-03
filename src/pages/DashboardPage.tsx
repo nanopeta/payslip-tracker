@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const sorted = [...payslips].sort((a, b) => b.year * 100 + b.month - (a.year * 100 + a.month))
   const [gainFilter, setGainFilter] = useState<PeriodFilter>('all')
   const [trendFilter, setTrendFilter] = useState<PeriodFilter>('all')
+  const [selectedGainYM, setSelectedGainYM] = useState<string>('')
 
   const trend = netPayTrend(payslips)
   const latestTrendYM = trend.length > 0 ? trend[trend.length - 1]!.label : ''
@@ -63,7 +64,6 @@ export default function DashboardPage() {
   // みなし残業効率（給与明細のみ対象）
   const monthlyPayslips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
   const latestMonthly = latestPayslip(monthlyPayslips)
-  const latestGain = latestMonthly ? calcOvertimeGain(latestMonthly, settings) : null
   const gainRows = sorted
     .filter((p) => !p.payslipType || p.payslipType === 'monthly')
     .map((p) => ({
@@ -76,14 +76,20 @@ export default function DashboardPage() {
   const showGainSection = gainRows.some((r) => r.gain !== 0)
   const latestGainYM = gainRows.length > 0 ? gainRows[gainRows.length - 1]!.yearMonth : ''
   const filteredGainRows = applyPeriodFilter(gainRows, gainFilter, latestGainYM)
+  const showOvertimeChart = gainRows.length > 1 && gainRows.some((r) => r.overtimeHours > 0)
 
-  // みなし残業 詳細計算
+  // みなし残業 詳細計算（選択月）
   const DEEMED_HOURS = 45
-  const deemedAmtLatest = latestMonthly ? getIncomeValueByLabel(latestMonthly.income, settings.deemedLabel) : 0
-  const actualAmtLatest = latestMonthly
-    ? settings.actualLabels.reduce((s, l) => s + getIncomeValueByLabel(latestMonthly.income, l), 0)
+  const effectiveGainYM = selectedGainYM || latestGainYM
+  const selectedMonthly = monthlyPayslips.find(
+    (p) => `${p.year}/${String(p.month).padStart(2, '0')}` === effectiveGainYM
+  ) ?? latestMonthly
+  const latestGain = selectedMonthly ? calcOvertimeGain(selectedMonthly, settings) : null
+  const deemedAmtLatest = selectedMonthly ? getIncomeValueByLabel(selectedMonthly.income, settings.deemedLabel) : 0
+  const actualAmtLatest = selectedMonthly
+    ? settings.actualLabels.reduce((s, l) => s + getIncomeValueByLabel(selectedMonthly.income, l), 0)
     : 0
-  const overtimeHoursLatest = latestMonthly?.attendance.overtimeHours ?? 0
+  const overtimeHoursLatest = selectedMonthly?.attendance.overtimeHours ?? 0
   const usagePercent = (overtimeHoursLatest / DEEMED_HOURS) * 100
   const overtimeHourlyRate = deemedAmtLatest > 0 ? Math.round(deemedAmtLatest / DEEMED_HOURS) : 0
   const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
@@ -210,11 +216,25 @@ export default function DashboardPage() {
       {showGainSection && latestMonthly && (
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
-              <p className="text-xs text-gray-400">{latestMonthly.year}年{latestMonthly.month}月</p>
+            <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
+            <div className="flex items-center gap-2">
+              {gainRows.length > 1 ? (
+                <select
+                  value={effectiveGainYM}
+                  onChange={(e) => setSelectedGainYM(e.target.value)}
+                  className="text-xs text-gray-500 border border-gray-200 rounded-md px-1.5 py-0.5 bg-white"
+                >
+                  {[...gainRows].reverse().map((r) => (
+                    <option key={r.yearMonth} value={r.yearMonth}>
+                      {r.yearMonth.replace(/^(\d{4})\/(\d{2})$/, '$1年$2月')}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs text-gray-400">{selectedMonthly?.year}年{selectedMonthly?.month}月</span>
+              )}
+              <Link to="/settings" className="text-xs text-brand-500 hover:text-brand-700">設定 →</Link>
             </div>
-            <Link to="/settings" className="text-xs text-brand-500 hover:text-brand-700">設定 →</Link>
           </div>
 
           <div className="flex items-baseline gap-2 mb-4">
@@ -259,17 +279,10 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {gainRows.length > 1 && gainRows.some((r) => r.overtimeHours > 0) && (
+          {showOvertimeChart && (
             <div className="border-t border-gray-100 pt-3 mt-1">
-              <p className="text-xs text-gray-400 mb-2">残業時間推移</p>
-              <OvertimeHoursChart data={filteredGainRows} deemedHours={DEEMED_HOURS} />
-            </div>
-          )}
-
-          {gainRows.length > 1 && (
-            <div className="border-t border-gray-100 pt-3">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-gray-400">月次推移（差額）</p>
+                <p className="text-xs text-gray-400">残業時間推移</p>
                 <div className="flex gap-1">
                   {PERIOD_FILTERS.map((f) => (
                     <button
@@ -281,6 +294,28 @@ export default function DashboardPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <OvertimeHoursChart data={filteredGainRows} deemedHours={DEEMED_HOURS} />
+            </div>
+          )}
+
+          {gainRows.length > 1 && (
+            <div className="border-t border-gray-100 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-400">月次推移（差額）</p>
+                {!showOvertimeChart && (
+                  <div className="flex gap-1">
+                    {PERIOD_FILTERS.map((f) => (
+                      <button
+                        key={f.key}
+                        onClick={() => setGainFilter(f.key)}
+                        className={`text-xs px-2 py-0.5 rounded-full transition-colors ${gainFilter === f.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <GainTrendChart data={filteredGainRows} />
             </div>
