@@ -101,11 +101,11 @@ export default function DashboardPage() {
     (p) => p.year === currentYear && (!p.payslipType || p.payslipType === 'monthly')
   )
 
-  // 今年の税負担（所得税＋住民税）
-  const ytdTaxTotal = ytd.totalIncomeTax + ytd.totalResidentTax
+  // 今年の控除合計
+  const ytdDeductionTotal = ytd.totalDeductions
   const prevYtd = annualTotals(payslips, currentYear - 1)
-  const prevYtdTaxTotal = prevYtd.monthCount > 0 ? prevYtd.totalIncomeTax + prevYtd.totalResidentTax : null
-  const taxDelta = prevYtdTaxTotal !== null ? ytdTaxTotal - prevYtdTaxTotal : null
+  const prevYtdDeductionTotal = prevYtd.monthCount > 0 ? prevYtd.totalDeductions : null
+  const deductionDelta = prevYtdDeductionTotal !== null ? ytdDeductionTotal - prevYtdDeductionTotal : null
 
   // 累計残業時間（月次6件以上の場合のみ StatCard 表示）
   const ytdOvertime = ytdOvertimeHoursStats(payslips, currentYear)
@@ -367,14 +367,14 @@ export default function DashboardPage() {
       )}
 
       {/* 年間累計 StatCards（税負担・賞与） */}
-      {(hasYtdData && ytdTaxTotal > 0) || (hasBonusData && currentYearBonusTotal > 0) ? (
+      {(hasYtdData && ytdDeductionTotal > 0) || (hasBonusData && currentYearBonusTotal > 0) ? (
         <div className="grid grid-cols-2 gap-3">
-          {hasYtdData && ytdTaxTotal > 0 && (
+          {hasYtdData && ytdDeductionTotal > 0 && (
             <StatCard
-              title="今年の税負担"
-              value={formatYen(ytdTaxTotal)}
-              sub={`${currentYear}年累計（所得税＋住民税）`}
-              delta={taxDelta !== null ? taxDelta : undefined}
+              title="今年の控除"
+              value={formatYen(ytdDeductionTotal)}
+              sub={`${currentYear}年累計（控除合計）`}
+              delta={deductionDelta !== null ? deductionDelta : undefined}
               deltaLabel="前年比"
             />
           )}
