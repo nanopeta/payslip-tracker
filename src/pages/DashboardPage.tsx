@@ -185,24 +185,6 @@ export default function DashboardPage() {
               deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
             />
           )}
-          {hasYtdData && ytdTaxTotal > 0 && (
-            <StatCard
-              title="今年の税負担"
-              value={formatYen(ytdTaxTotal)}
-              sub={`${currentYear}年累計（所得税＋住民税）`}
-              delta={taxDelta !== null ? taxDelta : undefined}
-              deltaLabel="前年比"
-            />
-          )}
-          {hasBonusData && currentYearBonusTotal > 0 && (
-            <StatCard
-              title="今年の賞与"
-              value={formatYen(currentYearBonusTotal)}
-              sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
-              delta={bonusDelta !== null ? bonusDelta : undefined}
-              deltaLabel="前年比"
-            />
-          )}
           {ytdOvertime.monthCount >= 6 && (
             <StatCard
               title="累計残業時間"
@@ -229,7 +211,7 @@ export default function DashboardPage() {
 
       {/* Overtime gain — unified card */}
       {showGainSection && latestMonthly && (
-        <div className="bg-brand-50 rounded-xl border border-brand-100 p-4">
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
@@ -311,7 +293,7 @@ export default function DashboardPage() {
 
       {/* YTD summary */}
       {hasYtdData && (
-        <div className="bg-brand-50 rounded-xl border border-brand-100 p-4">
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
           <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
           <div className="grid grid-cols-3 gap-3">
@@ -351,6 +333,30 @@ export default function DashboardPage() {
           )}
         </div>
       )}
+
+      {/* 年間累計 StatCards（税負担・賞与） */}
+      {(hasYtdData && ytdTaxTotal > 0) || (hasBonusData && currentYearBonusTotal > 0) ? (
+        <div className="grid grid-cols-2 gap-3">
+          {hasYtdData && ytdTaxTotal > 0 && (
+            <StatCard
+              title="今年の税負担"
+              value={formatYen(ytdTaxTotal)}
+              sub={`${currentYear}年累計（所得税＋住民税）`}
+              delta={taxDelta !== null ? taxDelta : undefined}
+              deltaLabel="前年比"
+            />
+          )}
+          {hasBonusData && currentYearBonusTotal > 0 && (
+            <StatCard
+              title="今年の賞与"
+              value={formatYen(currentYearBonusTotal)}
+              sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
+              delta={bonusDelta !== null ? bonusDelta : undefined}
+              deltaLabel="前年比"
+            />
+          )}
+        </div>
+      ) : null}
 
       {/* Charts */}
       <div className="space-y-4">
