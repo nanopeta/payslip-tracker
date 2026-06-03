@@ -409,7 +409,7 @@ export default function DashboardPage() {
               <p className="text-xs text-gray-400 mb-2">{gainSelectedYear}年 年間合算</p>
               <div className="grid grid-cols-4 gap-x-4 gap-y-3 mb-3">
                 <div>
-                  <p className="text-xs text-gray-400 mb-0.5">みなし合計（{ytdDeemedHours}h）</p>
+                  <p className="text-xs text-gray-400 mb-0.5">みなし（{ytdDeemedHours}h）</p>
                   <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdDeemedTotal)}</p>
                 </div>
                 <div>
