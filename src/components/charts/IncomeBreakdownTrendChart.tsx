@@ -10,13 +10,6 @@ export interface IncomeBreakdownPoint {
   lifePlanAllowance: number
 }
 
-const SERIES = [
-  { key: 'basicSalary'      as const, label: '基本給',           color: '#5b8fa8', width: 2.5 },
-  { key: 'deemedOvertime'   as const, label: 'みなし残業',       color: '#4a7a93', width: 2 },
-  { key: 'wlbAllowance'     as const, label: 'WLB手当',          color: '#7aafc5', width: 2 },
-  { key: 'lifePlanAllowance'as const, label: 'ライフプラン手当', color: '#5fad9b', width: 2 },
-]
-
 interface Props {
   data: IncomeBreakdownPoint[]
 }
@@ -25,7 +18,7 @@ export default function IncomeBreakdownTrendChart({ data }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
-  const activeSeries = SERIES.filter((s) => data.some((d) => d[s.key] > 0))
+  const totals = data.map((d) => d.basicSalary + d.deemedOvertime + d.wlbAllowance + d.lifePlanAllowance)
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -36,26 +29,38 @@ export default function IncomeBreakdownTrendChart({ data }: Props) {
       type: 'line',
       data: {
         labels: data.map((d) => d.label),
-        datasets: activeSeries.map((s) => ({
-          label: s.label,
-          data: data.map((d) => d[s.key]),
-          borderColor: s.color,
-          backgroundColor: 'transparent',
-          borderWidth: s.width,
-          pointRadius: 3,
-          pointBackgroundColor: s.color,
-          pointHoverRadius: 5,
-          tension: 0,
-        })),
+        datasets: [{
+          label: '合算額',
+          data: totals,
+          borderColor: '#5b8fa8',
+          backgroundColor: 'rgba(91,143,168,0.08)',
+          fill: true,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: totals.map((v, i) => (i > 0 && v !== totals[i - 1]) ? '#d06868' : '#5b8fa8'),
+          pointHoverRadius: 6,
+          stepped: 'before' as const,
+        }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { labels: { font: { size: 12 }, boxWidth: 12 } },
+          legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${ctx.dataset.label}: ${formatYen(ctx.raw as number)}`,
+              title: (items) => items[0]?.label ?? '',
+              label: (ctx) => {
+                const i = ctx.dataIndex
+                const v = ctx.raw as number
+                const prev = i > 0 ? totals[i - 1] : null
+                const delta = prev != null ? v - prev : null
+                const lines = [`合算: ${formatYen(v)}`]
+                if (delta != null && delta !== 0) {
+                  lines.push(`前月比: ${delta > 0 ? '+' : ''}${formatYen(delta)}`)
+                }
+                return lines
+              },
             },
             bodyFont: { size: 12 },
             cornerRadius: 8,
@@ -80,7 +85,7 @@ export default function IncomeBreakdownTrendChart({ data }: Props) {
     })
 
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(data)])
+  }, [JSON.stringify(totals)])
 
   if (data.length === 0) {
     return (
