@@ -98,14 +98,19 @@ src/
 │   ├── layout/             # Sidebar（PC）、BottomNav（スマホ）、Layout
 │   ├── ui/                 # StatCard
 │   ├── charts/
-│   │   ├── TrendSummaryChart.tsx      # 支給・手取りの推移（折れ線）★メイン
-│   │   ├── PaidLeaveTrendChart.tsx    # 有給残日数の推移（棒グラフ）
-│   │   ├── DeductionDonutChart.tsx    # 控除内訳ドーナツチャート（最新月）
-│   │   ├── OvertimeHoursChart.tsx     # 残業時間推移（棒グラフ・45h参照線・80h過労ライン付き）
+│   │   ├── TrendSummaryChart.tsx          # 支給・手取りの推移（折れ線）★メイン
+│   │   ├── PaidLeaveTrendChart.tsx        # 有給残日数の推移（棒グラフ）
+│   │   ├── DeductionDonutChart.tsx        # 控除内訳ドーナツチャート
+│   │   ├── IncomeDonutChart.tsx           # 支給内訳ドーナツチャート
+│   │   ├── NetPayBreakdownChart.tsx       # 総支給→手取りの内訳チャート（概要タブ）
+│   │   ├── IncomeBreakdownTrendChart.tsx  # 支給合算推移（基本給+みなし+WLB+ライフプラン）
+│   │   ├── OvertimeHoursChart.tsx         # 残業時間推移（棒グラフ・45h参照線・80h過労ライン付き）
+│   │   ├── GainTrendChart.tsx             # みなし残業差額推移（折れ線）
 │   │   ├── SocialInsuranceTrendChart.tsx  # 4保険合計の月次推移（折れ線）
-│   │   ├── MonthlyNetPayBarChart.tsx  # 年間集計の月次手取り棒グラフ（給与/賞与スタック）
-│   │   ├── NetPayTrendChart.tsx       # 旧・未使用
-│   │   └── IncomeDeductionChart.tsx   # 旧・未使用
+│   │   ├── MonthlyNetPayBarChart.tsx      # 年間集計の月次手取り棒グラフ（給与/賞与スタック）
+│   │   ├── AnnualTotalsBarChart.tsx       # 年間集計ページの年別推移棒グラフ
+│   │   ├── NetPayTrendChart.tsx           # 旧・未使用
+│   │   └── IncomeDeductionChart.tsx       # 旧・未使用
 │   ├── payslip/
 │   │   ├── PayslipCard.tsx            # 明細一覧のカード（monthly かつ overtimeHours > 0 のとき残業時間を表示）
 │   │   ├── PayslipDetailView.tsx      # 1件の明細詳細
@@ -113,9 +118,9 @@ src/
 │   ├── withholding/        # WithholdingCard
 │   └── upload/             # DropZone、PayslipReviewForm（重複検出付き）、WithholdingReviewForm
 └── pages/
-    ├── DashboardPage.tsx   # ダッシュボード（YTD累計・チャート・みなし残業・控除内訳・4保険合計）
-    ├── PayslipsPage.tsx    # 給与明細一覧（ソート切り替え・年別グループ・月フィルター・フリーテキスト検索・一括削除）
-    ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション・前月比サマリー・控除内訳ドーナツチャート）
+    ├── DashboardPage.tsx   # ダッシュボード（StatCards・収支内訳タブ・みなし残業効率・今年の累計・チャート群）
+    ├── PayslipsPage.tsx    # 給与明細一覧（ソート切り替え・年別グループトグル・月フィルター・フリーテキスト検索・アクティブフィルターチップス・一括削除）
+    ├── PayslipDetailPage.tsx  # 明細詳細（前後月ナビゲーション・前月比サマリー・収支内訳3タブ）
     ├── AnnualSummaryPage.tsx  # 年間集計（月次手取平均・最高月・最低月・税/社保内訳・MonthlyNetPayBarChart・CSV エクスポート）
     ├── UploadPage.tsx      # MHTアップロード（複数ファイル対応・重複検出）
     └── SettingsPage.tsx    # みなし残業設定（試算プレビュー付き）・JSON バックアップ/復元・CSV エクスポート
@@ -290,6 +295,14 @@ delta < 0  → '-¥XX,XXX' (color: #d06868)
 ```
 
 Props: `title`, `value`, `sub?`, `delta?`（数値、¥付きで自動フォーマット）, `deltaLabel?`（デフォルト: `'前月比'`）, `deltaText?`（文字列、`deltaPositive?` で色制御）, `highlight?`
+
+**padding**: `p-3`（12px）に統一。`p-[18px]` は使わない。
+
+**差引支給額カードのタイトル**: 年月を動的に埋め込む。
+```tsx
+title={latestMonth ? `差引支給額（${latestMonth.year}年${latestMonth.month}月）` : '差引支給額'}
+```
+`sub` には年月を重複表示しない。`手取り率` に計算式サブテキストは入れない。`有給残日数` に年月サブテキストは入れない。
 
 ### 給与種別バッジ（pill）
 
@@ -717,34 +730,164 @@ const INCOME_LABELS: Record<string, string> = {
 ### ダッシュボードのセクション構成（DashboardPage.tsx）
 
 上から順に:
-1. **StatCards** — 最新月の差引支給額・総支給・控除合計・手取り率・有給残日数・**4保険合計**（前月比付き）・**今年の賞与**（前年比付き・当年賞与データがある場合のみ）
-2. **社会保険料の推移** — `SocialInsuranceTrendChart`（2件以上ある場合のみ）
-3. **今年の累計（YTD）** — `annualTotals(payslips, currentYear)` で計算。当年データがない場合は非表示
-4. **みなし残業効率カード** — 差額・詳細数値・残業時間推移チャート（`OvertimeHoursChart`）・月次差額推移
-5. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
-6. **有給残日数の推移** — `PaidLeaveTrendChart`（2件以上ある場合のみ）
-7. **控除内訳ドーナツチャート** — `DeductionDonutChart`（最新給与月のデータ）
-8. **最近の給与明細** — 直近3件のカードリスト（「全件を見る」リンク付き）
+1. **StatCards** — 差引支給額（動的年月タイトル・`highlight`）・総支給・控除合計・手取り率・有給残日数・累計残業時間（6ヶ月以上のときのみ）
+2. **収支内訳カード** — `selectedDonutYM` 月選択ドロップダウン + 3タブ（概要/支給/控除）→ `NetPayBreakdownChart` / `IncomeDonutChart` / `DeductionDonutChart`
+3. **みなし残業効率カード** — `selectedGainYM` 月選択ドロップダウン + 差額・4カラムグリッド（みなし/実残業代/残業時間/使用率）・残業時給・基本時給 + 残業時間推移（`OvertimeHoursChart`）+ 月次差額推移（`GainTrendChart`）+ **年間合算セクション**（選択月の年の合計）
+4. **今年の累計カード** — 給与/賞与/合計の4カラム表テーブル（総支給・手取り・差額）+ 月次手取統計（平均/最高/最低）。「今年の賞与」StatCard は廃止・統合済み
+5. **支給合算の推移** — `IncomeBreakdownTrendChart`（期間フィルター付き・2件以上のときのみ）
+6. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
+7. **最近の給与明細** — 直近3件のカードリスト（「全件を見る」リンク付き）
 
-### DashboardPage の StatCard 折りたたみパターン
+### 収支内訳カード（月選択 + 3タブ）
 
-差引支給額・総支給・控除合計の3枚を常時表示し、残り（手取り率・有給残・4保険・税負担・賞与）は `showExtraCards` state でトグル展開する。
+`DashboardPage.tsx` と `PayslipDetailPage.tsx` の両方で使用する共通パターン。
 
 ```typescript
-const [showExtraCards, setShowExtraCards] = useState(false)
-// トグルボタン
-<button onClick={() => setShowExtraCards(v => !v)}>
-  {showExtraCards ? '▲ 閉じる' : '▼ もっと見る'}
-</button>
-{showExtraCards && (
-  <>
-    {/* 手取り率・有給残・4保険・税負担・賞与 StatCards */}
-  </>
-)}
+const [donutTab, setDonutTab] = useState<'overview' | 'income' | 'deduction'>('overview')
+const [selectedDonutYM, setSelectedDonutYM] = useState<string>('')  // ダッシュボードのみ
+
+// タブ切り替え UI
+{(['overview', 'income', 'deduction'] as const).map(({ key, label }) => (
+  <button className={`px-2.5 py-1 ... ${donutTab === key ? 'bg-brand-600 text-white' : 'bg-white text-gray-600'}`}>
+    {label}
+  </button>
+))}
+
+// レンダリング
+donutTab === 'overview' → <NetPayBreakdownChart />
+donutTab === 'income'   → <IncomeDonutChart />
+donutTab === 'deduction'→ <DeductionDonutChart />
 ```
 
-- 常時表示3枚は `highlight` フラグなし（グラデーション背景なし）
-- YTD・みなし残業セクションの背景は `bg-brand-50` で色分けし視覚階層を明確化
+- デフォルトタブは `'overview'`
+- ダッシュボードは月選択ドロップダウン付き、明細詳細ページは固定月（当該明細）
+
+### みなし残業 年間合算セクション
+
+月選択ドロップダウンで選択した年（`gainSelectedYear`）の全給与明細を集計して表示。
+
+```typescript
+const gainSelectedYear = effectiveGainYM ? parseInt(effectiveGainYM.split('/')[0]) : currentYear
+const currentYearGainSlips = monthlyPayslips.filter((p) => p.year === gainSelectedYear)
+const ytdDeemedTotal = currentYearGainSlips.reduce((sum, p) => sum + getIncomeValueByLabel(p.income, settings.deemedLabel), 0)
+const ytdActualTotal = currentYearGainSlips.reduce((sum, p) => sum + settings.actualLabels.reduce(...), 0)
+const ytdGainTotal = ytdDeemedTotal - ytdActualTotal
+const ytdDeemedHours = DEEMED_HOURS * currentYearGainSlips.length  // みなし時間合計
+const ytdActualHours = currentYearGainSlips.reduce((sum, p) => sum + p.attendance.overtimeHours, 0)
+const ytdGainHours = ytdDeemedHours - ytdActualHours
+const ytdUsagePercent = ytdDeemedHours > 0 ? (ytdActualHours / ytdDeemedHours) * 100 : 0
+const ytdOvertimeHourlyRate = ytdDeemedHours > 0 ? Math.round(ytdDeemedTotal / ytdDeemedHours) : 0
+const ytdBasicHourlyRate = ytdOvertimeHourlyRate > 0 ? Math.round(ytdOvertimeHourlyRate / 1.25) : 0
+```
+
+表示レイアウト（4カラムグリッド×2行）:
+- 行1: みなし（〇〇h）| 実残業代合計 | 残業時間合計 | 年間使用率（プログレスバー付き）
+- 行2: 年間差額 | 得した時間 | 残業時給平均 | 基本時給平均
+
+ラベル「みなし（〇〇h）」の `〇〇h` は `ytdDeemedHours`（月数×45）を動的表示。1行に収まるよう「みなし合計（〇〇h）」ではなく「みなし（〇〇h）」とする。
+
+### 今年の累計カードの構成（給与+賞与統合テーブル）
+
+```typescript
+// 必要な変数
+const currentYearMonthlyIncome = currentYearMonthlySlips.reduce((s, p) => s + p.income.total, 0)
+const currentYearMonthlyNetPay = currentYearMonthlySlips.reduce((s, p) => s + p.summary.netPay, 0)
+const currentYearBonusIncome = currentYearBonusSlips.reduce((s, p) => s + p.income.total, 0)
+const currentYearBonusTotal  = currentYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+```
+
+4カラムテーブル（ヘッダー行: 空 | 総支給 | 手取り | 差額）:
+- 給与行: `currentYearMonthlyIncome` / `currentYearMonthlyNetPay` / 差額（赤）
+- 賞与行（賞与ありのみ）: `currentYearBonusIncome` / `currentYearBonusTotal` / 差額 + 前年比インライン
+- 合計行: `ytd.totalIncome` / `ytd.totalNetPay` / `-ytd.totalDeductions`
+
+- 「今年の賞与」StatCard は廃止。賞与情報はこのカードに統合
+- `bonusDelta`（前年比）は賞与行のラベルに `text-[10px]` でインライン表示
+
+### PayslipsPage の年別グループトグルパターン
+
+```typescript
+const [groupByYear, setGroupByYear] = useState(true)
+
+// フィルター行の「年別」ボタン（filterYear === 'all' のときのみ表示）
+<button
+  onClick={() => setGroupByYear((v) => !v)}
+  className={`... ${groupByYear ? 'bg-brand-100 text-brand-700 border-brand-300' : 'bg-white text-gray-600 border-gray-200'}`}
+>
+  年別
+</button>
+
+// groupedByYear の生成条件
+const groupedByYear = filterYear === 'all' && groupByYear ? ... : null
+```
+
+- デフォルトは `true`（年別グループ表示オン）
+- 特定年フィルター中はボタン自体を非表示（`filterYear !== 'all'` のとき）
+
+### PayslipsPage のアクティブフィルターチップス
+
+`activeFilters` 配列を構築してチップとして表示する。
+
+```typescript
+const activeFilters: { label: string; onRemove: () => void }[] = []
+if (filterYear !== 'all') activeFilters.push({ label: `${filterYear}年`, onRemove: ... })
+if (filterMonth !== 'all') activeFilters.push({ label: `${filterMonth}月`, onRemove: ... })
+if (filterType !== 'all') activeFilters.push({ label: ..., onRemove: ... })
+if (searchQuery.trim() !== '') activeFilters.push({ label: `"${searchQuery}"`, onRemove: ... })
+```
+
+スタイル: `bg-brand-100 text-brand-700 border-brand-200 rounded-full text-xs px-2.5 py-1`
+- 各チップに `×` ボタン（個別解除）
+- 2件以上のとき「すべて解除」ボタンを末尾に追加
+
+### IncomeBreakdownTrendChart の仕様
+
+```typescript
+export interface IncomeBreakdownPoint {
+  label: string          // "YYYY/MM" 形式
+  basicSalary: number
+  deemedOvertime: number
+  wlbAllowance: number
+  lifePlanAllowance: number
+}
+```
+
+- 4項目の**合算値**を1本のステップ折れ線で表示（`stepped: 'before'`）
+- 前月から値が変わったポイントは赤（`#d06868`）、変わらない点は青（`#5b8fa8`）
+- Tooltip に合算額 + 前月比差額を表示
+- Chart.js（`chart.js/auto`）で実装（Recharts ではない）
+
+### IncomeDonutChart / DeductionDonutChart / NetPayBreakdownChart の共通仕様
+
+モバイルは縦積み、PC は横並びのレイアウト:
+```tsx
+<div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-6">
+  <div className="flex-shrink-0" style={{ width: 160, height: 160 }}>
+    <canvas ref={canvasRef} />
+  </div>
+  <div className="w-full min-w-0 divide-y divide-gray-100 sm:flex-1 sm:self-center">
+    {/* 凡例リスト */}
+  </div>
+</div>
+```
+
+- キャンバスサイズ: 160×160px
+- Chart.js（`chart.js/auto`）で実装
+
+### UI コンパクト化基準（最新）
+
+余白削減の標準値:
+
+| 要素 | クラス |
+|---|---|
+| StatCard padding | `p-3` |
+| Layout コンテンツ | `p-3 md:p-5` |
+| ページ間隔 | `space-y-3`（大）/ `space-y-2`（StatCards内） |
+| グループ間隔 | `space-y-4` |
+| カード padding | `p-3` |
+| セクション見出し mb | `mb-2` |
+| グリッド gap | `gap-2`〜`gap-3` |
+| カード間隔（リスト） | `space-y-2` |
 
 ### PayslipsPage の年別グループ表示パターン
 
