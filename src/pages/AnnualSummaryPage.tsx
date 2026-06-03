@@ -7,6 +7,7 @@ import AnnualDetailView from '../components/payslip/AnnualDetailView'
 import MonthlyNetPayBarChart from '../components/charts/MonthlyNetPayBarChart'
 import { annualTotals, uniqueYears } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
+import { calcFurusato, defaultTaxInputs, type TaxDeductionInputs } from '../lib/furusatoCalc'
 import type { Payslip } from '../types/payslip'
 
 function exportCsv(year: number, slips: Payslip[]) {
@@ -37,6 +38,32 @@ export default function AnnualSummaryPage() {
   const deleteWithholdingCert = useStore((s) => s.deleteWithholdingCert)
   const years = uniqueYears(payslips)
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set())
+  const [taxInputs, setTaxInputs] = useState<TaxDeductionInputs>(() => {
+    try {
+      const s = localStorage.getItem('payslip_tracker_tax_inputs')
+      if (s) return { ...defaultTaxInputs, ...JSON.parse(s) }
+    } catch { /* ignore */ }
+    return defaultTaxInputs
+  })
+  const [selectedSimYear, setSelectedSimYear] = useState(0)
+  const [showSimDetail, setShowSimDetail] = useState(false)
+
+  const effectiveSimYear = selectedSimYear !== 0 && years.includes(selectedSimYear)
+    ? selectedSimYear
+    : (years.length > 0 ? Math.max(...years) : new Date().getFullYear())
+  const simYearSlips = payslips.filter((p) => p.year === effectiveSimYear)
+  const simIncome = simYearSlips.reduce((s, p) => s + p.income.total, 0)
+  const simSocialInsurance = simYearSlips.reduce(
+    (s, p) => s + p.deductions.healthInsurance + p.deductions.longTermCareInsurance + p.deductions.pensionInsurance + p.deductions.employmentInsurance,
+    0
+  )
+  const simResult = simIncome > 0 ? calcFurusato(simIncome, simSocialInsurance, taxInputs) : null
+
+  function updateTaxInput(key: keyof TaxDeductionInputs, value: number) {
+    const next = { ...taxInputs, [key]: value }
+    setTaxInputs(next)
+    localStorage.setItem('payslip_tracker_tax_inputs', JSON.stringify(next))
+  }
 
   const hasData = payslips.length > 0 || withholdingCerts.length > 0
 
@@ -71,6 +98,112 @@ export default function AnnualSummaryPage() {
         <div className="text-center py-16 text-gray-400">
           <p>データがありません</p>
           <p className="text-sm mt-1">源泉徴収票のPDFをアップロードしてください</p>
+        </div>
+      )}
+
+      {/* ふるさと納税シミュレーター */}
+      {years.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">ふるさと納税シミュレーター</p>
+              <p className="text-xs text-gray-400 mt-0.5">給与明細から自動計算（概算）</p>
+            </div>
+            {years.length > 1 ? (
+              <select
+                value={effectiveSimYear}
+                onChange={(e) => setSelectedSimYear(Number(e.target.value))}
+                className="text-xs text-gray-500 border border-gray-200 rounded-md px-1.5 py-0.5 bg-white"
+              >
+                {[...years].sort((a, b) => b - a).map((y) => (
+                  <option key={y} value={y}>{y}年</option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-xs text-gray-400">{effectiveSimYear}年</span>
+            )}
+          </div>
+
+          <div className="px-4 pb-3 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-gray-50 rounded-lg p-2.5">
+                <p className="text-xs text-gray-400 mb-0.5">給与収入（自動）</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simIncome)}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2.5">
+                <p className="text-xs text-gray-400 mb-0.5">社会保険料（自動）</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simSocialInsurance)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { key: 'ideco' as const, label: 'iDeCo年額（円）', integer: false },
+                { key: 'lifeInsurancePremium' as const, label: '生命保険料年額（円）', integer: false },
+                { key: 'earthquakeInsurancePremium' as const, label: '地震保険料年額（円）', integer: false },
+                { key: 'dependents' as const, label: '扶養人数（人）', integer: true },
+              ]).map(({ key, label, integer }) => (
+                <div key={key}>
+                  <label className="text-xs text-gray-500 mb-0.5 block">{label}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={taxInputs[key] === 0 ? '' : taxInputs[key]}
+                    onChange={(e) => {
+                      const v = Number(e.target.value) || 0
+                      updateTaxInput(key, integer ? Math.max(0, Math.round(v)) : Math.max(0, v))
+                    }}
+                    placeholder="0"
+                    className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 tabular-nums focus:outline-none focus:ring-1 focus:ring-brand-400"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {simResult && (
+              <div className="bg-brand-50 border border-brand-200 rounded-xl p-3 text-center">
+                <p className="text-xs text-brand-600 mb-1">推定ふるさと納税 上限額</p>
+                <p className="text-2xl font-bold tabular-nums text-brand-700">{formatYen(simResult.furusatoLimit)}</p>
+                <p className="text-xs text-gray-400 mt-1">自己負担2,000円を含む概算</p>
+              </div>
+            )}
+
+            {simResult && (
+              <>
+                <button
+                  onClick={() => setShowSimDetail((v) => !v)}
+                  className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
+                >
+                  計算内訳
+                  <svg
+                    className={`w-3.5 h-3.5 transition-transform ${showSimDetail ? 'rotate-180' : ''}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showSimDetail && (
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-xs">
+                    {([
+                      { label: '給与所得控除', value: `-${formatYen(simResult.employmentIncomeDeduction)}`, bold: false, accent: false },
+                      { label: '給与所得', value: formatYen(simResult.employmentIncome), bold: false, accent: false },
+                      { label: '課税所得（所得税）', value: formatYen(simResult.taxableIncome), bold: true, accent: false },
+                      { label: '所得税率', value: `${(simResult.incomeTaxRate * 100).toFixed(0)}%`, bold: true, accent: false },
+                      { label: '課税所得（住民税）', value: formatYen(simResult.taxableIncomeResident), bold: false, accent: false },
+                      { label: '住民税所得割（10%）', value: formatYen(simResult.residentTaxDividend), bold: true, accent: false },
+                      { label: '推定上限額', value: formatYen(simResult.furusatoLimit), bold: true, accent: true },
+                    ]).map(({ label, value, bold, accent }) => (
+                      <div key={label} className="flex justify-between">
+                        <span className={accent ? 'text-brand-700 font-medium' : 'text-gray-500'}>{label}</span>
+                        <span className={`tabular-nums ${bold ? 'font-semibold' : ''} ${accent ? 'text-brand-700' : 'text-gray-700'}`}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
 

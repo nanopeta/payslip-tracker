@@ -101,6 +101,21 @@ export default function DashboardPage() {
   const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
 
   const currentYear = new Date().getFullYear()
+  const gainSelectedYear = effectiveGainYM ? parseInt(effectiveGainYM.split('/')[0]) : currentYear
+
+  // みなし残業 年間合算（選択月の年）
+  const currentYearGainSlips = monthlyPayslips.filter((p) => p.year === gainSelectedYear)
+  const ytdDeemedTotal = currentYearGainSlips.reduce(
+    (sum, p) => sum + getIncomeValueByLabel(p.income, settings.deemedLabel), 0)
+  const ytdActualTotal = currentYearGainSlips.reduce(
+    (sum, p) => sum + settings.actualLabels.reduce((s, l) => s + getIncomeValueByLabel(p.income, l), 0), 0)
+  const ytdGainTotal = ytdDeemedTotal - ytdActualTotal
+  const ytdDeemedHours = DEEMED_HOURS * currentYearGainSlips.length
+  const ytdActualHours = currentYearGainSlips.reduce((sum, p) => sum + p.attendance.overtimeHours, 0)
+  const ytdGainHours = ytdDeemedHours - ytdActualHours
+  const ytdUsagePercent = ytdDeemedHours > 0 ? (ytdActualHours / ytdDeemedHours) * 100 : 0
+  const ytdOvertimeHourlyRate = ytdDeemedHours > 0 ? Math.round(ytdDeemedTotal / ytdDeemedHours) : 0
+  const ytdBasicHourlyRate = ytdOvertimeHourlyRate > 0 ? Math.round(ytdOvertimeHourlyRate / 1.25) : 0
   const ytd = annualTotals(payslips, currentYear)
   const hasYtdData = ytd.monthCount > 0
   const currentYearMonthlySlips = payslips.filter(
@@ -114,14 +129,6 @@ export default function DashboardPage() {
   const currentYearBonusSlips = payslips.filter(
     (p) => p.year === currentYear && p.payslipType === 'bonus'
   )
-  const currentYearBonusTotal = currentYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
-  const prevYearBonusSlips = payslips.filter(
-    (p) => p.year === currentYear - 1 && p.payslipType === 'bonus'
-  )
-  const prevYearBonusTotal = prevYearBonusSlips.length > 0
-    ? prevYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
-    : null
-  const bonusDelta = prevYearBonusTotal !== null ? currentYearBonusTotal - prevYearBonusTotal : null
 
   // 支給項目推移
   const incomeBreakdownTrend = [...monthlyPayslips]
@@ -167,18 +174,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <div>
         <h1 className="text-xl font-bold text-gray-900">ダッシュボード</h1>
         <p className="text-gray-500 text-sm mt-0.5">給与データの概要</p>
       </div>
 
       {/* Stat cards */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <StatCard
-          title="差引支給額（最新月合計）"
+          title={latestMonth ? `差引支給額（${latestMonth.year}年${latestMonth.month}月）` : '差引支給額'}
           value={latestMonth ? formatYen(latestMonth.netPay) : '—'}
-          sub={latestMonth ? `${latestMonth.year}年${latestMonth.month}月` : undefined}
           delta={latestMonth && prevMonth ? latestMonth.netPay - prevMonth.netPay : undefined}
           highlight
         />
@@ -197,7 +203,6 @@ export default function DashboardPage() {
             <StatCard
               title="手取り率"
               value={`${takeHomeRate.toFixed(1)}%`}
-              sub="差引支給額 ÷ 総支給金額"
               deltaText={rateChange !== null ? `${rateChange >= 0 ? '+' : ''}${rateChange.toFixed(1)}pt` : undefined}
               deltaPositive={rateChange !== null && rateChange >= 0}
             />
@@ -206,7 +211,6 @@ export default function DashboardPage() {
             <StatCard
               title="有給残日数"
               value={`${paidLeaveStats.remaining}日`}
-              sub={paidLeaveStats.label.replace('/', '年').replace(/(\d+)$/, '$1月')}
               deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
               deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
             />
@@ -226,7 +230,7 @@ export default function DashboardPage() {
 
       {/* 収支内訳ドーナツ（最新月） */}
       {latestMonthly && (latestMonthly.income.total > 0 || latestMonthly.deductions.total > 0) && (
-        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-1">
             <p className="text-sm font-semibold text-gray-700">収支内訳</p>
             <div className="flex items-center gap-2">
@@ -265,7 +269,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-xs text-gray-400 mb-2">
             {donutTab === 'deduction'
               ? `控除合計 ${formatYen(selectedDonutMonthly?.deductions.total ?? 0)}`
               : `総支給 ${formatYen(selectedDonutMonthly?.income.total ?? 0)}`}
@@ -282,8 +286,8 @@ export default function DashboardPage() {
 
       {/* Overtime gain — unified card */}
       {showGainSection && latestMonthly && (
-        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+          <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
             <div className="flex items-center gap-2">
               {gainRows.length > 1 ? (
@@ -305,14 +309,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-baseline gap-2 mb-4">
+          <div className="flex items-baseline gap-2 mb-2">
             <span className="text-2xl font-bold tabular-nums" style={{ color: (latestGain ?? 0) >= 0 ? '#5fad9b' : '#d06868' }}>
               {(latestGain ?? 0) >= 0 ? '+' : ''}{formatYen(latestGain ?? 0)}
             </span>
             <span className="text-xs text-gray-400">差額</span>
           </div>
 
-          <div className="grid grid-cols-4 gap-x-4 gap-y-3 mb-3">
+          <div className="grid grid-cols-4 gap-x-3 gap-y-2 mb-2">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">みなし（{DEEMED_HOURS}h）</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(deemedAmtLatest)}</p>
@@ -388,32 +392,92 @@ export default function DashboardPage() {
               <GainTrendChart data={filteredGainRows} />
             </div>
           )}
+
+          {currentYearGainSlips.length > 0 && ytdDeemedTotal > 0 && (
+            <div className="border-t border-gray-100 pt-3 mt-1">
+              <p className="text-xs text-gray-400 mb-2">{gainSelectedYear}年 年間合算</p>
+              <div className="grid grid-cols-4 gap-x-4 gap-y-3 mb-3">
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">みなし（{ytdDeemedHours}h）</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdDeemedTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">実残業代合計</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdActualTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">残業時間合計</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{ytdActualHours.toFixed(1)}h</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">年間使用率</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{ytdUsagePercent.toFixed(0)}%</p>
+                  <div className="mt-1 bg-gray-200 rounded-full h-1 overflow-hidden">
+                    <div className="h-1 rounded-full" style={{
+                      width: `${Math.min(100, ytdUsagePercent)}%`,
+                      backgroundColor: ytdUsagePercent > 100 ? '#d06868' : '#5fad9b',
+                    }} />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-x-4 gap-y-3">
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">年間差額</p>
+                  <p className="text-sm font-semibold tabular-nums" style={{ color: ytdGainTotal >= 0 ? '#5fad9b' : '#d06868' }}>
+                    {ytdGainTotal >= 0 ? '+' : ''}{formatYen(ytdGainTotal)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">得した時間</p>
+                  <p className="text-sm font-semibold tabular-nums" style={{ color: ytdGainHours >= 0 ? '#5fad9b' : '#d06868' }}>
+                    {ytdGainHours >= 0 ? '+' : ''}{ytdGainHours.toFixed(1)}h
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">残業時給平均</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdOvertimeHourlyRate)}/h</p>
+                </div>
+                {ytdBasicHourlyRate > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">基本時給平均</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdBasicHourlyRate)}/h</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* YTD summary */}
       {hasYtdData && (
-        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
-          <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
-          <div className="grid grid-cols-3 gap-3">
+          <p className="text-xs text-gray-400 mb-2">
+            {currentYear}年
+            {ytd.monthlyMonthCount > 0 && ` 給与${ytd.monthlyMonthCount}ヶ月`}
+            {currentYearBonusSlips.length > 0 && ` 賞与${currentYearBonusSlips.length}件`}
+          </p>
+
+          <div className="grid grid-cols-3 gap-2">
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">年間総支給額</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytd.totalIncome)}</p>
+              <p className="text-xs text-gray-400">総支給</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(ytd.totalIncome)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">年間手取り</p>
-              <p className="text-sm font-semibold tabular-nums" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
+              <p className="text-xs text-gray-400">手取り</p>
+              <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">年間控除合計</p>
-              <p className="text-sm font-semibold tabular-nums" style={{ color: '#d06868' }}>{formatYen(ytd.totalDeductions)}</p>
+              <p className="text-xs text-gray-400">控除合計</p>
+              <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(ytd.totalDeductions)}</p>
             </div>
           </div>
+
           {currentYearMonthlySlips.length > 0 && (
-            <div className="border-t border-gray-100 pt-3">
+            <div className="border-t border-gray-100 pt-2 mt-2">
               <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <div>
                   <p className="text-xs text-gray-400">平均月手取</p>
                   <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(ytd.avgMonthlyNetPay)}</p>
@@ -434,21 +498,10 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 今年の賞与 StatCard */}
-      {hasBonusData && currentYearBonusTotal > 0 && (
-        <StatCard
-          title="今年の賞与"
-          value={formatYen(currentYearBonusTotal)}
-          sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
-          delta={bonusDelta !== null ? bonusDelta : undefined}
-          deltaLabel="前年比"
-        />
-      )}
-
       {/* Charts */}
-      <div className="space-y-4">
-        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-          <div className="flex items-center justify-between mb-3">
+      <div className="space-y-3">
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+          <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-semibold text-gray-700">支給・手取りの推移</p>
             <div className="flex gap-1">
               {PERIOD_FILTERS.map((f) => (
@@ -466,20 +519,23 @@ export default function DashboardPage() {
         </div>
 
         {incomeBreakdownTrend.length >= 2 && (
-          <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-gray-700">支給合算の推移（基本給＋みなし残業＋WLB＋ライフプラン）</p>
-              <div className="flex gap-1">
-                {PERIOD_FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => setIncomeBreakdownFilter(f.key)}
-                    className={`text-xs px-2 py-0.5 rounded-full transition-colors ${incomeBreakdownFilter === f.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+          <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+            <div className="mb-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-700">支給合算の推移</p>
+                <div className="flex gap-1">
+                  {PERIOD_FILTERS.map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setIncomeBreakdownFilter(f.key)}
+                      className={`text-xs px-2 py-0.5 rounded-full transition-colors ${incomeBreakdownFilter === f.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+              <p className="text-xs text-gray-400 mt-0.5">基本給＋みなし残業＋WLB手当＋ライフプラン手当</p>
             </div>
             <IncomeBreakdownTrendChart data={filteredIncomeBreakdown} />
           </div>
@@ -488,11 +544,11 @@ export default function DashboardPage() {
 
       {/* Recent payslips */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-semibold text-gray-700">最近の給与明細</p>
           <Link to="/payslips" className="text-xs text-brand-600 hover:text-brand-700">すべて見る →</Link>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {recent.map((p, i) => (
             <PayslipCard
               key={p.id}
