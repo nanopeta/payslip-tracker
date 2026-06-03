@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const [trendFilter, setTrendFilter] = useState<PeriodFilter>('all')
   const [selectedGainYM, setSelectedGainYM] = useState<string>('')
   const [donutTab, setDonutTab] = useState<'overview' | 'income' | 'deduction'>('overview')
+  const [selectedDonutYM, setSelectedDonutYM] = useState<string>('')
 
   const trend = netPayTrend(payslips)
   const latestTrendYM = trend.length > 0 ? trend[trend.length - 1]!.label : ''
@@ -104,12 +105,6 @@ export default function DashboardPage() {
     (p) => p.year === currentYear && (!p.payslipType || p.payslipType === 'monthly')
   )
 
-  // 今年の控除合計
-  const ytdDeductionTotal = ytd.totalDeductions
-  const prevYtd = annualTotals(payslips, currentYear - 1)
-  const prevYtdDeductionTotal = prevYtd.monthCount > 0 ? prevYtd.totalDeductions : null
-  const deductionDelta = prevYtdDeductionTotal !== null ? ytdDeductionTotal - prevYtdDeductionTotal : null
-
   // 累計残業時間（月次6件以上の場合のみ StatCard 表示）
   const ytdOvertime = ytdOvertimeHoursStats(payslips, currentYear)
 
@@ -125,6 +120,15 @@ export default function DashboardPage() {
     ? prevYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
     : null
   const bonusDelta = prevYearBonusTotal !== null ? currentYearBonusTotal - prevYearBonusTotal : null
+
+  // 収支内訳 月選択
+  const latestDonutYM = latestMonthly
+    ? `${latestMonthly.year}/${String(latestMonthly.month).padStart(2, '0')}`
+    : ''
+  const effectiveDonutYM = selectedDonutYM || latestDonutYM
+  const selectedDonutMonthly = monthlyPayslips.find(
+    (p) => `${p.year}/${String(p.month).padStart(2, '0')}` === effectiveDonutYM
+  ) ?? latestMonthly
 
   const recent = sorted.slice(0, 3)
 
@@ -207,35 +211,56 @@ export default function DashboardPage() {
       {/* 収支内訳ドーナツ（最新月） */}
       {latestMonthly && (latestMonthly.income.total > 0 || latestMonthly.deductions.total > 0) && (
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-          <div className="flex items-center justify-between mb-0.5">
+          <div className="flex items-center justify-between mb-1">
             <p className="text-sm font-semibold text-gray-700">収支内訳</p>
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-              {([
-                { key: 'overview', label: '概要' },
-                { key: 'income',   label: '支給' },
-                { key: 'deduction', label: '控除' },
-              ] as const).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setDonutTab(key)}
-                  className={`px-2.5 py-1 transition-colors ${donutTab === key ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            <div className="flex items-center gap-2">
+              {monthlyPayslips.length > 1 ? (
+                <select
+                  value={effectiveDonutYM}
+                  onChange={(e) => setSelectedDonutYM(e.target.value)}
+                  className="text-xs text-gray-500 border border-gray-200 rounded-md px-1.5 py-0.5 bg-white"
                 >
-                  {label}
-                </button>
-              ))}
+                  {[...monthlyPayslips]
+                    .sort((a, b) => (b.year * 100 + b.month) - (a.year * 100 + a.month))
+                    .map((p) => {
+                      const ym = `${p.year}/${String(p.month).padStart(2, '0')}`
+                      return <option key={ym} value={ym}>{p.year}年{p.month}月</option>
+                    })}
+                </select>
+              ) : (
+                <span className="text-xs text-gray-400">
+                  {selectedDonutMonthly?.year}年{selectedDonutMonthly?.month}月
+                </span>
+              )}
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+                {([
+                  { key: 'overview',  label: '概要' },
+                  { key: 'income',    label: '支給' },
+                  { key: 'deduction', label: '控除' },
+                ] as const).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setDonutTab(key)}
+                    className={`px-2.5 py-1 transition-colors ${donutTab === key ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <p className="text-xs text-gray-400 mb-3">
-            {latestMonthly.year}年{latestMonthly.month}月
-            {donutTab === 'overview' && ` 総支給 ${formatYen(latestMonthly.income.total)}`}
-            {donutTab === 'income'   && ` 総支給 ${formatYen(latestMonthly.income.total)}`}
-            {donutTab === 'deduction' && ` 控除合計 ${formatYen(latestMonthly.deductions.total)}`}
+            {donutTab === 'deduction'
+              ? `控除合計 ${formatYen(selectedDonutMonthly?.deductions.total ?? 0)}`
+              : `総支給 ${formatYen(selectedDonutMonthly?.income.total ?? 0)}`}
           </p>
-          {donutTab === 'overview'
-            ? <NetPayBreakdownChart income={latestMonthly.income} deductions={latestMonthly.deductions} summary={latestMonthly.summary} />
-            : donutTab === 'income'
-              ? <IncomeDonutChart income={latestMonthly.income} />
-              : <DeductionDonutChart deductions={latestMonthly.deductions} />}
+          {selectedDonutMonthly && (
+            donutTab === 'overview'
+              ? <NetPayBreakdownChart income={selectedDonutMonthly.income} deductions={selectedDonutMonthly.deductions} summary={selectedDonutMonthly.summary} />
+              : donutTab === 'income'
+                ? <IncomeDonutChart income={selectedDonutMonthly.income} />
+                : <DeductionDonutChart deductions={selectedDonutMonthly.deductions} />
+          )}
         </div>
       )}
 
@@ -393,29 +418,16 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 年間累計 StatCards（税負担・賞与） */}
-      {(hasYtdData && ytdDeductionTotal > 0) || (hasBonusData && currentYearBonusTotal > 0) ? (
-        <div className="grid grid-cols-2 gap-3">
-          {hasYtdData && ytdDeductionTotal > 0 && (
-            <StatCard
-              title="今年の控除"
-              value={formatYen(ytdDeductionTotal)}
-              sub={`${currentYear}年累計（控除合計）`}
-              delta={deductionDelta !== null ? deductionDelta : undefined}
-              deltaLabel="前年比"
-            />
-          )}
-          {hasBonusData && currentYearBonusTotal > 0 && (
-            <StatCard
-              title="今年の賞与"
-              value={formatYen(currentYearBonusTotal)}
-              sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
-              delta={bonusDelta !== null ? bonusDelta : undefined}
-              deltaLabel="前年比"
-            />
-          )}
-        </div>
-      ) : null}
+      {/* 今年の賞与 StatCard */}
+      {hasBonusData && currentYearBonusTotal > 0 && (
+        <StatCard
+          title="今年の賞与"
+          value={formatYen(currentYearBonusTotal)}
+          sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
+          delta={bonusDelta !== null ? bonusDelta : undefined}
+          deltaLabel="前年比"
+        />
+      )}
 
       {/* Charts */}
       <div className="space-y-4">
