@@ -5,6 +5,7 @@ import PayslipDetailView from '../components/payslip/PayslipDetailView'
 import PayslipReviewForm from '../components/upload/PayslipReviewForm'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import IncomeDonutChart from '../components/charts/IncomeDonutChart'
+import NetPayBreakdownChart from '../components/charts/NetPayBreakdownChart'
 import { previousPayslip, nextPayslip } from '../lib/aggregations'
 import { formatYen, formatHoursMinutes } from '../lib/formatters'
 import type { Payslip } from '../types/payslip'
@@ -17,7 +18,7 @@ export default function PayslipDetailPage() {
   const updatePayslip = useStore((s) => s.updatePayslip)
   const payslip = payslips.find((p) => p.id === id)
   const [editing, setEditing] = useState(false)
-  const [donutTab, setDonutTab] = useState<'income' | 'deduction'>('income')
+  const [donutTab, setDonutTab] = useState<'overview' | 'income' | 'deduction'>('overview')
 
   const prev = payslip ? previousPayslip(payslips, payslip) : null
   const next = payslip ? nextPayslip(payslips, payslip) : null
@@ -190,23 +191,26 @@ export default function PayslipDetailPage() {
               <div className="flex items-center justify-between mb-1">
                 <p className="text-xs text-gray-400">収支内訳</p>
                 <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-                  <button
-                    onClick={() => setDonutTab('income')}
-                    className={`px-2.5 py-1 transition-colors ${donutTab === 'income' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    支給
-                  </button>
-                  <button
-                    onClick={() => setDonutTab('deduction')}
-                    className={`px-2.5 py-1 transition-colors ${donutTab === 'deduction' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    控除
-                  </button>
+                  {([
+                    { key: 'overview',  label: '概要' },
+                    { key: 'income',    label: '支給' },
+                    { key: 'deduction', label: '控除' },
+                  ] as const).map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setDonutTab(key)}
+                      className={`px-2.5 py-1 transition-colors ${donutTab === key ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
-              {donutTab === 'income'
-                ? <IncomeDonutChart income={payslip.income} />
-                : <DeductionDonutChart deductions={payslip.deductions} />}
+              {donutTab === 'overview'
+                ? <NetPayBreakdownChart income={payslip.income} deductions={payslip.deductions} summary={payslip.summary} />
+                : donutTab === 'income'
+                  ? <IncomeDonutChart income={payslip.income} />
+                  : <DeductionDonutChart deductions={payslip.deductions} />}
             </div>
           )}
           <PayslipDetailView payslip={payslip} prev={prev} />
