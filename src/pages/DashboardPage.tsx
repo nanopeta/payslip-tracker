@@ -101,6 +101,14 @@ export default function DashboardPage() {
   const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
 
   const currentYear = new Date().getFullYear()
+
+  // みなし残業 年間合算（今年）
+  const currentYearGainSlips = monthlyPayslips.filter((p) => p.year === currentYear)
+  const ytdDeemedTotal = currentYearGainSlips.reduce(
+    (sum, p) => sum + getIncomeValueByLabel(p.income, settings.deemedLabel), 0)
+  const ytdActualTotal = currentYearGainSlips.reduce(
+    (sum, p) => sum + settings.actualLabels.reduce((s, l) => s + getIncomeValueByLabel(p.income, l), 0), 0)
+  const ytdGainTotal = ytdDeemedTotal - ytdActualTotal
   const ytd = annualTotals(payslips, currentYear)
   const hasYtdData = ytd.monthCount > 0
   const currentYearMonthlySlips = payslips.filter(
@@ -386,6 +394,28 @@ export default function DashboardPage() {
                 )}
               </div>
               <GainTrendChart data={filteredGainRows} />
+            </div>
+          )}
+
+          {currentYearGainSlips.length > 0 && ytdDeemedTotal > 0 && (
+            <div className="border-t border-gray-100 pt-3 mt-1">
+              <p className="text-xs text-gray-400 mb-2">{currentYear}年 年間合算</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">みなし合計</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdDeemedTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">実残業代合計</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdActualTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">年間差額</p>
+                  <p className="text-sm font-semibold tabular-nums" style={{ color: ytdGainTotal >= 0 ? '#5fad9b' : '#d06868' }}>
+                    {ytdGainTotal >= 0 ? '+' : ''}{formatYen(ytdGainTotal)}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
