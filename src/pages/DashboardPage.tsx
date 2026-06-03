@@ -129,6 +129,17 @@ export default function DashboardPage() {
   const currentYearBonusSlips = payslips.filter(
     (p) => p.year === currentYear && p.payslipType === 'bonus'
   )
+  const currentYearBonusTotal = currentYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+  const currentYearBonusIncome = currentYearBonusSlips.reduce((s, p) => s + p.income.total, 0)
+  const currentYearMonthlyIncome = currentYearMonthlySlips.reduce((s, p) => s + p.income.total, 0)
+  const currentYearMonthlyNetPay = currentYearMonthlySlips.reduce((s, p) => s + p.summary.netPay, 0)
+  const prevYearBonusSlips = payslips.filter(
+    (p) => p.year === currentYear - 1 && p.payslipType === 'bonus'
+  )
+  const prevYearBonusTotal = prevYearBonusSlips.length > 0
+    ? prevYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+    : null
+  const bonusDelta = prevYearBonusTotal !== null ? currentYearBonusTotal - prevYearBonusTotal : null
 
   // 支給項目推移
   const incomeBreakdownTrend = [...monthlyPayslips]
@@ -459,19 +470,40 @@ export default function DashboardPage() {
             {currentYearBonusSlips.length > 0 && ` 賞与${currentYearBonusSlips.length}件`}
           </p>
 
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <p className="text-xs text-gray-400">総支給</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(ytd.totalIncome)}</p>
+          <div className="grid grid-cols-4 gap-x-2 text-xs mb-0.5">
+            <div />
+            <p className="text-gray-400 text-right">総支給</p>
+            <p className="text-gray-400 text-right">手取り</p>
+            <p className="text-gray-400 text-right">差額</p>
+          </div>
+          {currentYearMonthlySlips.length > 0 && (
+            <div className="grid grid-cols-4 gap-x-2 items-center py-1 border-b border-gray-100">
+              <p className="text-xs text-gray-500">給与</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{formatYen(currentYearMonthlyIncome)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#5fad9b' }}>{formatYen(currentYearMonthlyNetPay)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#d06868' }}>-{formatYen(currentYearMonthlyIncome - currentYearMonthlyNetPay)}</p>
             </div>
-            <div>
-              <p className="text-xs text-gray-400">手取り</p>
-              <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
+          )}
+          {currentYearBonusSlips.length > 0 && (
+            <div className="grid grid-cols-4 gap-x-2 items-center py-1 border-b border-gray-100">
+              <p className="text-xs text-gray-500">
+                賞与
+                {bonusDelta !== null && (
+                  <span className="ml-1 text-[10px]" style={{ color: bonusDelta >= 0 ? '#5fad9b' : '#d06868' }}>
+                    {bonusDelta >= 0 ? '+' : ''}{formatYen(bonusDelta)}
+                  </span>
+                )}
+              </p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{formatYen(currentYearBonusIncome)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#f59e0b' }}>{formatYen(currentYearBonusTotal)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#d06868' }}>-{formatYen(currentYearBonusIncome - currentYearBonusTotal)}</p>
             </div>
-            <div>
-              <p className="text-xs text-gray-400">控除合計</p>
-              <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(ytd.totalDeductions)}</p>
-            </div>
+          )}
+          <div className="grid grid-cols-4 gap-x-2 items-center pt-1.5">
+            <p className="text-xs font-medium text-gray-700">合計</p>
+            <p className="text-sm font-bold tabular-nums text-gray-900 text-right">{formatYen(ytd.totalIncome)}</p>
+            <p className="text-sm font-bold tabular-nums text-right" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
+            <p className="text-sm font-bold tabular-nums text-right" style={{ color: '#d06868' }}>-{formatYen(ytd.totalDeductions)}</p>
           </div>
 
           {currentYearMonthlySlips.length > 0 && (

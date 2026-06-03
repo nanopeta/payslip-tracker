@@ -52,11 +52,23 @@ export default function AnnualSummaryPage() {
     ? selectedSimYear
     : (years.length > 0 ? Math.max(...years) : new Date().getFullYear())
   const simYearSlips = payslips.filter((p) => p.year === effectiveSimYear)
-  const simIncome = simYearSlips.reduce((s, p) => s + p.income.total, 0)
-  const simSocialInsurance = simYearSlips.reduce(
+  const simMonthlySlips = simYearSlips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
+  const simBonusSlips = simYearSlips.filter((p) => p.payslipType === 'bonus')
+  const simMonthlyCount = simMonthlySlips.length
+  const simMonthlyIncomeSum = simMonthlySlips.reduce((s, p) => s + p.income.total, 0)
+  const simBonusIncomeSum = simBonusSlips.reduce((s, p) => s + p.income.total, 0)
+  const simProjectedMonthlyIncome = simMonthlyCount > 0
+    ? Math.round(simMonthlyIncomeSum / simMonthlyCount) * 12
+    : 0
+  const simIncome = simProjectedMonthlyIncome + simBonusIncomeSum
+  const simMonthlySISum = simMonthlySlips.reduce(
     (s, p) => s + p.deductions.healthInsurance + p.deductions.longTermCareInsurance + p.deductions.pensionInsurance + p.deductions.employmentInsurance,
     0
   )
+  const simSocialInsurance = simMonthlyCount > 0
+    ? Math.round(simMonthlySISum / simMonthlyCount) * 12
+    : 0
+  const simIsProjected = simMonthlyCount > 0 && simMonthlyCount < 12
   const simResult = simIncome > 0 ? calcFurusato(simIncome, simSocialInsurance, taxInputs) : null
 
   function updateTaxInput(key: keyof TaxDeductionInputs, value: number) {
@@ -127,12 +139,22 @@ export default function AnnualSummaryPage() {
           <div className="px-4 pb-3 space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-gray-50 rounded-lg p-2.5">
-                <p className="text-xs text-gray-400 mb-0.5">給与収入（自動）</p>
+                <p className="text-xs text-gray-400 mb-0.5">
+                  給与収入（自動{simIsProjected ? `・月平均×12+賞与` : ''}）
+                </p>
                 <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simIncome)}</p>
+                {simIsProjected && (
+                  <p className="text-[10px] text-gray-400 mt-0.5">{simMonthlyCount}ヶ月分から試算</p>
+                )}
               </div>
               <div className="bg-gray-50 rounded-lg p-2.5">
-                <p className="text-xs text-gray-400 mb-0.5">社会保険料（自動）</p>
+                <p className="text-xs text-gray-400 mb-0.5">
+                  社会保険料（自動{simIsProjected ? `・月平均×12` : ''}）
+                </p>
                 <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simSocialInsurance)}</p>
+                {simIsProjected && (
+                  <p className="text-[10px] text-gray-400 mt-0.5">{simMonthlyCount}ヶ月分から試算</p>
+                )}
               </div>
             </div>
 
