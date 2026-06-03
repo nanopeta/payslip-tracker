@@ -78,11 +78,11 @@ export default function DeductionDonutChart({ deductions }: Props) {
   }
 
   return (
-    <div className="flex gap-6 items-start">
-      <div className="flex-shrink-0" style={{ width: 200, height: 200 }}>
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-6">
+      <div className="flex-shrink-0" style={{ width: 160, height: 160 }}>
         <canvas ref={canvasRef} />
       </div>
-      <div className="flex-1 min-w-0 divide-y divide-gray-100 self-center">
+      <div className="w-full min-w-0 divide-y divide-gray-100 sm:flex-1 sm:self-center">
         {data.map((item) => (
           <div key={item.name} className="flex items-center justify-between py-[7px] text-sm">
             <div className="flex items-center gap-2">
