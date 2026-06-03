@@ -101,9 +101,10 @@ export default function DashboardPage() {
   const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
 
   const currentYear = new Date().getFullYear()
+  const gainSelectedYear = effectiveGainYM ? parseInt(effectiveGainYM.split('/')[0]) : currentYear
 
-  // みなし残業 年間合算（今年）
-  const currentYearGainSlips = monthlyPayslips.filter((p) => p.year === currentYear)
+  // みなし残業 年間合算（選択月の年）
+  const currentYearGainSlips = monthlyPayslips.filter((p) => p.year === gainSelectedYear)
   const ytdDeemedTotal = currentYearGainSlips.reduce(
     (sum, p) => sum + getIncomeValueByLabel(p.income, settings.deemedLabel), 0)
   const ytdActualTotal = currentYearGainSlips.reduce(
@@ -112,6 +113,7 @@ export default function DashboardPage() {
   const ytdDeemedHours = DEEMED_HOURS * currentYearGainSlips.length
   const ytdActualHours = currentYearGainSlips.reduce((sum, p) => sum + p.attendance.overtimeHours, 0)
   const ytdGainHours = ytdDeemedHours - ytdActualHours
+  const ytdUsagePercent = ytdDeemedHours > 0 ? (ytdActualHours / ytdDeemedHours) * 100 : 0
   const ytd = annualTotals(payslips, currentYear)
   const hasYtdData = ytd.monthCount > 0
   const currentYearMonthlySlips = payslips.filter(
@@ -402,8 +404,8 @@ export default function DashboardPage() {
 
           {currentYearGainSlips.length > 0 && ytdDeemedTotal > 0 && (
             <div className="border-t border-gray-100 pt-3 mt-1">
-              <p className="text-xs text-gray-400 mb-2">{currentYear}年 年間合算</p>
-              <div className="grid grid-cols-2 gap-3">
+              <p className="text-xs text-gray-400 mb-2">{gainSelectedYear}年 年間合算</p>
+              <div className="grid grid-cols-4 gap-x-4 gap-y-3 mb-3">
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">みなし合計</p>
                   <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdDeemedTotal)}</p>
@@ -412,6 +414,22 @@ export default function DashboardPage() {
                   <p className="text-xs text-gray-400 mb-0.5">実残業代合計</p>
                   <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdActualTotal)}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">残業時間合計</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{ytdActualHours.toFixed(1)}h</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">年間使用率</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{ytdUsagePercent.toFixed(0)}%</p>
+                  <div className="mt-1 bg-gray-200 rounded-full h-1 overflow-hidden">
+                    <div className="h-1 rounded-full" style={{
+                      width: `${Math.min(100, ytdUsagePercent)}%`,
+                      backgroundColor: ytdUsagePercent > 100 ? '#d06868' : '#5fad9b',
+                    }} />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-x-4 gap-y-3">
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">年間差額</p>
                   <p className="text-sm font-semibold tabular-nums" style={{ color: ytdGainTotal >= 0 ? '#5fad9b' : '#d06868' }}>
@@ -423,7 +441,6 @@ export default function DashboardPage() {
                   <p className="text-sm font-semibold tabular-nums" style={{ color: ytdGainHours >= 0 ? '#5fad9b' : '#d06868' }}>
                     {ytdGainHours >= 0 ? '+' : ''}{ytdGainHours.toFixed(1)}h
                   </p>
-                  <p className="text-xs text-gray-400">{ytdDeemedHours}h − {ytdActualHours.toFixed(1)}h</p>
                 </div>
               </div>
             </div>
