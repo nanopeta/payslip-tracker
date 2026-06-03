@@ -130,6 +130,9 @@ export default function DashboardPage() {
     (p) => p.year === currentYear && p.payslipType === 'bonus'
   )
   const currentYearBonusTotal = currentYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+  const currentYearBonusIncome = currentYearBonusSlips.reduce((s, p) => s + p.income.total, 0)
+  const currentYearMonthlyIncome = currentYearMonthlySlips.reduce((s, p) => s + p.income.total, 0)
+  const currentYearMonthlyNetPay = currentYearMonthlySlips.reduce((s, p) => s + p.summary.netPay, 0)
   const prevYearBonusSlips = payslips.filter(
     (p) => p.year === currentYear - 1 && p.payslipType === 'bonus'
   )
@@ -460,27 +463,51 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* YTD summary */}
+      {/* YTD summary + 賞与（統合カード） */}
       {hasYtdData && (
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
-          <p className="text-xs text-gray-400 mb-2">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">年間総支給額</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytd.totalIncome)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">年間手取り</p>
-              <p className="text-sm font-semibold tabular-nums" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">年間控除合計</p>
-              <p className="text-sm font-semibold tabular-nums" style={{ color: '#d06868' }}>{formatYen(ytd.totalDeductions)}</p>
-            </div>
+          <p className="text-xs text-gray-400 mb-2">
+            {currentYear}年
+            {ytd.monthlyMonthCount > 0 && ` 給与${ytd.monthlyMonthCount}ヶ月`}
+            {currentYearBonusSlips.length > 0 && ` 賞与${currentYearBonusSlips.length}件`}
+          </p>
+
+          {/* 総支給 / 手取り テーブル */}
+          <div className="grid grid-cols-3 gap-x-2 gap-y-1.5 text-xs mb-0.5">
+            <div />
+            <p className="text-gray-400 text-center">総支給</p>
+            <p className="text-gray-400 text-center">手取り</p>
           </div>
           {currentYearMonthlySlips.length > 0 && (
-            <div className="border-t border-gray-100 pt-2">
+            <div className="grid grid-cols-3 gap-x-2 gap-y-1 items-center py-1 border-b border-gray-100">
+              <p className="text-xs text-gray-500">給与</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{formatYen(currentYearMonthlyIncome)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#5fad9b' }}>{formatYen(currentYearMonthlyNetPay)}</p>
+            </div>
+          )}
+          {currentYearBonusSlips.length > 0 && (
+            <div className="grid grid-cols-3 gap-x-2 gap-y-1 items-center py-1 border-b border-gray-100">
+              <p className="text-xs text-gray-500">
+                賞与
+                {bonusDelta !== null && (
+                  <span className="ml-1 text-[10px]" style={{ color: bonusDelta >= 0 ? '#5fad9b' : '#d06868' }}>
+                    {bonusDelta >= 0 ? '+' : ''}{formatYen(bonusDelta)}
+                  </span>
+                )}
+              </p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{formatYen(currentYearBonusIncome)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#f59e0b' }}>{formatYen(currentYearBonusTotal)}</p>
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-x-2 gap-y-1 items-center pt-1.5">
+            <p className="text-xs font-medium text-gray-700">合計</p>
+            <p className="text-sm font-bold tabular-nums text-gray-900 text-right">{formatYen(ytd.totalIncome)}</p>
+            <p className="text-sm font-bold tabular-nums text-right" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
+          </div>
+
+          {currentYearMonthlySlips.length > 0 && (
+            <div className="border-t border-gray-100 pt-2 mt-2">
               <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
               <div className="grid grid-cols-3 gap-2">
                 <div>
@@ -501,17 +528,6 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      )}
-
-      {/* 今年の賞与 StatCard */}
-      {hasBonusData && currentYearBonusTotal > 0 && (
-        <StatCard
-          title="今年の賞与"
-          value={formatYen(currentYearBonusTotal)}
-          sub={`${currentYear}年 計${currentYearBonusSlips.length}件`}
-          delta={bonusDelta !== null ? bonusDelta : undefined}
-          deltaLabel="前年比"
-        />
       )}
 
       {/* Charts */}
