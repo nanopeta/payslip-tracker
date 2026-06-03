@@ -53,8 +53,8 @@ export default function AnnualSummaryPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">源泉徴収票・年次サマリ</h1>
-          <p className="text-gray-500 text-sm mt-0.5">年間給与の集計</p>
+          <h1 className="text-xl font-bold text-gray-900">年間集計</h1>
+          <p className="text-gray-500 text-sm mt-0.5">給与明細の年間まとめ・源泉徴収票</p>
         </div>
         <Link
           to="/upload"
