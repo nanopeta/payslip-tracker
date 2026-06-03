@@ -80,6 +80,13 @@ export default function AnnualSummaryPage() {
   const simBonusResidentTaxSum = simBonusSlips.reduce((s, p) => s + p.deductions.residentTax, 0)
   const simProjectedMonthlyIncomeTax = simMonthlyCount > 0 ? Math.round(simMonthlyIncomeTaxSum / simMonthlyCount) * 12 : 0
   const simProjectedMonthlyResidentTax = simMonthlyCount > 0 ? Math.round(simMonthlyResidentTaxSum / simMonthlyCount) * 12 : 0
+  // 税還付・経費精算・健保給付金など、SI+税以外の調整項目（負値 = クレジット）
+  const simImpliedDeductions = simIncome - simProjectedNetPay
+  const simShownDeductions =
+    simProjectedMonthlySI + simBonusSISum +
+    simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum +
+    simProjectedMonthlyResidentTax + simBonusResidentTaxSum
+  const simDeductionAdjustment = simImpliedDeductions - simShownDeductions
   const simResult = simIncome > 0 ? calcFurusato(simIncome, simSocialInsurance, taxInputs) : null
 
   function updateTaxInput(key: keyof TaxDeductionInputs, value: number) {
@@ -237,10 +244,18 @@ export default function AnnualSummaryPage() {
                             <span className="tabular-nums text-gray-700">{formatYen(simBonusResidentTaxSum)}</span>
                           </div>
                         )}
+                        {simDeductionAdjustment !== 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">その他・調整</span>
+                            <span className="tabular-nums text-gray-700">
+                              {simDeductionAdjustment >= 0 ? formatYen(simDeductionAdjustment) : `−${formatYen(Math.abs(simDeductionAdjustment))}`}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
                           <span className="text-gray-600">合計</span>
                           <span className="tabular-nums" style={{ color: '#d06868' }}>
-                            {formatYen(simProjectedMonthlySI + simBonusSISum + simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum + simProjectedMonthlyResidentTax + simBonusResidentTaxSum)}
+                            {formatYen(simImpliedDeductions)}
                           </span>
                         </div>
                       </div>
