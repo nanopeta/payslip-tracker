@@ -47,6 +47,7 @@ export default function AnnualSummaryPage() {
   })
   const [selectedSimYear, setSelectedSimYear] = useState(0)
   const [showSimDetail, setShowSimDetail] = useState(false)
+  const [showIncomeDetail, setShowIncomeDetail] = useState(false)
 
   const effectiveSimYear = selectedSimYear !== 0 && years.includes(selectedSimYear)
     ? selectedSimYear
@@ -69,6 +70,14 @@ export default function AnnualSummaryPage() {
     ? Math.round(simMonthlySISum / simMonthlyCount) * 12
     : 0
   const simIsProjected = simMonthlyCount > 0 && simMonthlyCount < 12
+  const simMonthlyNetPaySum = simMonthlySlips.reduce((s, p) => s + p.summary.netPay, 0)
+  const simBonusNetPaySum = simBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+  const simProjectedMonthlyNetPay = simMonthlyCount > 0 ? Math.round(simMonthlyNetPaySum / simMonthlyCount) * 12 : 0
+  const simProjectedNetPay = simProjectedMonthlyNetPay + simBonusNetPaySum
+  const simMonthlyIncomeTaxSum = simMonthlySlips.reduce((s, p) => s + p.deductions.incomeTax, 0)
+  const simMonthlyResidentTaxSum = simMonthlySlips.reduce((s, p) => s + p.deductions.residentTax, 0)
+  const simProjectedIncomeTax = simMonthlyCount > 0 ? Math.round(simMonthlyIncomeTaxSum / simMonthlyCount) * 12 : 0
+  const simProjectedResidentTax = simMonthlyCount > 0 ? Math.round(simMonthlyResidentTaxSum / simMonthlyCount) * 12 : 0
   const simResult = simIncome > 0 ? calcFurusato(simIncome, simSocialInsurance, taxInputs) : null
 
   function updateTaxInput(key: keyof TaxDeductionInputs, value: number) {
@@ -137,6 +146,115 @@ export default function AnnualSummaryPage() {
           </div>
 
           <div className="px-4 pb-3 space-y-3">
+
+            {/* 年収試算 */}
+            {simMonthlyCount > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-gray-600">年収試算</p>
+                  {simIsProjected && <p className="text-[10px] text-gray-400">{simMonthlyCount}ヶ月分から試算</p>}
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  <div className="bg-gray-50 rounded-lg p-2">
+                    <p className="text-[10px] text-gray-400 mb-0.5">総支給</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(simIncome)}</p>
+                  </div>
+                  <div className="bg-brand-50 rounded-lg p-2">
+                    <p className="text-[10px] text-gray-400 mb-0.5">手取り</p>
+                    <p className="text-sm font-semibold tabular-nums" style={{ color: '#5fad9b' }}>{formatYen(simProjectedNetPay)}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2">
+                    <p className="text-[10px] text-gray-400 mb-0.5">控除合計</p>
+                    <p className="text-sm font-semibold tabular-nums" style={{ color: '#d06868' }}>{formatYen(simIncome - simProjectedNetPay)}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowIncomeDetail((v) => !v)}
+                  className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
+                >
+                  内訳
+                  <svg className={`w-3.5 h-3.5 transition-transform ${showIncomeDetail ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showIncomeDetail && (
+                  <div className="mt-2 bg-gray-50 rounded-lg p-3 space-y-3 text-xs">
+                    <div>
+                      <p className="text-gray-500 font-medium mb-1.5">総支給</p>
+                      <div className="space-y-1 pl-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">給与 月平均</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simMonthlyCount > 0 ? Math.round(simMonthlyIncomeSum / simMonthlyCount) : 0)}/月</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">給与試算（×12）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlyIncome)}</span>
+                        </div>
+                        {simBonusIncomeSum > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">賞与実績</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simBonusIncomeSum)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                          <span className="text-gray-600">合計</span>
+                          <span className="tabular-nums text-gray-900">{formatYen(simIncome)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 font-medium mb-1.5">控除</p>
+                      <div className="space-y-1 pl-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">社会保険料（×12）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simSocialInsurance)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">所得税（×12）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedIncomeTax)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">住民税（×12）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedResidentTax)}</span>
+                        </div>
+                        <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                          <span className="text-gray-600">合計</span>
+                          <span className="tabular-nums" style={{ color: '#d06868' }}>{formatYen(simSocialInsurance + simProjectedIncomeTax + simProjectedResidentTax)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 font-medium mb-1.5">手取り</p>
+                      <div className="space-y-1 pl-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">給与 月平均</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simMonthlyCount > 0 ? Math.round(simMonthlyNetPaySum / simMonthlyCount) : 0)}/月</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">給与試算（×12）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlyNetPay)}</span>
+                        </div>
+                        {simBonusNetPaySum > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">賞与実績</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simBonusNetPaySum)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                          <span className="text-gray-600">合計</span>
+                          <span className="tabular-nums font-semibold" style={{ color: '#5fad9b' }}>{formatYen(simProjectedNetPay)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="border-t border-gray-100" />
+
+            <p className="text-xs font-medium text-gray-600">ふるさと納税シミュレーター</p>
+
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-gray-50 rounded-lg p-2.5">
                 <p className="text-xs text-gray-400 mb-0.5">
