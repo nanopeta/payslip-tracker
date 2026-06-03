@@ -467,19 +467,22 @@ export default function DashboardPage() {
 
         {incomeBreakdownTrend.length >= 2 && (
           <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-gray-700">支給合算の推移（基本給＋みなし残業＋WLB＋ライフプラン）</p>
-              <div className="flex gap-1">
-                {PERIOD_FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => setIncomeBreakdownFilter(f.key)}
-                    className={`text-xs px-2 py-0.5 rounded-full transition-colors ${incomeBreakdownFilter === f.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+            <div className="mb-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-700">支給合算の推移</p>
+                <div className="flex gap-1">
+                  {PERIOD_FILTERS.map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setIncomeBreakdownFilter(f.key)}
+                      className={`text-xs px-2 py-0.5 rounded-full transition-colors ${incomeBreakdownFilter === f.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+              <p className="text-xs text-gray-400 mt-0.5">基本給＋みなし残業＋WLB手当＋ライフプラン手当</p>
             </div>
             <IncomeBreakdownTrendChart data={filteredIncomeBreakdown} />
           </div>
