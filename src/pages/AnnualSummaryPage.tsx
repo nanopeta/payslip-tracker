@@ -71,11 +71,7 @@ export default function AnnualSummaryPage() {
   const simProjectedMonthlySI = simMonthlySISum + simMonthlySIAvg * simRemainingMonths
   const simSocialInsurance = simProjectedMonthlySI + simBonusSISum
   const simIsProjected = simRemainingMonths > 0
-  const simMonthlyNetPaySum = simMonthlySlips.reduce((s, p) => s + p.summary.netPay, 0)
-  const simBonusNetPaySum = simBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
-  const simMonthlyNetPayAvg = simMonthlyCount > 0 ? Math.round(simMonthlyNetPaySum / simMonthlyCount) : 0
-  const simProjectedMonthlyNetPay = simMonthlyNetPaySum + simMonthlyNetPayAvg * simRemainingMonths
-  const simProjectedNetPay = simProjectedMonthlyNetPay + simBonusNetPaySum
+  // 所得税・住民税の集計（手取り試算より先に計算が必要）
   const simMonthlyIncomeTaxSum = simMonthlySlips.reduce((s, p) => s + p.deductions.incomeTax, 0)
   const simBonusIncomeTaxSum = simBonusSlips.reduce((s, p) => s + p.deductions.incomeTax, 0)
   const simMonthlyResidentTaxSum = simMonthlySlips.reduce((s, p) => s + p.deductions.residentTax, 0)
@@ -84,13 +80,24 @@ export default function AnnualSummaryPage() {
   const simMonthlyResidentTaxAvg = simMonthlyCount > 0 ? Math.round(simMonthlyResidentTaxSum / simMonthlyCount) : 0
   const simProjectedMonthlyIncomeTax = simMonthlyIncomeTaxSum + simMonthlyIncomeTaxAvg * simRemainingMonths
   const simProjectedMonthlyResidentTax = simMonthlyResidentTaxSum + simMonthlyResidentTaxAvg * simRemainingMonths
-  // 税還付・経費精算・健保給付金など、SI+税以外の調整項目（負値 = クレジット）
-  const simImpliedDeductions = simIncome - simProjectedNetPay
-  const simShownDeductions =
+  const simMonthlyNetPaySum = simMonthlySlips.reduce((s, p) => s + p.summary.netPay, 0)
+  const simBonusNetPaySum = simBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
+  // 将来月の手取り試算は「通常控除（社保＋所得税＋住民税）」を使い、税還付等の一時的な調整を除外する
+  const simMonthlyNormalDeductionsAvg = simMonthlySIAvg + simMonthlyIncomeTaxAvg + simMonthlyResidentTaxAvg
+  const simProjectedMonthlyNetPay = simMonthlyNetPaySum +
+    (simMonthlyCount > 0 ? (simMonthlyIncomeAvg - simMonthlyNormalDeductionsAvg) * simRemainingMonths : 0)
+  const simProjectedNetPay = simProjectedMonthlyNetPay + simBonusNetPaySum
+  // 実績月のみの「その他調整」（税還付・経費精算等）。将来月には一時調整を引き継がない
+  const simDeductionAdjustment = simMonthlySlips.reduce((s, p) => {
+    return s + p.deductions.total - (calcSI(p) + p.deductions.incomeTax + p.deductions.residentTax)
+  }, 0) + simBonusSlips.reduce((s, p) => {
+    return s + p.deductions.total - (calcSI(p) + p.deductions.incomeTax + p.deductions.residentTax)
+  }, 0)
+  const simImpliedDeductions =
     simProjectedMonthlySI + simBonusSISum +
     simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum +
-    simProjectedMonthlyResidentTax + simBonusResidentTaxSum
-  const simDeductionAdjustment = simImpliedDeductions - simShownDeductions
+    simProjectedMonthlyResidentTax + simBonusResidentTaxSum +
+    simDeductionAdjustment
   const simResult = simIncome > 0 ? calcFurusato(simIncome, simSocialInsurance, taxInputs) : null
 
   function updateTaxInput(key: keyof TaxDeductionInputs, value: number) {
@@ -294,7 +301,7 @@ export default function AnnualSummaryPage() {
                         {simRemainingMonths > 0 && (
                           <div className="flex justify-between">
                             <span className="text-gray-400">月平均×残り{simRemainingMonths}ヶ月</span>
-                            <span className="tabular-nums text-gray-700">{formatYen(simMonthlyNetPayAvg * simRemainingMonths)}</span>
+                            <span className="tabular-nums text-gray-700">{formatYen((simMonthlyIncomeAvg - simMonthlyNormalDeductionsAvg) * simRemainingMonths)}</span>
                           </div>
                         )}
                         {simBonusNetPaySum > 0 && (
