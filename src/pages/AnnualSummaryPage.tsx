@@ -56,30 +56,34 @@ export default function AnnualSummaryPage() {
   const simMonthlySlips = simYearSlips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
   const simBonusSlips = simYearSlips.filter((p) => p.payslipType === 'bonus')
   const simMonthlyCount = simMonthlySlips.length
+  const simRemainingMonths = Math.max(0, 12 - simMonthlyCount)
   const simMonthlyIncomeSum = simMonthlySlips.reduce((s, p) => s + p.income.total, 0)
   const simBonusIncomeSum = simBonusSlips.reduce((s, p) => s + p.income.total, 0)
-  const simProjectedMonthlyIncome = simMonthlyCount > 0
-    ? Math.round(simMonthlyIncomeSum / simMonthlyCount) * 12
-    : 0
+  const simMonthlyIncomeAvg = simMonthlyCount > 0 ? Math.round(simMonthlyIncomeSum / simMonthlyCount) : 0
+  const simProjectedMonthlyIncome = simMonthlyIncomeSum + simMonthlyIncomeAvg * simRemainingMonths
   const simIncome = simProjectedMonthlyIncome + simBonusIncomeSum
   const calcSI = (p: Payslip) =>
     p.deductions.healthInsurance + p.deductions.longTermCareInsurance +
     p.deductions.pensionInsurance + p.deductions.employmentInsurance
   const simMonthlySISum = simMonthlySlips.reduce((s, p) => s + calcSI(p), 0)
   const simBonusSISum = simBonusSlips.reduce((s, p) => s + calcSI(p), 0)
-  const simProjectedMonthlySI = simMonthlyCount > 0 ? Math.round(simMonthlySISum / simMonthlyCount) * 12 : 0
+  const simMonthlySIAvg = simMonthlyCount > 0 ? Math.round(simMonthlySISum / simMonthlyCount) : 0
+  const simProjectedMonthlySI = simMonthlySISum + simMonthlySIAvg * simRemainingMonths
   const simSocialInsurance = simProjectedMonthlySI + simBonusSISum
-  const simIsProjected = simMonthlyCount > 0 && simMonthlyCount < 12
+  const simIsProjected = simRemainingMonths > 0
   const simMonthlyNetPaySum = simMonthlySlips.reduce((s, p) => s + p.summary.netPay, 0)
   const simBonusNetPaySum = simBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
-  const simProjectedMonthlyNetPay = simMonthlyCount > 0 ? Math.round(simMonthlyNetPaySum / simMonthlyCount) * 12 : 0
+  const simMonthlyNetPayAvg = simMonthlyCount > 0 ? Math.round(simMonthlyNetPaySum / simMonthlyCount) : 0
+  const simProjectedMonthlyNetPay = simMonthlyNetPaySum + simMonthlyNetPayAvg * simRemainingMonths
   const simProjectedNetPay = simProjectedMonthlyNetPay + simBonusNetPaySum
   const simMonthlyIncomeTaxSum = simMonthlySlips.reduce((s, p) => s + p.deductions.incomeTax, 0)
   const simBonusIncomeTaxSum = simBonusSlips.reduce((s, p) => s + p.deductions.incomeTax, 0)
   const simMonthlyResidentTaxSum = simMonthlySlips.reduce((s, p) => s + p.deductions.residentTax, 0)
   const simBonusResidentTaxSum = simBonusSlips.reduce((s, p) => s + p.deductions.residentTax, 0)
-  const simProjectedMonthlyIncomeTax = simMonthlyCount > 0 ? Math.round(simMonthlyIncomeTaxSum / simMonthlyCount) * 12 : 0
-  const simProjectedMonthlyResidentTax = simMonthlyCount > 0 ? Math.round(simMonthlyResidentTaxSum / simMonthlyCount) * 12 : 0
+  const simMonthlyIncomeTaxAvg = simMonthlyCount > 0 ? Math.round(simMonthlyIncomeTaxSum / simMonthlyCount) : 0
+  const simMonthlyResidentTaxAvg = simMonthlyCount > 0 ? Math.round(simMonthlyResidentTaxSum / simMonthlyCount) : 0
+  const simProjectedMonthlyIncomeTax = simMonthlyIncomeTaxSum + simMonthlyIncomeTaxAvg * simRemainingMonths
+  const simProjectedMonthlyResidentTax = simMonthlyResidentTaxSum + simMonthlyResidentTaxAvg * simRemainingMonths
   // 税還付・経費精算・健保給付金など、SI+税以外の調整項目（負値 = クレジット）
   const simImpliedDeductions = simIncome - simProjectedNetPay
   const simShownDeductions =
@@ -192,13 +196,15 @@ export default function AnnualSummaryPage() {
                       <p className="text-gray-500 font-medium mb-1.5">総支給</p>
                       <div className="space-y-1 pl-2">
                         <div className="flex justify-between">
-                          <span className="text-gray-400">給与 月平均</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simMonthlyCount > 0 ? Math.round(simMonthlyIncomeSum / simMonthlyCount) : 0)}/月</span>
+                          <span className="text-gray-400">給与実績（{simMonthlyCount}ヶ月）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simMonthlyIncomeSum)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">給与試算（×12）</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlyIncome)}</span>
-                        </div>
+                        {simRemainingMonths > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">月平均×残り{simRemainingMonths}ヶ月</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simMonthlyIncomeAvg * simRemainingMonths)}</span>
+                          </div>
+                        )}
                         {simBonusIncomeSum > 0 && (
                           <div className="flex justify-between">
                             <span className="text-gray-400">賞与実績</span>
@@ -215,9 +221,15 @@ export default function AnnualSummaryPage() {
                       <p className="text-gray-500 font-medium mb-1.5">控除</p>
                       <div className="space-y-1 pl-2">
                         <div className="flex justify-between">
-                          <span className="text-gray-400">社会保険料（給与×12）</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlySI)}</span>
+                          <span className="text-gray-400">社保実績（{simMonthlyCount}ヶ月）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simMonthlySISum)}</span>
                         </div>
+                        {simRemainingMonths > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">社保月平均×残り{simRemainingMonths}ヶ月</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simMonthlySIAvg * simRemainingMonths)}</span>
+                          </div>
+                        )}
                         {simBonusSISum > 0 && (
                           <div className="flex justify-between">
                             <span className="text-gray-400">社会保険料（賞与）</span>
@@ -225,9 +237,15 @@ export default function AnnualSummaryPage() {
                           </div>
                         )}
                         <div className="flex justify-between">
-                          <span className="text-gray-400">所得税（給与×12）</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlyIncomeTax)}</span>
+                          <span className="text-gray-400">所得税実績（{simMonthlyCount}ヶ月）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simMonthlyIncomeTaxSum)}</span>
                         </div>
+                        {simRemainingMonths > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">所得税月平均×残り{simRemainingMonths}ヶ月</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simMonthlyIncomeTaxAvg * simRemainingMonths)}</span>
+                          </div>
+                        )}
                         {simBonusIncomeTaxSum > 0 && (
                           <div className="flex justify-between">
                             <span className="text-gray-400">所得税（賞与）</span>
@@ -235,9 +253,15 @@ export default function AnnualSummaryPage() {
                           </div>
                         )}
                         <div className="flex justify-between">
-                          <span className="text-gray-400">住民税（給与×12）</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlyResidentTax)}</span>
+                          <span className="text-gray-400">住民税実績（{simMonthlyCount}ヶ月）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simMonthlyResidentTaxSum)}</span>
                         </div>
+                        {simRemainingMonths > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">住民税月平均×残り{simRemainingMonths}ヶ月</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simMonthlyResidentTaxAvg * simRemainingMonths)}</span>
+                          </div>
+                        )}
                         {simBonusResidentTaxSum > 0 && (
                           <div className="flex justify-between">
                             <span className="text-gray-400">住民税（賞与）</span>
@@ -264,13 +288,15 @@ export default function AnnualSummaryPage() {
                       <p className="text-gray-500 font-medium mb-1.5">手取り</p>
                       <div className="space-y-1 pl-2">
                         <div className="flex justify-between">
-                          <span className="text-gray-400">給与 月平均</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simMonthlyCount > 0 ? Math.round(simMonthlyNetPaySum / simMonthlyCount) : 0)}/月</span>
+                          <span className="text-gray-400">給与実績（{simMonthlyCount}ヶ月）</span>
+                          <span className="tabular-nums text-gray-700">{formatYen(simMonthlyNetPaySum)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">給与試算（×12）</span>
-                          <span className="tabular-nums text-gray-700">{formatYen(simProjectedMonthlyNetPay)}</span>
-                        </div>
+                        {simRemainingMonths > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">月平均×残り{simRemainingMonths}ヶ月</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simMonthlyNetPayAvg * simRemainingMonths)}</span>
+                          </div>
+                        )}
                         {simBonusNetPaySum > 0 && (
                           <div className="flex justify-between">
                             <span className="text-gray-400">賞与実績</span>
@@ -295,21 +321,15 @@ export default function AnnualSummaryPage() {
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-gray-50 rounded-lg p-2.5">
                 <p className="text-xs text-gray-400 mb-0.5">
-                  給与収入（自動{simIsProjected ? `・月平均×12+賞与` : ''}）
+                  給与収入（自動{simIsProjected ? `・実績${simMonthlyCount}+試算${simRemainingMonths}ヶ月` : ''}）
                 </p>
                 <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simIncome)}</p>
-                {simIsProjected && (
-                  <p className="text-[10px] text-gray-400 mt-0.5">{simMonthlyCount}ヶ月分から試算</p>
-                )}
               </div>
               <div className="bg-gray-50 rounded-lg p-2.5">
                 <p className="text-xs text-gray-400 mb-0.5">
-                  社会保険料（自動{simIsProjected ? `・月平均×12+賞与` : ''}）
+                  社会保険料（自動{simIsProjected ? `・実績${simMonthlyCount}+試算${simRemainingMonths}ヶ月` : ''}）
                 </p>
                 <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simSocialInsurance)}</p>
-                {simIsProjected && (
-                  <p className="text-[10px] text-gray-400 mt-0.5">{simMonthlyCount}ヶ月分から試算</p>
-                )}
               </div>
             </div>
 
