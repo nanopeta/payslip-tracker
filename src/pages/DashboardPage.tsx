@@ -216,46 +216,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* YTD summary */}
-      {hasYtdData && (
-        <div className="bg-brand-50 rounded-xl border border-brand-100 p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
-          <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">年間総支給額</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytd.totalIncome)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">年間手取り</p>
-              <p className="text-sm font-semibold tabular-nums" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">年間控除合計</p>
-              <p className="text-sm font-semibold tabular-nums" style={{ color: '#d06868' }}>{formatYen(ytd.totalDeductions)}</p>
-            </div>
-          </div>
-          {currentYearMonthlySlips.length > 0 && (
-            <div className="border-t border-gray-100 pt-3">
-              <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <p className="text-xs text-gray-400">平均月手取</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(ytd.avgMonthlyNetPay)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">最高月</p>
-                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(ytd.maxMonthNetPay)}</p>
-                  <p className="text-xs text-gray-400">{ytd.maxMonthLabel}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">最低月</p>
-                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(ytd.minMonthNetPay)}</p>
-                  <p className="text-xs text-gray-400">{ytd.minMonthLabel}</p>
-                </div>
-              </div>
-            </div>
-          )}
+      {/* 控除内訳ドーナツ（最新月） */}
+      {latestMonthly && latestMonthly.deductions.total > 0 && (
+        <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+          <p className="text-sm font-semibold text-gray-700 mb-0.5">控除内訳</p>
+          <p className="text-xs text-gray-400 mb-3">
+            {latestMonthly.year}年{latestMonthly.month}月 合計 {formatYen(latestMonthly.deductions.total)}
+          </p>
+          <DeductionDonutChart deductions={latestMonthly.deductions} />
         </div>
       )}
 
@@ -341,6 +309,49 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* YTD summary */}
+      {hasYtdData && (
+        <div className="bg-brand-50 rounded-xl border border-brand-100 p-4">
+          <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
+          <p className="text-xs text-gray-400 mb-3">{currentYear}年 {ytd.monthlyMonthCount}ヶ月分</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">年間総支給額</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytd.totalIncome)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">年間手取り</p>
+              <p className="text-sm font-semibold tabular-nums" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">年間控除合計</p>
+              <p className="text-sm font-semibold tabular-nums" style={{ color: '#d06868' }}>{formatYen(ytd.totalDeductions)}</p>
+            </div>
+          </div>
+          {currentYearMonthlySlips.length > 0 && (
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs text-gray-400">平均月手取</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(ytd.avgMonthlyNetPay)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">最高月</p>
+                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(ytd.maxMonthNetPay)}</p>
+                  <p className="text-xs text-gray-400">{ytd.maxMonthLabel}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">最低月</p>
+                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(ytd.minMonthNetPay)}</p>
+                  <p className="text-xs text-gray-400">{ytd.minMonthLabel}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Charts */}
       <div className="space-y-4">
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
@@ -365,16 +376,6 @@ export default function DashboardPage() {
           <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
             <p className="text-sm font-semibold text-gray-700 mb-3">有給残日数の推移</p>
             <PaidLeaveTrendChart data={leaveTrend} />
-          </div>
-        )}
-
-        {latestMonthly && latestMonthly.deductions.total > 0 && (
-          <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-            <p className="text-sm font-semibold text-gray-700 mb-0.5">控除内訳</p>
-            <p className="text-xs text-gray-400 mb-3">
-              {latestMonthly.year}年{latestMonthly.month}月 合計 {formatYen(latestMonthly.deductions.total)}
-            </p>
-            <DeductionDonutChart deductions={latestMonthly.deductions} />
           </div>
         )}
       </div>
