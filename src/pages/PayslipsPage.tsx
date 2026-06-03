@@ -91,6 +91,32 @@ export default function PayslipsPage() {
   }
 
   const isFiltered = filtered.length < payslips.length || filterYear !== 'all' || filterType !== 'all' || filterMonth !== 'all' || searchQuery.trim() !== ''
+
+  const activeFilters: { label: string; onRemove: () => void }[] = []
+  if (filterYear !== 'all') {
+    activeFilters.push({
+      label: `${filterYear}年`,
+      onRemove: () => { setFilterYear('all'); setFilterMonth('all'); resetSelection() },
+    })
+  }
+  if (filterMonth !== 'all') {
+    activeFilters.push({
+      label: `${filterMonth}月`,
+      onRemove: () => { setFilterMonth('all'); resetSelection() },
+    })
+  }
+  if (filterType !== 'all') {
+    activeFilters.push({
+      label: filterType === 'monthly' ? '給与のみ' : '賞与のみ',
+      onRemove: () => { setFilterType('all'); resetSelection() },
+    })
+  }
+  if (searchQuery.trim() !== '') {
+    activeFilters.push({
+      label: `"${searchQuery.trim()}"`,
+      onRemove: () => { setSearchQuery(''); resetSelection() },
+    })
+  }
   const filteredNetPayTotal = filtered.reduce((sum, p) => sum + p.summary.netPay, 0)
   const filteredNetPayAvg = filtered.length > 0 ? Math.round(filteredNetPayTotal / filtered.length) : 0
 
@@ -271,6 +297,35 @@ export default function PayslipsPage() {
             </button>
           )}
         </div>
+        {activeFilters.length > 0 && (
+          <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1">
+            {activeFilters.map((f) => (
+              <span
+                key={f.label}
+                className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-brand-100 text-brand-700 border border-brand-200"
+              >
+                {f.label}
+                <button
+                  onClick={f.onRemove}
+                  className="text-brand-500 hover:text-brand-800 transition-colors"
+                  aria-label={`${f.label}を解除`}
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            ))}
+            {activeFilters.length > 1 && (
+              <button
+                onClick={() => { setFilterYear('all'); setFilterMonth('all'); setFilterType('all'); setSearchQuery(''); resetSelection() }}
+                className="flex-shrink-0 px-2.5 py-1 rounded-full text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                すべて解除
+              </button>
+            )}
+          </div>
+        )}
         </div>
       )}
 
