@@ -55,7 +55,6 @@ export default function AnnualSummaryPage() {
   const simMonthlySlips = simYearSlips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
   const simBonusSlips = simYearSlips.filter((p) => p.payslipType === 'bonus')
   const simMonthlyCount = simMonthlySlips.length
-  // 月平均×12 で年収を試算（12ヶ月分揃っていれば実績をそのまま使用）
   const simMonthlyIncomeSum = simMonthlySlips.reduce((s, p) => s + p.income.total, 0)
   const simBonusIncomeSum = simBonusSlips.reduce((s, p) => s + p.income.total, 0)
   const simProjectedMonthlyIncome = simMonthlyCount > 0
