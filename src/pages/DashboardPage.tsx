@@ -4,11 +4,10 @@ import useStore from '../store/useStore'
 import GainTrendChart from '../components/charts/GainTrendChart'
 import StatCard from '../components/ui/StatCard'
 import TrendSummaryChart from '../components/charts/TrendSummaryChart'
-import PaidLeaveTrendChart from '../components/charts/PaidLeaveTrendChart'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, paidLeaveTrend, latestPaidLeave, getIncomeValueByLabel, annualTotals, ytdOvertimeHoursStats } from '../lib/aggregations'
+import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, latestPaidLeave, getIncomeValueByLabel, annualTotals, ytdOvertimeHoursStats } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 
 type PeriodFilter = 'all' | 'year' | '6m' | '12m'
@@ -58,8 +57,6 @@ export default function DashboardPage() {
     ? takeHomeRate - prevTakeHomeRate
     : null
 
-  // 有給残日数推移
-  const leaveTrend = paidLeaveTrend(payslips)
   const paidLeaveStats = latestPaidLeave(payslips)
 
 
@@ -378,12 +375,6 @@ export default function DashboardPage() {
           <TrendSummaryChart data={filteredTrend} showMonthlyLine={hasBonusData} />
         </div>
 
-        {leaveTrend.length > 1 && (
-          <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-            <p className="text-sm font-semibold text-gray-700 mb-3">有給残日数の推移</p>
-            <PaidLeaveTrendChart data={leaveTrend} />
-          </div>
-        )}
       </div>
 
       {/* Recent payslips */}
