@@ -8,6 +8,7 @@ import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import IncomeDonutChart from '../components/charts/IncomeDonutChart'
 import NetPayBreakdownChart from '../components/charts/NetPayBreakdownChart'
 import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
+import IncomeBreakdownTrendChart from '../components/charts/IncomeBreakdownTrendChart'
 import PayslipCard from '../components/payslip/PayslipCard'
 import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, latestPaidLeave, getIncomeValueByLabel, annualTotals, ytdOvertimeHoursStats } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [selectedGainYM, setSelectedGainYM] = useState<string>('')
   const [donutTab, setDonutTab] = useState<'overview' | 'income' | 'deduction'>('overview')
   const [selectedDonutYM, setSelectedDonutYM] = useState<string>('')
+  const [incomeBreakdownFilter, setIncomeBreakdownFilter] = useState<PeriodFilter>('all')
 
   const trend = netPayTrend(payslips)
   const latestTrendYM = trend.length > 0 ? trend[trend.length - 1]!.label : ''
@@ -120,6 +122,20 @@ export default function DashboardPage() {
     ? prevYearBonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
     : null
   const bonusDelta = prevYearBonusTotal !== null ? currentYearBonusTotal - prevYearBonusTotal : null
+
+  // 支給項目推移
+  const incomeBreakdownTrend = [...monthlyPayslips]
+    .sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month))
+    .map((p) => ({
+      label: `${p.year}/${String(p.month).padStart(2, '0')}`,
+      basicSalary: p.income.basicSalary,
+      deemedOvertime: p.income.deemedOvertime,
+      wlbAllowance: p.income.wlbAllowance,
+      lifePlanAllowance: p.income.lifePlanAllowance,
+    }))
+  const latestIncomeBreakdownYM = incomeBreakdownTrend.length > 0
+    ? incomeBreakdownTrend[incomeBreakdownTrend.length - 1]!.label : ''
+  const filteredIncomeBreakdown = applyPeriodFilter(incomeBreakdownTrend, incomeBreakdownFilter, latestIncomeBreakdownYM)
 
   // 収支内訳 月選択
   const latestDonutYM = latestMonthly
@@ -449,6 +465,25 @@ export default function DashboardPage() {
           <TrendSummaryChart data={filteredTrend} showMonthlyLine={hasBonusData} />
         </div>
 
+        {incomeBreakdownTrend.length >= 2 && (
+          <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-gray-700">支給項目の推移</p>
+              <div className="flex gap-1">
+                {PERIOD_FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setIncomeBreakdownFilter(f.key)}
+                    className={`text-xs px-2 py-0.5 rounded-full transition-colors ${incomeBreakdownFilter === f.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <IncomeBreakdownTrendChart data={filteredIncomeBreakdown} />
+          </div>
+        )}
       </div>
 
       {/* Recent payslips */}
