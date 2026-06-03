@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import PayslipDetailView from '../components/payslip/PayslipDetailView'
 import PayslipReviewForm from '../components/upload/PayslipReviewForm'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
+import IncomeDonutChart from '../components/charts/IncomeDonutChart'
 import { previousPayslip, nextPayslip } from '../lib/aggregations'
 import { formatYen, formatHoursMinutes } from '../lib/formatters'
 import type { Payslip } from '../types/payslip'
@@ -16,6 +17,7 @@ export default function PayslipDetailPage() {
   const updatePayslip = useStore((s) => s.updatePayslip)
   const payslip = payslips.find((p) => p.id === id)
   const [editing, setEditing] = useState(false)
+  const [donutTab, setDonutTab] = useState<'income' | 'deduction'>('income')
 
   const prev = payslip ? previousPayslip(payslips, payslip) : null
   const next = payslip ? nextPayslip(payslips, payslip) : null
@@ -183,10 +185,28 @@ export default function PayslipDetailPage() {
         </div>
       ) : (
         <>
-          {payslip.deductions.total > 0 && (
+          {(payslip.income.total > 0 || payslip.deductions.total > 0) && (
             <div className="bg-white rounded-xl p-4 shadow-sm border border-brand-200">
-              <p className="text-xs text-gray-400 mb-1">控除内訳</p>
-              <DeductionDonutChart deductions={payslip.deductions} />
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-gray-400">収支内訳</p>
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+                  <button
+                    onClick={() => setDonutTab('income')}
+                    className={`px-2.5 py-1 transition-colors ${donutTab === 'income' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    支給
+                  </button>
+                  <button
+                    onClick={() => setDonutTab('deduction')}
+                    className={`px-2.5 py-1 transition-colors ${donutTab === 'deduction' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    控除
+                  </button>
+                </div>
+              </div>
+              {donutTab === 'income'
+                ? <IncomeDonutChart income={payslip.income} />
+                : <DeductionDonutChart deductions={payslip.deductions} />}
             </div>
           )}
           <PayslipDetailView payslip={payslip} prev={prev} />

@@ -5,6 +5,7 @@ import GainTrendChart from '../components/charts/GainTrendChart'
 import StatCard from '../components/ui/StatCard'
 import TrendSummaryChart from '../components/charts/TrendSummaryChart'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
+import IncomeDonutChart from '../components/charts/IncomeDonutChart'
 import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
 import PayslipCard from '../components/payslip/PayslipCard'
 import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, latestPaidLeave, getIncomeValueByLabel, annualTotals, ytdOvertimeHoursStats } from '../lib/aggregations'
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [gainFilter, setGainFilter] = useState<PeriodFilter>('all')
   const [trendFilter, setTrendFilter] = useState<PeriodFilter>('all')
   const [selectedGainYM, setSelectedGainYM] = useState<string>('')
+  const [donutTab, setDonutTab] = useState<'income' | 'deduction'>('income')
 
   const trend = netPayTrend(payslips)
   const latestTrendYM = trend.length > 0 ? trend[trend.length - 1]!.label : ''
@@ -201,14 +203,35 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 控除内訳ドーナツ（最新月） */}
-      {latestMonthly && latestMonthly.deductions.total > 0 && (
+      {/* 収支内訳ドーナツ（最新月） */}
+      {latestMonthly && (latestMonthly.income.total > 0 || latestMonthly.deductions.total > 0) && (
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-4" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-          <p className="text-sm font-semibold text-gray-700 mb-0.5">控除内訳</p>
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-sm font-semibold text-gray-700">収支内訳</p>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+              <button
+                onClick={() => setDonutTab('income')}
+                className={`px-2.5 py-1 transition-colors ${donutTab === 'income' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                支給
+              </button>
+              <button
+                onClick={() => setDonutTab('deduction')}
+                className={`px-2.5 py-1 transition-colors ${donutTab === 'deduction' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                控除
+              </button>
+            </div>
+          </div>
           <p className="text-xs text-gray-400 mb-3">
-            {latestMonthly.year}年{latestMonthly.month}月 合計 {formatYen(latestMonthly.deductions.total)}
+            {latestMonthly.year}年{latestMonthly.month}月
+            {donutTab === 'income'
+              ? ` 総支給 ${formatYen(latestMonthly.income.total)}`
+              : ` 控除合計 ${formatYen(latestMonthly.deductions.total)}`}
           </p>
-          <DeductionDonutChart deductions={latestMonthly.deductions} />
+          {donutTab === 'income'
+            ? <IncomeDonutChart income={latestMonthly.income} />
+            : <DeductionDonutChart deductions={latestMonthly.deductions} />}
         </div>
       )}
 
