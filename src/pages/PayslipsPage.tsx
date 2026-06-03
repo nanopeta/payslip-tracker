@@ -142,7 +142,7 @@ export default function PayslipsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">給与明細</h1>
@@ -341,7 +341,7 @@ export default function PayslipsPage() {
           )}
         </div>
       ) : groupedByYear ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {groupedByYear.map(({ year, items, count, totalNetPay }) => (
             <div key={year}>
               <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-gray-200">
@@ -351,7 +351,7 @@ export default function PayslipsPage() {
                 <span className="text-gray-400 text-sm">·</span>
                 <span className="text-gray-500 text-sm">手取合計 <span className="font-medium text-gray-700">{formatYen(totalNetPay)}</span></span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {items.map((p) => {
                   const fi = filteredIndexMap.get(p.id)!
                   return (

@@ -73,7 +73,7 @@ export default function PayslipDetailPage() {
     : null
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Link
           to="/payslips"
@@ -130,9 +130,9 @@ export default function PayslipDetailPage() {
       )}
 
       {!editing && prev && (
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-brand-200">
-          <p className="text-xs text-gray-400 mb-3">{prev.year}年{prev.month}月との比較</p>
-          <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl p-3 shadow-sm border border-brand-200">
+          <p className="text-xs text-gray-400 mb-2">{prev.year}年{prev.month}月との比較</p>
+          <div className="grid grid-cols-3 gap-3">
             {[
               { label: '手取り', delta: payslip.summary.netPay - prev.summary.netPay },
               { label: '総支給', delta: payslip.income.total - prev.income.total },
@@ -153,8 +153,8 @@ export default function PayslipDetailPage() {
       )}
 
       {!editing && attendanceItems && (
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-brand-200">
-          <p className="text-xs text-gray-400 mb-3">勤怠（{prev!.year}年{prev!.month}月との比較）</p>
+        <div className="bg-white rounded-xl p-3 shadow-sm border border-brand-200">
+          <p className="text-xs text-gray-400 mb-2">勤怠（{prev!.year}年{prev!.month}月との比較）</p>
           <div className="grid grid-cols-3 gap-3">
             {attendanceItems.map(({ label, value, prevValue, display, invert, fmt }) => {
               const delta = value - prevValue
@@ -176,7 +176,7 @@ export default function PayslipDetailPage() {
       )}
 
       {editing ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <p className="font-semibold text-gray-800">数値を編集してください</p>
           <PayslipReviewForm
             initial={payslip}
@@ -187,7 +187,7 @@ export default function PayslipDetailPage() {
       ) : (
         <>
           {(payslip.income.total > 0 || payslip.deductions.total > 0) && (
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-brand-200">
+            <div className="bg-white rounded-xl p-3 shadow-sm border border-brand-200">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-xs text-gray-400">収支内訳</p>
                 <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">

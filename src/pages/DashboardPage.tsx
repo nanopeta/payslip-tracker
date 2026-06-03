@@ -449,7 +449,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* YTD summary */}
+      {/* YTD summary + 賞与（統合カード） */}
       {hasYtdData && (
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>

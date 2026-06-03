@@ -17,7 +17,7 @@ export default function StatCard({ title, value, sub, delta, deltaLabel, deltaTe
   if (highlight) {
     return (
       <div
-        className="rounded-[14px] border-transparent p-[18px]"
+        className="rounded-[14px] border-transparent p-3"
         style={{ background: 'linear-gradient(135deg, #2a5068 0%, #3d7490 50%, #4e8fa6 100%)', boxShadow: CARD_SHADOW }}
       >
         <p className="text-[11px] font-semibold uppercase tracking-[.04em] text-blue-200">{title}</p>
@@ -41,7 +41,7 @@ export default function StatCard({ title, value, sub, delta, deltaLabel, deltaTe
 
   return (
     <div
-      className="bg-white rounded-[14px] border border-[#d8e7ef] p-[18px]"
+      className="bg-white rounded-[14px] border border-[#d8e7ef] p-3"
       style={{ boxShadow: CARD_SHADOW }}
     >
       <p className="text-[11px] font-semibold uppercase tracking-[.04em] text-[#7a94a6]">{title}</p>

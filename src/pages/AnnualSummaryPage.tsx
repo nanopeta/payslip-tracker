@@ -77,7 +77,7 @@ export default function AnnualSummaryPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">年間集計</h1>
@@ -247,7 +247,7 @@ export default function AnnualSummaryPage() {
 
       {/* Annual totals from payslips */}
       {years.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-700">給与明細から集計した年次合計</p>
           {years.map((year) => {
             const totals = annualTotals(payslips, year)
@@ -282,7 +282,7 @@ export default function AnnualSummaryPage() {
             return (
               <div key={year} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 {/* Header row */}
-                <div className="flex items-center gap-2 px-5 pt-5 pb-4">
+                <div className="flex items-center gap-2 px-4 pt-3 pb-2">
                   <button
                     onClick={() => toggleYear(year)}
                     className="flex-1 flex items-center justify-between text-left hover:bg-gray-50 rounded transition-colors"
@@ -319,9 +319,9 @@ export default function AnnualSummaryPage() {
                   </button>
                 </div>
 
-                <div className="px-5 pb-5 space-y-4">
+                <div className="px-4 pb-3 space-y-3">
                   {/* Totals */}
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <p className="text-xs text-gray-400">年間総支給</p>
                       <p className="text-base font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.totalIncome)}</p>
@@ -337,8 +337,8 @@ export default function AnnualSummaryPage() {
                   </div>
 
                   {/* Tax & social insurance breakdown */}
-                  <div className="border-t border-gray-100 pt-3">
-                    <div className="grid grid-cols-3 gap-4">
+                  <div className="border-t border-gray-100 pt-2">
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
                         <p className="text-xs text-gray-400">所得税合計</p>
                         <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.totalIncomeTax)}</p>
@@ -375,9 +375,9 @@ export default function AnnualSummaryPage() {
                       .sort((a, b) => a.month - b.month)
                       .map((d) => ({ label: `${d.month}月`, monthlyNetPay: d.monthlyNetPay, bonusNetPay: d.bonusNetPay }))
                     return (
-                      <div className="border-t border-gray-100 pt-3">
+                      <div className="border-t border-gray-100 pt-2">
                         <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-3 gap-2">
                           <div>
                             <p className="text-xs text-gray-400">平均月手取</p>
                             <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.avgMonthlyNetPay)}</p>
@@ -404,7 +404,7 @@ export default function AnnualSummaryPage() {
 
                   {/* Bonus breakdown */}
                   {hasBonus && (
-                    <div className="border-t border-gray-100 pt-3 space-y-2">
+                    <div className="border-t border-gray-100 pt-2 space-y-2">
                       <p className="text-xs text-gray-400">内訳</p>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-gray-50 rounded-lg p-3">
@@ -439,7 +439,7 @@ export default function AnnualSummaryPage() {
 
                   {/* Annual detail — expanded */}
                   {isExpanded && (
-                    <div className="border-t border-gray-100 pt-4 space-y-4">
+                    <div className="border-t border-gray-100 pt-2 space-y-3">
                       {/* Tax burden rate */}
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
