@@ -6,7 +6,7 @@ import PayslipReviewForm from '../components/upload/PayslipReviewForm'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import IncomeDonutChart from '../components/charts/IncomeDonutChart'
 import NetPayBreakdownChart from '../components/charts/NetPayBreakdownChart'
-import { previousPayslip, nextPayslip, previousSameTypePayslip } from '../lib/aggregations'
+import { previousSameTypePayslip, nextSameTypePayslip } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 import type { Payslip } from '../types/payslip'
 
@@ -20,9 +20,8 @@ export default function PayslipDetailPage() {
   const [editing, setEditing] = useState(false)
   const [donutTab, setDonutTab] = useState<'overview' | 'income' | 'deduction'>('overview')
 
-  const prev = payslip ? previousPayslip(payslips, payslip) : null
   const prevSameType = payslip ? previousSameTypePayslip(payslips, payslip) : null
-  const next = payslip ? nextPayslip(payslips, payslip) : null
+  const nextSameType = payslip ? nextSameTypePayslip(payslips, payslip) : null
 
   if (!payslip) {
     return (
@@ -74,25 +73,25 @@ export default function PayslipDetailPage() {
         </div>
       </div>
 
-      {(prev || next) && (
+      {(prevSameType || nextSameType) && (
         <div className="flex items-center justify-between">
-          {prev ? (
+          {prevSameType ? (
             <button
-              onClick={() => navigate(`/payslips/${prev.id}`)}
+              onClick={() => navigate(`/payslips/${prevSameType.id}`)}
               className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              {prev.year}年{prev.month}月
+              {prevSameType.year}年{prevSameType.month}月
             </button>
           ) : <div />}
-          {next ? (
+          {nextSameType ? (
             <button
-              onClick={() => navigate(`/payslips/${next.id}`)}
+              onClick={() => navigate(`/payslips/${nextSameType.id}`)}
               className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 transition-colors"
             >
-              {next.year}年{next.month}月
+              {nextSameType.year}年{nextSameType.month}月
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
