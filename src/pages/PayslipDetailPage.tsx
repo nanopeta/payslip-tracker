@@ -148,7 +148,7 @@ export default function PayslipDetailPage() {
           {(payslip.income.total > 0 || payslip.deductions.total > 0) && (
             <div className="bg-white rounded-xl p-3 shadow-sm border border-brand-200">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-gray-400">収支内訳</p>
+                <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>収支内訳</p>
                 <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
                   {([
                     { key: 'overview',  label: '概要' },

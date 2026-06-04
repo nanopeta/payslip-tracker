@@ -160,7 +160,7 @@ export default function AnnualSummaryPage() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-4 pt-3 pb-2 flex items-center justify-between">
             <div>
-              <p className="font-semibold text-gray-900 text-sm">年収試算</p>
+              <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>年収試算</p>
               {simIsProjected && <p className="text-xs text-gray-400 mt-0.5">{simMonthlyCount}ヶ月分から試算</p>}
             </div>
             {years.length > 1 ? (
@@ -376,7 +376,7 @@ export default function AnnualSummaryPage() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-4 pt-3 pb-2 flex items-center justify-between">
             <div>
-              <p className="font-semibold text-gray-900 text-sm">ふるさと納税シミュレーター</p>
+              <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>ふるさと納税シミュレーター</p>
               <p className="text-xs text-gray-400 mt-0.5">給与明細から自動計算（概算）</p>
             </div>
             {simMonthlyCount === 0 && (years.length > 1 ? (
@@ -588,7 +588,7 @@ export default function AnnualSummaryPage() {
           })
         return (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 pt-3 pb-4">
-            <p className="text-sm font-semibold text-gray-700 mb-3">年別推移</p>
+            <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>年別推移</p>
             <AnnualTotalsBarChart data={chartData} />
           </div>
         )
@@ -597,7 +597,7 @@ export default function AnnualSummaryPage() {
       {/* Withholding certs */}
       {withholdingCerts.length > 0 && (
         <div className="space-y-4">
-          <p className="text-sm font-semibold text-gray-700">源泉徴収票</p>
+          <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>源泉徴収票</p>
           {[...withholdingCerts]
             .sort((a, b) => b.year - a.year)
             .map((cert) => (
@@ -615,7 +615,7 @@ export default function AnnualSummaryPage() {
       {/* Annual totals from payslips */}
       {years.length > 0 && (
         <div className="space-y-3">
-          <p className="text-sm font-semibold text-gray-700">給与明細から集計した年次合計</p>
+          <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>給与明細から集計した年次合計</p>
           {years.map((year) => {
             const totals = annualTotals(payslips, year)
             const prevYearTotals = years.includes(year - 1) ? annualTotals(payslips, year - 1) : null
