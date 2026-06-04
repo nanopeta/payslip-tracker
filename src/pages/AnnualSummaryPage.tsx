@@ -322,7 +322,7 @@ export default function AnnualSummaryPage() {
 
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-400">
-                {customMode ? 'カスタム値を入力' : `自動入力${simIsProjected ? `（実績${simMonthlyCount}+試算${simRemainingMonths}ヶ月）` : ''}`}
+                {customMode ? 'カスタム値を入力' : `自動入力${simIsProjected ? `（実績${simMonthlyCount}+試算${simRemainingMonths}ヶ月${simBonusSlips.length > 0 ? '+実績賞与' : ''}）` : ''}`}
               </p>
               <button
                 onClick={() => {
