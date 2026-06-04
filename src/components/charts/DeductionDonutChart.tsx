@@ -15,19 +15,25 @@ const SLICES: { key: keyof PayslipDeductions; label: string; color: string }[] =
 
 interface Props {
   deductions: PayslipDeductions
+  prevDeductions?: PayslipDeductions
 }
 
-export default function DeductionDonutChart({ deductions }: Props) {
+export default function DeductionDonutChart({ deductions, prevDeductions }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
   const named = SLICES
-    .map((s) => ({ name: s.label, value: deductions[s.key] as number, color: s.color }))
+    .map((s) => ({
+      name: s.label,
+      value: deductions[s.key] as number,
+      color: s.color,
+      prevValue: prevDeductions ? prevDeductions[s.key] as number : undefined,
+    }))
     .filter((s) => s.value > 0)
   const namedTotal = named.reduce((sum, d) => sum + d.value, 0)
   const other = deductions.total - namedTotal
   const data = other > 0
-    ? [...named, { name: 'その他', value: other, color: '#c8dfe9' }]
+    ? [...named, { name: 'その他', value: other, color: '#c8dfe9', prevValue: undefined as number | undefined }]
     : named
 
   useEffect(() => {
@@ -83,18 +89,26 @@ export default function DeductionDonutChart({ deductions }: Props) {
         <canvas ref={canvasRef} />
       </div>
       <div className="w-full min-w-0 divide-y divide-gray-100 sm:flex-1 sm:self-center">
-        {data.map((item) => (
-          <div key={item.name} className="flex items-center justify-between py-[7px] text-sm">
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-              <span className="text-[#243447]">{item.name}</span>
+        {data.map((item) => {
+          const delta = item.prevValue !== undefined ? item.value - item.prevValue : undefined
+          return (
+            <div key={item.name} className="flex items-center justify-between py-[7px] text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="text-[#243447] truncate">{item.name}</span>
+              </div>
+              <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
+                <span className="text-[#243447] font-medium">{formatYen(item.value)}</span>
+                {delta !== undefined && delta !== 0 && (
+                  <span className="text-xs w-14 text-right" style={{ color: delta <= 0 ? '#5fad9b' : '#d06868' }}>
+                    {delta > 0 ? '+' : ''}{formatYen(delta)}
+                  </span>
+                )}
+                <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / deductions.total) * 100).toFixed(1)}%</span>
+              </div>
             </div>
-            <div className="flex items-center gap-3 tabular-nums">
-              <span className="text-[#243447] font-medium">{formatYen(item.value)}</span>
-              <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / deductions.total) * 100).toFixed(1)}%</span>
-            </div>
-          </div>
-        ))}
+          )
+        })}
         <div className="flex items-center justify-between py-[7px]">
           <span className="text-sm text-[#7a94a6] font-medium">合計</span>
           <span className="text-sm text-[#243447] font-semibold tabular-nums">{formatYen(deductions.total)}</span>

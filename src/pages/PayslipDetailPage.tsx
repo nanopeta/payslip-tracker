@@ -207,10 +207,10 @@ export default function PayslipDetailPage() {
                 </div>
               </div>
               {donutTab === 'overview'
-                ? <NetPayBreakdownChart income={payslip.income} deductions={payslip.deductions} summary={payslip.summary} />
+                ? <NetPayBreakdownChart income={payslip.income} deductions={payslip.deductions} summary={payslip.summary} prevDeductions={prev?.deductions} prevSummary={prev?.summary} />
                 : donutTab === 'income'
-                  ? <IncomeDonutChart income={payslip.income} />
-                  : <DeductionDonutChart deductions={payslip.deductions} />}
+                  ? <IncomeDonutChart income={payslip.income} prevIncome={prev?.income} />
+                  : <DeductionDonutChart deductions={payslip.deductions} prevDeductions={prev?.deductions} />}
             </div>
           )}
           <PayslipDetailView payslip={payslip} prev={prev} />

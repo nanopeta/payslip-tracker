@@ -20,25 +20,36 @@ const EXTRA_COLORS = ['#e8a87c', '#d4a574', '#c89b6e', '#e0b894', '#f0c8a0']
 
 interface Props {
   income: PayslipIncome
+  prevIncome?: PayslipIncome
 }
 
-export default function IncomeDonutChart({ income }: Props) {
+export default function IncomeDonutChart({ income, prevIncome }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
   const named = NAMED_SLICES
-    .map((s) => ({ name: s.label, value: income[s.key] as number, color: s.color }))
+    .map((s) => ({
+      name: s.label,
+      value: income[s.key] as number,
+      color: s.color,
+      prevValue: prevIncome ? prevIncome[s.key] as number : undefined,
+    }))
     .filter((s) => s.value > 0)
 
   const otherEntries = Object.entries(income.otherIncome)
     .filter(([, v]) => v > 0)
-    .map(([k, v], i) => ({ name: k, value: v, color: EXTRA_COLORS[i % EXTRA_COLORS.length] }))
+    .map(([k, v], i) => ({
+      name: k,
+      value: v,
+      color: EXTRA_COLORS[i % EXTRA_COLORS.length],
+      prevValue: prevIncome ? (prevIncome.otherIncome[k] ?? 0) : undefined,
+    }))
 
   const allSlices = [...named, ...otherEntries]
   const namedTotal = allSlices.reduce((sum, s) => sum + s.value, 0)
   const rest = income.total - namedTotal
   const data = rest > 0
-    ? [...allSlices, { name: 'その他', value: rest, color: '#e0e7ed' }]
+    ? [...allSlices, { name: 'その他', value: rest, color: '#e0e7ed', prevValue: undefined as number | undefined }]
     : allSlices
 
   useEffect(() => {
@@ -94,18 +105,26 @@ export default function IncomeDonutChart({ income }: Props) {
         <canvas ref={canvasRef} />
       </div>
       <div className="w-full min-w-0 divide-y divide-gray-100 sm:flex-1 sm:self-center">
-        {data.map((item) => (
-          <div key={item.name} className="flex items-center justify-between py-[7px] text-sm">
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-              <span className="text-[#243447]">{item.name}</span>
+        {data.map((item) => {
+          const delta = item.prevValue !== undefined ? item.value - item.prevValue : undefined
+          return (
+            <div key={item.name} className="flex items-center justify-between py-[7px] text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="text-[#243447] truncate">{item.name}</span>
+              </div>
+              <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
+                <span className="text-[#243447] font-medium">{formatYen(item.value)}</span>
+                {delta !== undefined && delta !== 0 && (
+                  <span className="text-xs w-14 text-right" style={{ color: delta >= 0 ? '#5fad9b' : '#d06868' }}>
+                    {delta > 0 ? '+' : ''}{formatYen(delta)}
+                  </span>
+                )}
+                <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / income.total) * 100).toFixed(1)}%</span>
+              </div>
             </div>
-            <div className="flex items-center gap-3 tabular-nums">
-              <span className="text-[#243447] font-medium">{formatYen(item.value)}</span>
-              <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / income.total) * 100).toFixed(1)}%</span>
-            </div>
-          </div>
-        ))}
+          )
+        })}
         <div className="flex items-center justify-between py-[7px]">
           <span className="text-sm text-[#7a94a6] font-medium">合計</span>
           <span className="text-sm text-[#243447] font-semibold tabular-nums">{formatYen(income.total)}</span>
