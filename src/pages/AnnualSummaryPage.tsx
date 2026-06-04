@@ -698,8 +698,35 @@ export default function AnnualSummaryPage() {
                     </div>
                   )}
 
-                  {/* Monthly stats: avg / max / min + chart */}
-                  {monthlySlips.length > 0 && (() => {
+                  {/* Monthly stats: avg / max / min */}
+                  {monthlySlips.length > 0 && (
+                    <div className="border-t border-gray-100 pt-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <p className="text-xs text-gray-400">平均月手取</p>
+                          <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.avgMonthlyNetPay)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">最高月</p>
+                          <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(totals.maxMonthNetPay)}</p>
+                          <p className="text-xs text-gray-400">{totals.maxMonthLabel}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">最低月</p>
+                          <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(totals.minMonthNetPay)}</p>
+                          <p className="text-xs text-gray-400">{totals.minMonthLabel}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* みなし残業・勤怠 — 常時表示 */}
+                  <div className="border-t border-gray-100 pt-2">
+                    <AnnualDetailView payslips={yearSlips} />
+                  </div>
+
+                  {/* 展開時: 月別推移 + ドーナツグラフ */}
+                  {isExpanded && (() => {
                     const chartData = yearSlips
                       .reduce<{ month: number; monthlyNetPay: number; bonusNetPay: number; monthlyIncome: number; bonusIncome: number }[]>((acc, p) => {
                         const existing = acc.find((d) => d.month === p.month)
@@ -720,35 +747,6 @@ export default function AnnualSummaryPage() {
                       }, [])
                       .sort((a, b) => a.month - b.month)
                       .map((d) => ({ label: `${d.month}月`, monthlyNetPay: d.monthlyNetPay, bonusNetPay: d.bonusNetPay, monthlyIncome: d.monthlyIncome, bonusIncome: d.bonusIncome }))
-                    return (
-                      <div className="border-t border-gray-100 pt-2">
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <p className="text-xs text-gray-400">平均月手取</p>
-                            <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.avgMonthlyNetPay)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-400">最高月</p>
-                            <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(totals.maxMonthNetPay)}</p>
-                            <p className="text-xs text-gray-400">{totals.maxMonthLabel}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-400">最低月</p>
-                            <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(totals.minMonthNetPay)}</p>
-                            <p className="text-xs text-gray-400">{totals.minMonthLabel}</p>
-                          </div>
-                        </div>
-                        {chartData.length >= 2 && (
-                          <div className="mt-3" style={{ height: hasBonus ? 200 : 180 }}>
-                            <MonthlyNetPayBarChart data={chartData} hasBonus={hasBonus} />
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })()}
-
-                  {/* Annual detail — expanded */}
-                  {isExpanded && (() => {
                     const tab = annualDonutTab[year] ?? 'overview'
                     const aggIncome = yearSlips.reduce((agg, p) => {
                       const keys = Object.keys(emptyIncome()) as (keyof ReturnType<typeof emptyIncome>)[]
@@ -773,8 +771,14 @@ export default function AnnualSummaryPage() {
                     const aggSummary = { netPay: totals.totalNetPay, bankTransfer: 0 }
                     return (
                       <div className="border-t border-gray-100 pt-3 space-y-3">
-                        {/* 収支内訳タブ */}
-                        <div>
+                        {/* 月別推移グラフ */}
+                        {chartData.length >= 2 && (
+                          <div style={{ height: hasBonus ? 200 : 180 }}>
+                            <MonthlyNetPayBarChart data={chartData} hasBonus={hasBonus} />
+                          </div>
+                        )}
+                        {/* 収支内訳ドーナツ（一番下） */}
+                        <div className="border-t border-gray-100 pt-3">
                           <div className="flex items-center gap-2 mb-3">
                             <p className="text-xs font-medium text-gray-500 flex-1">収支内訳</p>
                             <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs">
@@ -792,9 +796,6 @@ export default function AnnualSummaryPage() {
                           {tab === 'overview' && <NetPayBreakdownChart income={aggIncome} deductions={aggDeductions} summary={aggSummary} />}
                           {tab === 'income' && <IncomeDonutChart income={aggIncome} />}
                           {tab === 'deduction' && <DeductionDonutChart deductions={aggDeductions} />}
-                        </div>
-                        <div className="border-t border-gray-100 pt-2">
-                          <AnnualDetailView payslips={yearSlips} />
                         </div>
                       </div>
                     )
