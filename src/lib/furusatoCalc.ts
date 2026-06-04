@@ -20,6 +20,7 @@ export interface FurusatoResult {
   lifeInsuranceDeduction: number
   earthquakeDeduction: number
   dependentDeduction: number
+  basicDeduction: number
   taxableIncome: number
   incomeTaxRate: number
   taxableIncomeResident: number
@@ -27,8 +28,9 @@ export interface FurusatoResult {
   furusatoLimit: number
 }
 
+// 令和7年度改正: 最低保障額 55万 → 65万
 function calcEmploymentIncomeDeduction(income: number): number {
-  if (income <= 1_800_000) return Math.max(Math.round(income * 0.4 / 1000) * 1000 - 100_000, 550_000)
+  if (income <= 1_800_000) return Math.max(Math.round(income * 0.4 / 1000) * 1000 - 100_000, 650_000)
   if (income <= 3_600_000) return Math.round(income * 0.3 / 1000) * 1000 + 80_000
   if (income <= 6_600_000) return Math.round(income * 0.2 / 1000) * 1000 + 440_000
   if (income <= 8_500_000) return Math.round(income * 0.1 / 1000) * 1000 + 1_100_000
@@ -63,6 +65,19 @@ function getIncomeTaxRate(taxableIncome: number): number {
   return 0.45
 }
 
+// 令和7・8年分の基礎控除（所得税）。合計所得金額（≒給与所得）に応じて段階的に変化。
+// 令和9年分以後は 132万超〜655万の区分が 58万円に統一される予定。
+function calcBasicDeductionIT(employmentIncome: number): number {
+  if (employmentIncome <= 1_320_000) return 950_000
+  if (employmentIncome <= 3_360_000) return 880_000
+  if (employmentIncome <= 4_890_000) return 680_000
+  if (employmentIncome <= 6_550_000) return 630_000
+  if (employmentIncome <= 23_500_000) return 580_000
+  if (employmentIncome <= 24_000_000) return 320_000
+  if (employmentIncome <= 24_500_000) return 160_000
+  return 0
+}
+
 export function calcFurusato(
   annualIncome: number,
   socialInsurance: number,
@@ -70,6 +85,8 @@ export function calcFurusato(
 ): FurusatoResult {
   const empDeduction = calcEmploymentIncomeDeduction(annualIncome)
   const empIncome = Math.max(0, annualIncome - empDeduction)
+
+  const basicDeduction = calcBasicDeductionIT(empIncome)
 
   // 所得税用（生命保険料控除は新生命・介護医療を別枠で計算し合算、上限120,000）
   const lifeDeductionIT = Math.min(
@@ -80,11 +97,11 @@ export function calcFurusato(
   const earthquakeDeductionIT = Math.min(inputs.earthquakeInsurancePremium, 50_000)
   const dependentDeductionIT = inputs.dependents * 380_000
   const totalDeductionsIT =
-    socialInsurance + inputs.ideco + lifeDeductionIT + earthquakeDeductionIT + dependentDeductionIT + 480_000
+    socialInsurance + inputs.ideco + lifeDeductionIT + earthquakeDeductionIT + dependentDeductionIT + basicDeduction
   const taxableIncome = Math.max(0, empIncome - totalDeductionsIT)
   const incomeTaxRate = getIncomeTaxRate(taxableIncome)
 
-  // 住民税用（生命保険料控除は別枠で計算し合算、上限70,000）
+  // 住民税用（基礎控除は令和7年分も43万円据え置き）
   const lifeDeductionRT = Math.min(
     calcLifeInsuranceDeductionRT(inputs.lifeInsurancePremium) +
     calcLifeInsuranceDeductionRT(inputs.careInsurancePremium ?? 0),
@@ -109,6 +126,7 @@ export function calcFurusato(
     lifeInsuranceDeduction: lifeDeductionIT,
     earthquakeDeduction: earthquakeDeductionIT,
     dependentDeduction: dependentDeductionIT,
+    basicDeduction,
     taxableIncome,
     incomeTaxRate,
     taxableIncomeResident,
