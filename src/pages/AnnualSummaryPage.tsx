@@ -333,7 +333,8 @@ export default function AnnualSummaryPage() {
             <div className="grid grid-cols-2 gap-2">
               {([
                 { key: 'ideco' as const, label: 'iDeCo年額（円）', integer: false },
-                { key: 'lifeInsurancePremium' as const, label: '生命保険料年額（円）', integer: false },
+                { key: 'lifeInsurancePremium' as const, label: '新生命保険料年額（円）', integer: false },
+                { key: 'careInsurancePremium' as const, label: '介護医療保険料年額（円）', integer: false },
                 { key: 'earthquakeInsurancePremium' as const, label: '地震保険料年額（円）', integer: false },
                 { key: 'dependents' as const, label: '扶養人数（人）', integer: true },
               ]).map(({ key, label, integer }) => (
