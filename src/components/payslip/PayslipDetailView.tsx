@@ -126,7 +126,7 @@ export default function PayslipDetailView({ payslip }: Props) {
             {[
               { label: '出勤日数', value: attendance.workDays, display: `${attendance.workDays}日` },
               { label: '有休取得', value: attendance.paidLeave, display: `${attendance.paidLeave}日` },
-              { label: '有休残', value: attendance.paidLeaveRemaining, display: `${attendance.paidLeaveRemaining}日` },
+              { label: '有休残（最終月）', value: attendance.paidLeaveRemaining, display: `${attendance.paidLeaveRemaining}日` },
               { label: '欠勤', value: attendance.absenceDays, display: `${attendance.absenceDays}日` },
               { label: '休日出勤', value: attendance.holidayWorkDays, display: `${attendance.holidayWorkDays}日` },
               { label: '特別休暇', value: attendance.specialLeave, display: `${attendance.specialLeave}日` },
