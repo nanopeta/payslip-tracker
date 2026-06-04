@@ -243,6 +243,11 @@ export default function PayslipReviewForm({ initial, onSave, onCancel, duplicate
           <NumInput label="所得税" value={deductions.incomeTax} onChange={(v) => patchDed('incomeTax', v)} />
           <NumInput label="住民税" value={deductions.residentTax} onChange={(v) => patchDed('residentTax', v)} />
           <NumInput label="預り金" value={deductions.deposit} onChange={(v) => patchDed('deposit', v)} />
+          <NumInput label="税還付" value={deductions.taxRefund} onChange={(v) => patchDed('taxRefund', v)} />
+          <NumInput label="経費精算" value={deductions.expenseReimbursement} onChange={(v) => patchDed('expenseReimbursement', v)} />
+          <NumInput label="健保給付金" value={deductions.healthInsuranceBenefit} onChange={(v) => patchDed('healthInsuranceBenefit', v)} />
+          <NumInput label="一時保育料" value={deductions.temporaryChildcare} onChange={(v) => patchDed('temporaryChildcare', v)} />
+          <NumInput label="仮払金" value={deductions.advance} onChange={(v) => patchDed('advance', v)} />
           <NumInput label="控除合計額" value={deductions.total} onChange={(v) => patchDed('total', v)} />
         </div>
       </div>
