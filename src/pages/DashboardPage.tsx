@@ -243,7 +243,7 @@ export default function DashboardPage() {
       {latestMonthly && (latestMonthly.income.total > 0 || latestMonthly.deductions.total > 0) && (
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-1">
-            <p className="text-sm font-semibold text-gray-700">収支内訳</p>
+            <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>収支内訳</p>
             <div className="flex items-center gap-2">
               {monthlyPayslips.length > 1 ? (
                 <select
@@ -299,7 +299,7 @@ export default function DashboardPage() {
       {showGainSection && latestMonthly && (
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-gray-700">みなし残業 効率</p>
+            <p className="text-sm font-bold text-amber-600 flex items-center gap-2"><span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>みなし残業 効率</p>
             <div className="flex items-center gap-2">
               {gainRows.length > 1 ? (
                 <select
@@ -463,7 +463,7 @@ export default function DashboardPage() {
       {/* YTD summary + 賞与（統合カード） */}
       {hasYtdData && (
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
-          <p className="text-sm font-semibold text-gray-700 mb-0.5">今年の累計</p>
+          <p className="text-sm font-bold text-gray-600 mb-0.5 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>今年の累計</p>
           <p className="text-xs text-gray-400 mb-2">
             {currentYear}年
             {ytd.monthlyMonthCount > 0 && ` 給与${ytd.monthlyMonthCount}ヶ月`}
@@ -534,7 +534,7 @@ export default function DashboardPage() {
       <div className="space-y-3">
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-gray-700">支給・手取りの推移</p>
+            <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>支給・手取りの推移</p>
             <div className="flex gap-1">
               {PERIOD_FILTERS.map((f) => (
                 <button
@@ -554,7 +554,7 @@ export default function DashboardPage() {
           <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
             <div className="mb-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-700">支給合算の推移</p>
+                <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>支給合算の推移</p>
                 <div className="flex gap-1">
                   {PERIOD_FILTERS.map((f) => (
                     <button
@@ -577,7 +577,7 @@ export default function DashboardPage() {
       {/* Recent payslips */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold text-gray-700">最近の給与明細</p>
+          <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>最近の給与明細</p>
           <Link to="/payslips" className="text-xs text-brand-600 hover:text-brand-700">すべて見る →</Link>
         </div>
         <div className="space-y-2">

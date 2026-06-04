@@ -53,8 +53,8 @@ export default function AnnualDetailView({ payslips }: Props) {
     <div>
       {showGain && (
         <div>
-          <p className="text-xs font-semibold text-amber-600 mb-2.5 flex items-center gap-1.5">
-            <span className="w-1 h-3.5 bg-amber-400 rounded-full inline-block"></span>
+          <p className="text-sm font-bold text-amber-600 mb-2.5 flex items-center gap-2">
+            <span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>
             みなし残業 効率（年間）
           </p>
           <div className="grid grid-cols-4 gap-3 mb-3">
@@ -117,8 +117,8 @@ export default function AnnualDetailView({ payslips }: Props) {
 
       {showAttendance && (
         <div className={showGain ? 'border-t border-gray-100 mt-4 pt-3' : ''}>
-          <p className="text-xs font-semibold text-gray-500 mb-2.5 flex items-center gap-1.5">
-            <span className="w-1 h-3.5 bg-gray-300 rounded-full inline-block"></span>
+          <p className="text-sm font-bold text-gray-600 mb-2.5 flex items-center gap-2">
+            <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
             勤怠（年間合計）
           </p>
           <div className="grid grid-cols-3 gap-x-4 gap-y-2">
