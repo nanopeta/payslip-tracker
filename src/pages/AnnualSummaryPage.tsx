@@ -88,11 +88,13 @@ export default function AnnualSummaryPage() {
     (simMonthlyCount > 0 ? (simMonthlyIncomeAvg - simMonthlyNormalDeductionsAvg) * simRemainingMonths : 0)
   const simProjectedNetPay = simProjectedMonthlyNetPay + simBonusNetPaySum
   // 実績月のみの「その他調整」（税還付・経費精算等）。将来月には一時調整を引き継がない
-  const simDeductionAdjustment = simMonthlySlips.reduce((s, p) => {
-    return s + p.deductions.total - (calcSI(p) + p.deductions.incomeTax + p.deductions.residentTax)
-  }, 0) + simBonusSlips.reduce((s, p) => {
+  const simMonthlyDeductionAdjustment = simMonthlySlips.reduce((s, p) => {
     return s + p.deductions.total - (calcSI(p) + p.deductions.incomeTax + p.deductions.residentTax)
   }, 0)
+  const simBonusDeductionAdjustment = simBonusSlips.reduce((s, p) => {
+    return s + p.deductions.total - (calcSI(p) + p.deductions.incomeTax + p.deductions.residentTax)
+  }, 0)
+  const simDeductionAdjustment = simMonthlyDeductionAdjustment + simBonusDeductionAdjustment
   const simImpliedDeductions =
     simProjectedMonthlySI + simBonusSISum +
     simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum +
@@ -275,11 +277,19 @@ export default function AnnualSummaryPage() {
                             <span className="tabular-nums text-gray-700">{formatYen(simBonusResidentTaxSum)}</span>
                           </div>
                         )}
-                        {simDeductionAdjustment !== 0 && (
+                        {simMonthlyDeductionAdjustment !== 0 && (
                           <div className="flex justify-between">
-                            <span className="text-gray-400">その他・調整</span>
+                            <span className="text-gray-400">その他調整（月次）</span>
                             <span className="tabular-nums text-gray-700">
-                              {simDeductionAdjustment >= 0 ? formatYen(simDeductionAdjustment) : `−${formatYen(Math.abs(simDeductionAdjustment))}`}
+                              {simMonthlyDeductionAdjustment >= 0 ? formatYen(simMonthlyDeductionAdjustment) : `−${formatYen(Math.abs(simMonthlyDeductionAdjustment))}`}
+                            </span>
+                          </div>
+                        )}
+                        {simBonusDeductionAdjustment !== 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">その他調整（賞与）</span>
+                            <span className="tabular-nums text-gray-700">
+                              {simBonusDeductionAdjustment >= 0 ? formatYen(simBonusDeductionAdjustment) : `−${formatYen(Math.abs(simBonusDeductionAdjustment))}`}
                             </span>
                           </div>
                         )}
