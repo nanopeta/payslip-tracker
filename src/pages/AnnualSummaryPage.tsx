@@ -48,6 +48,9 @@ export default function AnnualSummaryPage() {
   const [selectedSimYear, setSelectedSimYear] = useState(0)
   const [showSimDetail, setShowSimDetail] = useState(false)
   const [showIncomeDetail, setShowIncomeDetail] = useState(false)
+  const [customMode, setCustomMode] = useState(false)
+  const [customIncome, setCustomIncome] = useState(0)
+  const [customSocialInsurance, setCustomSocialInsurance] = useState(0)
 
   const effectiveSimYear = selectedSimYear !== 0 && years.includes(selectedSimYear)
     ? selectedSimYear
@@ -100,7 +103,9 @@ export default function AnnualSummaryPage() {
     simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum +
     simProjectedMonthlyResidentTax + simBonusResidentTaxSum +
     simDeductionAdjustment
-  const simResult = simIncome > 0 ? calcFurusato(simIncome, simSocialInsurance, taxInputs) : null
+  const effectiveIncome = customMode ? customIncome : simIncome
+  const effectiveSocialInsurance = customMode ? customSocialInsurance : simSocialInsurance
+  const simResult = effectiveIncome > 0 ? calcFurusato(effectiveIncome, effectiveSocialInsurance, taxInputs) : null
 
   function updateTaxInput(key: keyof TaxDeductionInputs, value: number) {
     const next = { ...taxInputs, [key]: value }
@@ -315,19 +320,63 @@ export default function AnnualSummaryPage() {
 
             <p className="text-xs font-medium text-gray-600">ふるさと納税シミュレーター</p>
 
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-400">
+                {customMode ? 'カスタム値を入力' : `自動入力${simIsProjected ? `（実績${simMonthlyCount}+試算${simRemainingMonths}ヶ月）` : ''}`}
+              </p>
+              <button
+                onClick={() => {
+                  if (!customMode) {
+                    setCustomIncome(simIncome)
+                    setCustomSocialInsurance(simSocialInsurance)
+                  }
+                  setCustomMode((v) => !v)
+                }}
+                className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-colors ${
+                  customMode
+                    ? 'bg-brand-600 text-white border-brand-600'
+                    : 'bg-white text-gray-500 border-gray-300 hover:border-brand-400'
+                }`}
+              >
+                {customMode ? 'カスタム' : '自動'}
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-gray-50 rounded-lg p-2.5">
-                <p className="text-xs text-gray-400 mb-0.5">
-                  給与収入（自動{simIsProjected ? `・実績${simMonthlyCount}+試算${simRemainingMonths}ヶ月` : ''}）
-                </p>
-                <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simIncome)}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-2.5">
-                <p className="text-xs text-gray-400 mb-0.5">
-                  社会保険料（自動{simIsProjected ? `・実績${simMonthlyCount}+試算${simRemainingMonths}ヶ月` : ''}）
-                </p>
-                <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simSocialInsurance)}</p>
-              </div>
+              {customMode ? (
+                <>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-0.5 block">給与収入（円）</label>
+                    <input
+                      type="number" min="0"
+                      value={customIncome === 0 ? '' : customIncome}
+                      onChange={(e) => setCustomIncome(Math.max(0, Number(e.target.value) || 0))}
+                      placeholder={String(simIncome)}
+                      className="w-full text-sm border border-brand-300 rounded-lg px-2.5 py-1.5 tabular-nums focus:outline-none focus:ring-1 focus:ring-brand-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-0.5 block">社会保険料（円）</label>
+                    <input
+                      type="number" min="0"
+                      value={customSocialInsurance === 0 ? '' : customSocialInsurance}
+                      onChange={(e) => setCustomSocialInsurance(Math.max(0, Number(e.target.value) || 0))}
+                      placeholder={String(simSocialInsurance)}
+                      className="w-full text-sm border border-brand-300 rounded-lg px-2.5 py-1.5 tabular-nums focus:outline-none focus:ring-1 focus:ring-brand-400"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-gray-50 rounded-lg p-2.5">
+                    <p className="text-xs text-gray-400 mb-0.5">給与収入</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simIncome)}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2.5">
+                    <p className="text-xs text-gray-400 mb-0.5">社会保険料</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-700">{formatYen(simSocialInsurance)}</p>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -398,22 +447,22 @@ export default function AnnualSummaryPage() {
                   const itRate = simResult.incomeTaxRate
                   // 収入区分に応じた給与所得控除の計算式（国税庁の速算表）
                   const empDeductionFormula = (() => {
-                    if (simIncome <= 1_800_000) return '収入×40%-10万（最低65万）'
-                    if (simIncome <= 3_600_000) return '収入×30%+8万'
-                    if (simIncome <= 6_600_000) return '収入×20%+44万'
-                    if (simIncome <= 8_500_000) return '収入×10%+110万'
+                    if (effectiveIncome <= 1_800_000) return '収入×40%-10万（最低65万）'
+                    if (effectiveIncome <= 3_600_000) return '収入×30%+8万'
+                    if (effectiveIncome <= 6_600_000) return '収入×20%+44万'
+                    if (effectiveIncome <= 8_500_000) return '収入×10%+110万'
                     return '上限195万'
                   })()
                   return (
                     <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-xs">
                       <Divider label="① 給与所得" />
-                      <Row label="給与収入（年額）" value={formatYen(simIncome)} />
+                      <Row label={`給与収入（年額）${customMode ? '※カスタム' : ''}`} value={formatYen(effectiveIncome)} />
                       <Row label="給与所得控除" value={`-${formatYen(simResult.employmentIncomeDeduction)}`} sub={empDeductionFormula} indent />
                       <Row label="給与所得" value={formatYen(simResult.employmentIncome)} bold />
 
                       <Divider label="② 所得税の課税所得" />
                       <Row label="給与所得" value={formatYen(simResult.employmentIncome)} />
-                      <Row label="社会保険料控除" value={`-${formatYen(simSocialInsurance)}`} indent />
+                      <Row label="社会保険料控除" value={`-${formatYen(effectiveSocialInsurance)}`} indent />
                       {taxInputs.ideco > 0 && <Row label="iDeCo（小規模共済等）" value={`-${formatYen(taxInputs.ideco)}`} indent />}
                       {simResult.lifeInsuranceDeduction > 0 && <Row label="生命保険料控除" value={`-${formatYen(simResult.lifeInsuranceDeduction)}`} indent />}
                       {simResult.earthquakeDeduction > 0 && <Row label="地震保険料控除" value={`-${formatYen(simResult.earthquakeDeduction)}`} indent />}
@@ -424,7 +473,7 @@ export default function AnnualSummaryPage() {
 
                       <Divider label="③ 住民税の課税所得" />
                       <Row label="給与所得" value={formatYen(simResult.employmentIncome)} />
-                      <Row label="社会保険料控除" value={`-${formatYen(simSocialInsurance)}`} indent />
+                      <Row label="社会保険料控除" value={`-${formatYen(effectiveSocialInsurance)}`} indent />
                       {taxInputs.ideco > 0 && <Row label="iDeCo（小規模共済等）" value={`-${formatYen(taxInputs.ideco)}`} indent />}
                       {simResult.lifeInsuranceDeductionRT > 0 && <Row label="生命保険料控除（住民税）" value={`-${formatYen(simResult.lifeInsuranceDeductionRT)}`} indent />}
                       {simResult.earthquakeDeductionRT > 0 && <Row label="地震保険料控除（住民税）" value={`-${formatYen(simResult.earthquakeDeductionRT)}`} indent />}
