@@ -48,6 +48,7 @@ export default function AnnualSummaryPage() {
   const [selectedSimYear, setSelectedSimYear] = useState(0)
   const [showSimDetail, setShowSimDetail] = useState(false)
   const [showIncomeDetail, setShowIncomeDetail] = useState(false)
+  const [showRefundDetail, setShowRefundDetail] = useState(false)
   const [customMode, setCustomMode] = useState(false)
   const [customIncome, setCustomIncome] = useState(0)
   const [customSocialInsurance, setCustomSocialInsurance] = useState(0)
@@ -321,15 +322,44 @@ export default function AnnualSummaryPage() {
               const projectedIT = simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum
               const refund = projectedIT - simResult.incomeTaxAmount
               return (
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">年末調整の推定還付金</p>
-                  <p className="text-xl font-bold tabular-nums" style={{ color: refund >= 0 ? '#5fad9b' : '#d06868' }}>
-                    {refund >= 0 ? '+' : ''}{formatYen(refund)}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {refund >= 0 ? '年末調整で還付見込み' : '年末調整で追加納税の可能性あり'}
-                  </p>
-                </div>
+                <>
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-500 mb-1">年末調整の推定還付金</p>
+                    <p className="text-xl font-bold tabular-nums" style={{ color: refund >= 0 ? '#5fad9b' : '#d06868' }}>
+                      {refund >= 0 ? '+' : ''}{formatYen(refund)}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {refund >= 0 ? '年末調整で還付見込み' : '年末調整で追加納税の可能性あり'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowRefundDetail((v) => !v)}
+                    className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
+                  >
+                    計算内訳
+                    <svg className={`w-3.5 h-3.5 transition-transform ${showRefundDetail ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {showRefundDetail && (
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">推定年間源泉徴収（月次＋賞与）</span>
+                        <span className="tabular-nums text-gray-700">{formatYen(projectedIT)}</span>
+                      </div>
+                      <div className="flex justify-between pl-3">
+                        <span className="text-gray-400">正確な年税額 <span className="text-gray-300">課税所得×税率×1.021</span></span>
+                        <span className="tabular-nums text-gray-700">−{formatYen(simResult.incomeTaxAmount)}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold border-t border-gray-200 pt-1 mt-1">
+                        <span className="text-gray-600">推定還付金</span>
+                        <span className="tabular-nums" style={{ color: refund >= 0 ? '#5fad9b' : '#d06868' }}>
+                          {refund >= 0 ? '+' : ''}{formatYen(refund)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </>
               )
             })()}
           </div>
@@ -530,23 +560,6 @@ export default function AnnualSummaryPage() {
                         </p>
                       </div>
                       <Row label="推定上限額" value={formatYen(simResult.furusatoLimit)} bold accent />
-
-                      {!customMode && (() => {
-                        const projectedIT = simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum
-                        const refund = projectedIT - simResult.incomeTaxAmount
-                        return (
-                          <>
-                            <Divider label="⑤ 推定年末還付金" />
-                            <Row label="推定年間源泉徴収（月次+賞与）" value={formatYen(projectedIT)} />
-                            <Row label="正確な年税額" value={`-${formatYen(simResult.incomeTaxAmount)}`} sub="課税所得×税率×1.021" indent />
-                            <Row
-                              label="推定還付金"
-                              value={`${refund >= 0 ? '+' : ''}${formatYen(refund)}`}
-                              bold accent
-                            />
-                          </>
-                        )
-                      })()}
                     </div>
                   )
                 })()}
