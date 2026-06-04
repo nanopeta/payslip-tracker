@@ -142,34 +142,64 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
       {/* Overtime gain */}
       {showGain && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-          <p className="text-sm font-bold text-amber-600 mb-2 flex items-center gap-2">
+          <p className="text-sm font-bold text-amber-600 mb-2.5 flex items-center gap-2">
             <span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>
             みなし残業 効率
           </p>
-          <div className="flex justify-between py-1.5">
-            <span className="text-sm text-gray-600">{settings.deemedLabel}</span>
-            <span className="text-sm tabular-nums text-gray-900">{formatYen(deemedAmt)}</span>
-          </div>
-          {settings.actualLabels.map((label) => (
-            <div key={label} className="flex justify-between py-1.5">
-              <span className="text-sm text-gray-600">{label}</span>
-              <span className="text-sm tabular-nums text-gray-900">
-                {formatYen(getIncomeValueByLabel(income, label))}
-              </span>
-            </div>
-          ))}
-          {settings.actualLabels.length > 1 && (
-            <div className="flex justify-between py-1.5 border-t border-gray-50">
-              <span className="text-xs text-gray-400">実残業合計</span>
-              <span className="text-sm tabular-nums text-gray-700">{formatYen(actualAmt)}</span>
-            </div>
-          )}
-          <div className={`flex justify-between pt-2 mt-1 border-t border-gray-100 font-bold`}>
-            <span className="text-sm text-gray-700">差額</span>
-            <span className="text-base tabular-nums" style={{ color: gain >= 0 ? '#5fad9b' : '#d06868' }}>
-              {gain >= 0 ? '+' : ''}{formatYen(gain)}
-            </span>
-          </div>
+          {(() => {
+            const DEEMED_HOURS = 45
+            const gainHours = DEEMED_HOURS - attendance.overtimeHours
+            const usagePercent = (attendance.overtimeHours / DEEMED_HOURS) * 100
+            const overtimeHourlyRate = deemedAmt > 0 ? Math.round(deemedAmt / DEEMED_HOURS) : 0
+            const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
+            return (
+              <>
+                <div className="grid grid-cols-4 gap-3 mb-3">
+                  <div>
+                    <p className="text-[10px] text-gray-400 leading-tight">みなし（45h）</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{formatYen(deemedAmt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 leading-tight">実残業代</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{formatYen(actualAmt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 leading-tight">残業時間</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{attendance.overtimeHours.toFixed(1)}h</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 leading-tight">使用率</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{usagePercent.toFixed(1)}%</p>
+                    <div className="mt-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, usagePercent)}%`, backgroundColor: usagePercent > 100 ? '#d06868' : '#5b8fa8' }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-3 pt-3 border-t border-gray-100">
+                  <div>
+                    <p className="text-[10px] text-gray-400 leading-tight">差額</p>
+                    <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: gain >= 0 ? '#5fad9b' : '#d06868' }}>
+                      {gain >= 0 ? '+' : ''}{formatYen(gain)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 leading-tight">得した時間</p>
+                    <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: gainHours >= 0 ? '#5fad9b' : '#d06868' }}>
+                      {gainHours >= 0 ? '+' : '-'}{Math.abs(gainHours).toFixed(1)}h
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 leading-tight">残業時給</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{overtimeHourlyRate > 0 ? `${formatYen(overtimeHourlyRate)}/h` : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 leading-tight">基本時給</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{basicHourlyRate > 0 ? `${formatYen(basicHourlyRate)}/h` : '—'}</p>
+                  </div>
+                </div>
+              </>
+            )
+          })()}
         </div>
       )}
 
@@ -209,24 +239,22 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
             <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
             勤怠
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-x-4 gap-y-2">
             {[
               { label: '出勤日数', value: attendance.workDays, display: `${attendance.workDays}日` },
-              { label: '有休', value: attendance.paidLeave, display: `${attendance.paidLeave}日` },
+              { label: '有休取得', value: attendance.paidLeave, display: `${attendance.paidLeave}日` },
               { label: '有休残', value: attendance.paidLeaveRemaining, display: `${attendance.paidLeaveRemaining}日` },
-              { label: '欠勤日数', value: attendance.absenceDays, display: `${attendance.absenceDays}日` },
+              { label: '欠勤', value: attendance.absenceDays, display: `${attendance.absenceDays}日` },
+              { label: '休日出勤', value: attendance.holidayWorkDays, display: `${attendance.holidayWorkDays}日` },
+              { label: '特別休暇', value: attendance.specialLeave, display: `${attendance.specialLeave}日` },
               { label: '出勤時間', value: attendance.workHours, display: formatHoursMinutes(attendance.workHours) },
               { label: '残業時間', value: attendance.overtimeHours, display: formatHoursMinutes(attendance.overtimeHours) },
               { label: '遅早時間', value: attendance.lateEarlyHours, display: formatHoursMinutes(attendance.lateEarlyHours) },
-              { label: '休日出勤日数', value: attendance.holidayWorkDays, display: `${attendance.holidayWorkDays}日` },
-              { label: '特別休暇', value: attendance.specialLeave, display: `${attendance.specialLeave}日` },
             ].map((item) =>
               item.value > 0 ? (
-                <div key={item.label} className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500">{item.label}</p>
-                  <p className="text-base font-semibold tabular-nums text-gray-900 mt-0.5">
-                    {item.display}
-                  </p>
+                <div key={item.label}>
+                  <p className="text-[10px] text-gray-400 leading-tight">{item.label}</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{item.display}</p>
                 </div>
               ) : null
             )}
