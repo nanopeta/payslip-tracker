@@ -632,15 +632,6 @@ export default function AnnualSummaryPage() {
             const bonusIncome = bonusSlips.reduce((s, p) => s + p.income.total, 0)
             const bonusNetPay = bonusSlips.reduce((s, p) => s + p.summary.netPay, 0)
             const isExpanded = expandedYears.has(year)
-            const socialInsuranceTotal = yearSlips.reduce(
-              (s, p) =>
-                s +
-                p.deductions.healthInsurance +
-                p.deductions.longTermCareInsurance +
-                p.deductions.pensionInsurance +
-                p.deductions.employmentInsurance,
-              0
-            )
             return (
               <div key={year} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 {/* Header row */}
@@ -676,36 +667,36 @@ export default function AnnualSummaryPage() {
                   {/* Totals */}
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <p className="text-xs text-gray-400">年間総支給</p>
+                      <p className="text-xs text-gray-400">総支給</p>
                       <p className="text-base font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.totalIncome)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">年間差引支給</p>
+                      <p className="text-xs text-gray-400">手取り</p>
                       <p className="text-base font-semibold tabular-nums text-brand-700 mt-0.5">{formatYen(totals.totalNetPay)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">年間控除合計</p>
+                      <p className="text-xs text-gray-400">控除合計</p>
                       <p className="text-base font-semibold tabular-nums text-red-500 mt-0.5">{formatYen(totals.totalDeductions)}</p>
                     </div>
                   </div>
 
-                  {/* Tax & social insurance breakdown */}
-                  <div className="border-t border-gray-100 pt-2">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <p className="text-xs text-gray-400">所得税合計</p>
-                        <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.totalIncomeTax)}</p>
+                  {/* 賞与内訳サブ行 */}
+                  {hasBonus && (
+                    <div className="grid grid-cols-2 gap-2 -mt-1">
+                      <div className="bg-gray-50 rounded-lg px-2.5 py-1.5 text-xs">
+                        <span className="text-gray-400">給与</span>
+                        <span className="tabular-nums text-gray-700 ml-1.5">{formatYen(monthlyIncome)}</span>
+                        <span className="text-gray-300 mx-1">/</span>
+                        <span className="tabular-nums text-brand-600">{formatYen(monthlyNetPay)}</span>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-400">住民税合計</p>
-                        <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(totals.totalResidentTax)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400">社会保険料合計</p>
-                        <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(socialInsuranceTotal)}</p>
+                      <div className="bg-amber-50 rounded-lg px-2.5 py-1.5 text-xs">
+                        <span className="text-amber-600">賞与</span>
+                        <span className="tabular-nums text-gray-700 ml-1.5">{formatYen(bonusIncome)}</span>
+                        <span className="text-gray-300 mx-1">/</span>
+                        <span className="tabular-nums text-brand-600">{formatYen(bonusNetPay)}</span>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Monthly stats: avg / max / min + chart */}
                   {monthlySlips.length > 0 && (() => {
@@ -731,7 +722,6 @@ export default function AnnualSummaryPage() {
                       .map((d) => ({ label: `${d.month}月`, monthlyNetPay: d.monthlyNetPay, bonusNetPay: d.bonusNetPay, monthlyIncome: d.monthlyIncome, bonusIncome: d.bonusIncome }))
                     return (
                       <div className="border-t border-gray-100 pt-2">
-                        <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
                         <div className="grid grid-cols-3 gap-2">
                           <div>
                             <p className="text-xs text-gray-400">平均月手取</p>
@@ -756,41 +746,6 @@ export default function AnnualSummaryPage() {
                       </div>
                     )
                   })()}
-
-                  {/* Bonus breakdown */}
-                  {hasBonus && (
-                    <div className="border-t border-gray-100 pt-2 space-y-2">
-                      <p className="text-xs text-gray-400">内訳</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs text-gray-500 mb-1.5">給与（{monthlySlips.length}件）</p>
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">総支給</span>
-                              <span className="tabular-nums font-medium">{formatYen(monthlyIncome)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">差引支給</span>
-                              <span className="tabular-nums font-medium text-brand-700">{formatYen(monthlyNetPay)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="bg-amber-50 rounded-lg p-3">
-                          <p className="text-xs text-amber-700 mb-1.5">賞与・インセンティブ（{bonusSlips.length}件）</p>
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">総支給</span>
-                              <span className="tabular-nums font-medium">{formatYen(bonusIncome)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">差引支給</span>
-                              <span className="tabular-nums font-medium text-brand-700">{formatYen(bonusNetPay)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Annual detail — expanded */}
                   {isExpanded && (() => {
