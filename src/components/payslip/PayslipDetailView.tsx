@@ -124,17 +124,17 @@ export default function PayslipDetailView({ payslip }: Props) {
           </p>
           <div className="grid grid-cols-3 gap-x-4 gap-y-2">
             {[
-              { label: '出勤日数', value: attendance.workDays, display: `${attendance.workDays}日` },
-              { label: '有休取得', value: attendance.paidLeave, display: `${attendance.paidLeave}日` },
-              { label: '有休残（最終月）', value: attendance.paidLeaveRemaining, display: `${attendance.paidLeaveRemaining}日` },
-              { label: '欠勤', value: attendance.absenceDays, display: `${attendance.absenceDays}日` },
-              { label: '休日出勤', value: attendance.holidayWorkDays, display: `${attendance.holidayWorkDays}日` },
-              { label: '特別休暇', value: attendance.specialLeave, display: `${attendance.specialLeave}日` },
-              { label: '出勤時間', value: attendance.workHours, display: formatHoursMinutes(attendance.workHours) },
-              { label: '残業時間', value: attendance.overtimeHours, display: formatHoursMinutes(attendance.overtimeHours) },
-              { label: '遅早時間', value: attendance.lateEarlyHours, display: formatHoursMinutes(attendance.lateEarlyHours) },
+              { label: '出勤日数', value: attendance.workDays, display: `${attendance.workDays}日`, alwaysShow: false },
+              { label: '有休取得', value: attendance.paidLeave, display: `${attendance.paidLeave}日`, alwaysShow: true },
+              { label: '有休残', value: attendance.paidLeaveRemaining, display: `${attendance.paidLeaveRemaining}日`, alwaysShow: false },
+              { label: '欠勤', value: attendance.absenceDays, display: `${attendance.absenceDays}日`, alwaysShow: false },
+              { label: '休日出勤', value: attendance.holidayWorkDays, display: `${attendance.holidayWorkDays}日`, alwaysShow: false },
+              { label: '特別休暇', value: attendance.specialLeave, display: `${attendance.specialLeave}日`, alwaysShow: false },
+              { label: '出勤時間', value: attendance.workHours, display: formatHoursMinutes(attendance.workHours), alwaysShow: false },
+              { label: '残業時間', value: attendance.overtimeHours, display: formatHoursMinutes(attendance.overtimeHours), alwaysShow: false },
+              { label: '遅早時間', value: attendance.lateEarlyHours, display: formatHoursMinutes(attendance.lateEarlyHours), alwaysShow: false },
             ].map((item) =>
-              item.value > 0 ? (
+              (item.alwaysShow || item.value > 0) ? (
                 <div key={item.label}>
                   <p className="text-[10px] text-gray-400 leading-tight">{item.label}</p>
                   <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{item.display}</p>
