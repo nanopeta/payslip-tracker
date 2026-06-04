@@ -8,22 +8,24 @@ interface RowProps {
   value: number
   bold?: boolean
   accent?: string
+  accentColor?: string
   delta?: number
   deltaInvert?: boolean
   isTotal?: boolean
 }
 
-function Row({ label, value, bold, accent, delta, deltaInvert, isTotal }: RowProps) {
+function Row({ label, value, bold, accent, accentColor, delta, deltaInvert, isTotal }: RowProps) {
   if (value === 0) return null
   const showDelta = delta !== undefined && delta !== 0
   const deltaColor = showDelta
     ? (deltaInvert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868'
     : undefined
+  const accentStyle = accentColor ? { color: accentColor } : undefined
   return (
     <div className={`flex justify-between py-2 ${isTotal ? 'bg-gray-50 rounded px-2 -mx-2 mt-1 font-semibold' : 'border-b border-gray-100'} ${bold ? 'font-bold' : ''}`}>
-      <span className={`text-sm ${accent ?? 'text-gray-600'}`}>{label}</span>
+      <span className={`text-sm ${accentColor ? '' : (accent ?? 'text-gray-600')}`} style={accentStyle}>{label}</span>
       <span className="flex items-center gap-1.5">
-        <span className={`text-sm tabular-nums ${accent ?? 'text-gray-900'}`}>{formatYen(value)}</span>
+        <span className={`text-sm tabular-nums ${accentColor ? '' : (accent ?? 'text-gray-900')}`} style={accentStyle}>{formatYen(value)}</span>
         {showDelta && (
           <span className="text-xs tabular-nums" style={{ color: deltaColor }}>
             {delta! > 0 ? '+' : '-'}{formatYen(Math.abs(delta!))}
@@ -140,10 +142,10 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
       {/* Overtime gain */}
       {showGain && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-          <p className="text-sm font-bold text-indigo-600 mb-2 flex items-center gap-2">
-          <span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>
-          みなし残業 効率
-        </p>
+          <p className="text-sm font-bold text-amber-600 mb-2 flex items-center gap-2">
+            <span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>
+            みなし残業 効率
+          </p>
           <div className="flex justify-between py-1.5">
             <span className="text-sm text-gray-600">{settings.deemedLabel}</span>
             <span className="text-sm tabular-nums text-gray-900">{formatYen(deemedAmt)}</span>
@@ -173,8 +175,8 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
 
       {/* Deductions */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-        <p className="text-sm font-bold text-red-600 mb-2 flex items-center gap-2">
-          <span className="w-1 h-4 bg-red-400 rounded-full inline-block"></span>
+        <p className="text-sm font-bold mb-2 flex items-center gap-2" style={{ color: '#d06868' }}>
+          <span className="w-1 h-4 rounded-full inline-block" style={{ backgroundColor: '#d06868' }}></span>
           控除
         </p>
         {dedWarning && (
@@ -197,7 +199,7 @@ export default function PayslipDetailView({ payslip, prev }: Props) {
         {Object.entries(deductions.otherDeductions).map(([k, v]) => (
           <Row key={k} label={k} value={v} delta={pd ? v - (pd.otherDeductions[k] ?? 0) : undefined} deltaInvert />
         ))}
-        <Row label="控除合計額" value={deductions.total} bold isTotal accent="text-red-600" delta={pd ? deductions.total - pd.total : undefined} deltaInvert />
+        <Row label="控除合計額" value={deductions.total} bold isTotal accentColor="#d06868" delta={pd ? deductions.total - pd.total : undefined} deltaInvert />
       </div>
 
       {/* Attendance */}
