@@ -396,11 +396,19 @@ export default function AnnualSummaryPage() {
                     </div>
                   )
                   const itRate = simResult.incomeTaxRate
+                  // 収入区分に応じた給与所得控除の計算式（国税庁の速算表）
+                  const empDeductionFormula = (() => {
+                    if (simIncome <= 1_800_000) return '収入×40%-10万（最低65万）'
+                    if (simIncome <= 3_600_000) return '収入×30%+8万'
+                    if (simIncome <= 6_600_000) return '収入×20%+44万'
+                    if (simIncome <= 8_500_000) return '収入×10%+110万'
+                    return '上限195万'
+                  })()
                   return (
                     <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-xs">
                       <Divider label="① 給与所得" />
                       <Row label="給与収入（年額）" value={formatYen(simIncome)} />
-                      <Row label="給与所得控除" value={`-${formatYen(simResult.employmentIncomeDeduction)}`} indent />
+                      <Row label="給与所得控除" value={`-${formatYen(simResult.employmentIncomeDeduction)}`} sub={empDeductionFormula} indent />
                       <Row label="給与所得" value={formatYen(simResult.employmentIncome)} bold />
 
                       <Divider label="② 所得税の課税所得" />
