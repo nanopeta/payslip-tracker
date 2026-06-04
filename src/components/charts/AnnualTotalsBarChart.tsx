@@ -22,23 +22,32 @@ export default function AnnualTotalsBarChart({ data }: Props) {
     Chart.getChart(canvasRef.current!)?.destroy(); if (chartRef.current) chartRef.current.destroy()
 
     chartRef.current = new Chart(canvasRef.current, {
-      type: 'bar',
+      type: 'line',
       data: {
         labels: data.map((d) => d.label),
         datasets: [
           {
             label: '総支給',
             data: data.map((d) => d.totalIncome),
-            backgroundColor: '#5b8fa8',
-            borderRadius: 3,
-            borderSkipped: false,
+            borderColor: '#5b8fa8',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [5, 3],
+            pointRadius: 4,
+            pointBackgroundColor: '#5b8fa8',
+            pointHoverRadius: 6,
+            tension: 0,
           },
           {
             label: '差引支給',
             data: data.map((d) => d.totalNetPay),
-            backgroundColor: '#5fad9b',
-            borderRadius: 3,
-            borderSkipped: false,
+            borderColor: '#5fad9b',
+            backgroundColor: 'transparent',
+            borderWidth: 2.5,
+            pointRadius: 4,
+            pointBackgroundColor: '#5fad9b',
+            pointHoverRadius: 6,
+            tension: 0,
           },
         ],
       },
