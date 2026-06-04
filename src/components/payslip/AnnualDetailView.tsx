@@ -28,11 +28,10 @@ function mergeRecord(target: Record<string, number>, source: Record<string, numb
 }
 
 interface Props {
-  year: number
   payslips: Payslip[]
 }
 
-export default function AnnualDetailView({ year, payslips }: Props) {
+export default function AnnualDetailView({ payslips }: Props) {
   const settings = useStore((s) => s.overtimeSettings)
 
   const inc = {
@@ -117,12 +116,6 @@ export default function AnnualDetailView({ year, payslips }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-brand-700 text-white rounded-xl px-5 py-5">
-        <p className="text-brand-200 text-sm">{year}年 年間集計</p>
-        <p className="text-3xl font-bold mt-2 tabular-nums">{formatYen(netPay)}</p>
-        <p className="text-brand-200 text-xs mt-0.5">年間差引支給額</p>
-      </div>
-
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <p className="text-sm font-bold text-brand-700 mb-3 flex items-center gap-2">
           <span className="w-1 h-4 bg-brand-500 rounded-full inline-block"></span>
@@ -209,26 +202,26 @@ export default function AnnualDetailView({ year, payslips }: Props) {
 
       {showAttendance && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+          <p className="text-sm font-bold text-gray-600 mb-2.5 flex items-center gap-2">
             <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
             勤怠（年間合計）
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-x-4 gap-y-2">
             {[
               { label: '出勤日数', value: workDays, display: `${workDays}日` },
-              { label: '有休', value: paidLeave, display: `${paidLeave}日` },
+              { label: '有休取得', value: paidLeave, display: `${paidLeave}日` },
               { label: '有休残（最終月）', value: paidLeaveRemaining, display: `${paidLeaveRemaining}日` },
-              { label: '欠勤日数', value: absenceDays, display: `${absenceDays}日` },
+              { label: '欠勤', value: absenceDays, display: `${absenceDays}日` },
+              { label: '休日出勤', value: holidayWorkDays, display: `${holidayWorkDays}日` },
+              { label: '特別休暇', value: specialLeave, display: `${specialLeave}日` },
               { label: '出勤時間', value: workHours, display: formatHoursMinutes(workHours) },
               { label: '残業時間', value: overtimeHours, display: formatHoursMinutes(overtimeHours) },
               { label: '遅早時間', value: lateEarlyHours, display: formatHoursMinutes(lateEarlyHours) },
-              { label: '休日出勤日数', value: holidayWorkDays, display: `${holidayWorkDays}日` },
-              { label: '特別休暇', value: specialLeave, display: `${specialLeave}日` },
             ].map((item) =>
               item.value > 0 ? (
-                <div key={item.label} className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500">{item.label}</p>
-                  <p className="text-base font-semibold tabular-nums text-gray-900 mt-0.5">{item.display}</p>
+                <div key={item.label}>
+                  <p className="text-[10px] text-gray-400 leading-tight">{item.label}</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{item.display}</p>
                 </div>
               ) : null
             )}
