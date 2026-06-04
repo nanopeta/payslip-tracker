@@ -383,6 +383,7 @@ export default function AnnualSummaryPage() {
                     {([
                       { label: '給与所得控除', value: `-${formatYen(simResult.employmentIncomeDeduction)}`, bold: false, accent: false },
                       { label: '給与所得', value: formatYen(simResult.employmentIncome), bold: false, accent: false },
+                      { label: '基礎控除（令和7-8年）', value: `-${formatYen(simResult.basicDeduction)}`, bold: false, accent: false },
                       { label: '課税所得（所得税）', value: formatYen(simResult.taxableIncome), bold: true, accent: false },
                       { label: '所得税率', value: `${(simResult.incomeTaxRate * 100).toFixed(0)}%`, bold: true, accent: false },
                       { label: '課税所得（住民税）', value: formatYen(simResult.taxableIncomeResident), bold: false, accent: false },
