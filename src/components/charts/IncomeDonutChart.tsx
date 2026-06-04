@@ -128,7 +128,19 @@ export default function IncomeDonutChart({ income, prevIncome }: Props) {
         })}
         <div className="flex items-center justify-between py-[7px]">
           <span className="text-sm text-[#7a94a6] font-medium">合計</span>
-          <span className="text-sm text-[#243447] font-semibold tabular-nums">{formatYen(income.total)}</span>
+          <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
+            <span className="text-sm text-[#243447] font-semibold">{formatYen(income.total)}</span>
+            {prevIncome && (() => {
+              const d = income.total - prevIncome.total
+              return (
+                <span className="text-xs w-14 text-right font-semibold"
+                  style={{ color: d !== 0 ? (d >= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
+                  {d !== 0 ? `${d > 0 ? '+' : ''}${formatYen(d)}` : '0'}
+                </span>
+              )
+            })()}
+            <span className="w-11" />
+          </div>
         </div>
       </div>
     </div>
