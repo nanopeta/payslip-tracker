@@ -272,12 +272,24 @@ export default function AnnualSummaryPage() {
                             </span>
                           </div>
                         )}
-                        {simBonusSlips.length > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">賞与控除実績</span>
-                            <span className="tabular-nums text-gray-700">{formatYen(simBonusIncomeSum - simBonusNetPaySum)}</span>
-                          </div>
-                        )}
+                        {simBonusSlips.length > 0 && (() => {
+                          const bonusTotalDeductions = simBonusIncomeSum - simBonusNetPaySum
+                          const bonusOther = bonusTotalDeductions - simBonusSISum
+                          return (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">賞与社保実績</span>
+                                <span className="tabular-nums text-gray-700">{formatYen(simBonusSISum)}</span>
+                              </div>
+                              {bonusOther !== 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">賞与その他控除実績</span>
+                                  <span className="tabular-nums text-gray-700">{formatYen(bonusOther)}</span>
+                                </div>
+                              )}
+                            </>
+                          )
+                        })()}
                         <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
                           <span className="text-gray-600">合計</span>
                           <span className="tabular-nums" style={{ color: '#d06868' }}>
