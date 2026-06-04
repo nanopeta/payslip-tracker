@@ -118,11 +118,11 @@ export default function PayslipDetailView({ payslip }: Props) {
       {/* 勤怠 */}
       {(attendance.workDays > 0 || attendance.workHours > 0) && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-          <p className="text-sm font-bold text-gray-600 mb-2 flex items-center gap-2">
+          <p className="text-sm font-bold text-gray-600 mb-2.5 flex items-center gap-2">
             <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
             勤怠
           </p>
-          <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+          <div className="grid grid-cols-3 gap-3">
             {[
               { label: '出勤日数', value: attendance.workDays, display: `${attendance.workDays}日`, alwaysShow: false },
               { label: '有休取得', value: attendance.paidLeave, display: `${attendance.paidLeave}日`, alwaysShow: true },
