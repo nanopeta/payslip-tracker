@@ -99,9 +99,10 @@ export default function DeductionDonutChart({ deductions, prevDeductions }: Prop
               </div>
               <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
                 <span className="text-[#243447] font-medium">{formatYen(item.value)}</span>
-                {delta !== undefined && delta !== 0 && (
-                  <span className="text-xs w-14 text-right" style={{ color: delta <= 0 ? '#5fad9b' : '#d06868' }}>
-                    {delta > 0 ? '+' : ''}{formatYen(delta)}
+                {prevDeductions && (
+                  <span className="text-xs w-14 text-right"
+                    style={{ color: delta !== undefined && delta !== 0 ? (delta <= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
+                    {delta !== undefined && delta !== 0 ? `${delta > 0 ? '+' : ''}${formatYen(delta)}` : '0'}
                   </span>
                 )}
                 <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / deductions.total) * 100).toFixed(1)}%</span>

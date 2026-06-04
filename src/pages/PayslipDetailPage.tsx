@@ -7,7 +7,7 @@ import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import IncomeDonutChart from '../components/charts/IncomeDonutChart'
 import NetPayBreakdownChart from '../components/charts/NetPayBreakdownChart'
 import { previousPayslip, nextPayslip } from '../lib/aggregations'
-import { formatYen, formatHoursMinutes } from '../lib/formatters'
+import { formatYen } from '../lib/formatters'
 import type { Payslip } from '../types/payslip'
 
 export default function PayslipDetailPage() {
@@ -42,35 +42,6 @@ export default function PayslipDetailPage() {
     updatePayslip(payslip!.id, updated)
     setEditing(false)
   }
-
-  const attendanceItems = prev
-    ? [
-        {
-          label: '出勤日数',
-          value: payslip!.attendance.workDays,
-          prevValue: prev.attendance.workDays,
-          display: `${payslip!.attendance.workDays}日`,
-          invert: false,
-          fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日`,
-        },
-        {
-          label: '残業時間',
-          value: payslip!.attendance.overtimeHours,
-          prevValue: prev.attendance.overtimeHours,
-          display: formatHoursMinutes(payslip!.attendance.overtimeHours),
-          invert: true,
-          fmt: (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}h`,
-        },
-        {
-          label: '有給残日数',
-          value: payslip!.attendance.paidLeaveRemaining,
-          prevValue: prev.attendance.paidLeaveRemaining,
-          display: `${payslip!.attendance.paidLeaveRemaining}日`,
-          invert: false,
-          fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日`,
-        },
-      ]
-    : null
 
   return (
     <div className="space-y-3">
@@ -129,52 +100,6 @@ export default function PayslipDetailPage() {
         </div>
       )}
 
-      {!editing && prev && (
-        <div className="bg-white rounded-xl p-3 shadow-sm border border-brand-200">
-          <p className="text-xs text-gray-400 mb-2">{prev.year}年{prev.month}月との比較</p>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: '手取り', delta: payslip.summary.netPay - prev.summary.netPay },
-              { label: '総支給', delta: payslip.income.total - prev.income.total },
-              { label: '控除合計', delta: payslip.deductions.total - prev.deductions.total, invert: true },
-            ].map(({ label, delta, invert }) => (
-              <div key={label} className="text-center">
-                <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                <p
-                  className="text-sm font-semibold tabular-nums"
-                  style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}
-                >
-                  {delta >= 0 ? '+' : '-'}{formatYen(Math.abs(delta))}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!editing && attendanceItems && (
-        <div className="bg-white rounded-xl p-3 shadow-sm border border-brand-200">
-          <p className="text-xs text-gray-400 mb-2">勤怠（{prev!.year}年{prev!.month}月との比較）</p>
-          <div className="grid grid-cols-3 gap-3">
-            {attendanceItems.map(({ label, value, prevValue, display, invert, fmt }) => {
-              const delta = value - prevValue
-              const deltaColor = (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868'
-              return (
-                <div key={label} className="text-center">
-                  <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                  <p className="text-base font-semibold tabular-nums text-gray-900">{display}</p>
-                  {delta !== 0 && (
-                    <p className="text-xs tabular-nums mt-0.5" style={{ color: deltaColor }}>
-                      {fmt(delta)}
-                    </p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {editing ? (
         <div className="space-y-3">
           <p className="font-semibold text-gray-800">数値を編集してください</p>
@@ -186,6 +111,37 @@ export default function PayslipDetailPage() {
         </div>
       ) : (
         <>
+          {/* ヒーロー・みなし残業・勤怠 */}
+          <PayslipDetailView payslip={payslip} />
+
+          {/* 前月比（コンパクト統合） */}
+          {prev && (
+            <div className="bg-white rounded-xl px-3 py-2 shadow-sm border border-brand-200">
+              <p className="text-[10px] text-gray-400 mb-1.5">{prev.year}年{prev.month}月との比較</p>
+              <div className="grid grid-cols-3 gap-x-3 gap-y-2">
+                {[
+                  { label: '手取り', delta: payslip.summary.netPay - prev.summary.netPay, invert: false },
+                  { label: '総支給', delta: payslip.income.total - prev.income.total, invert: false },
+                  { label: '控除', delta: payslip.deductions.total - prev.deductions.total, invert: true },
+                  { label: '出勤日数', delta: payslip.attendance.workDays - prev.attendance.workDays, invert: false, fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
+                  { label: '残業時間', delta: payslip.attendance.overtimeHours - prev.attendance.overtimeHours, invert: true, fmt: (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}h` },
+                  { label: '有給残', delta: payslip.attendance.paidLeaveRemaining - prev.attendance.paidLeaveRemaining, invert: false, fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
+                ].map(({ label, delta, invert, fmt }) => (
+                  <div key={label}>
+                    <p className="text-[10px] text-gray-400 leading-tight">{label}</p>
+                    <p className="text-xs font-semibold tabular-nums mt-0.5"
+                      style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}>
+                      {fmt
+                        ? fmt(delta)
+                        : `${delta >= 0 ? '+' : '-'}${formatYen(Math.abs(delta))}`}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 収支内訳（一番下） */}
           {(payslip.income.total > 0 || payslip.deductions.total > 0) && (
             <div className="bg-white rounded-xl p-3 shadow-sm border border-brand-200">
               <div className="flex items-center justify-between mb-1">
@@ -213,7 +169,6 @@ export default function PayslipDetailPage() {
                   : <DeductionDonutChart deductions={payslip.deductions} prevDeductions={prev?.deductions} />}
             </div>
           )}
-          <PayslipDetailView payslip={payslip} prev={prev} />
         </>
       )}
     </div>
