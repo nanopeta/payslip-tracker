@@ -137,7 +137,7 @@ export default function UploadPage() {
       {step === 'idle' && (
         <>
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 whitespace-pre-wrap">
+            <div className="rounded-xl px-4 py-3 text-sm whitespace-pre-wrap" style={{ backgroundColor: 'rgba(208,104,104,0.08)', border: '1px solid rgba(208,104,104,0.3)', color: '#d06868' }}>
               {error}
             </div>
           )}

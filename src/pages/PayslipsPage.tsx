@@ -154,7 +154,8 @@ export default function PayslipsPage() {
               {selectedIds.size > 0 && (
                 <button
                   onClick={handleDeleteSelected}
-                  className="px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+                  className="px-3 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: '#d06868' }}
                 >
                   削除 ({selectedIds.size}件)
                 </button>
