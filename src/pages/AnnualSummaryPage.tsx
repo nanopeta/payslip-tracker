@@ -5,10 +5,13 @@ import AnnualTotalsBarChart from '../components/charts/AnnualTotalsBarChart'
 import WithholdingCard from '../components/withholding/WithholdingCard'
 import AnnualDetailView from '../components/payslip/AnnualDetailView'
 import MonthlyNetPayBarChart from '../components/charts/MonthlyNetPayBarChart'
+import IncomeDonutChart from '../components/charts/IncomeDonutChart'
+import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import { annualTotals, uniqueYears } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 import { calcFurusato, defaultTaxInputs, type TaxDeductionInputs } from '../lib/furusatoCalc'
 import type { Payslip } from '../types/payslip'
+import { emptyIncome, emptyDeductions } from '../types/payslip'
 
 function exportCsv(year: number, slips: Payslip[]) {
   const headers = ['年月', '種別', '総支給', '控除合計', '手取り', '残業時間']
@@ -49,6 +52,7 @@ export default function AnnualSummaryPage() {
   const [showSimDetail, setShowSimDetail] = useState(false)
   const [showIncomeDetail, setShowIncomeDetail] = useState(false)
   const [showRefundDetail, setShowRefundDetail] = useState(false)
+  const [annualDonutTab, setAnnualDonutTab] = useState<Record<number, 'income' | 'deduction'>>({})
   const [customMode, setCustomMode] = useState(false)
   const [customIncome, setCustomIncome] = useState(0)
   const [customSocialInsurance, setCustomSocialInsurance] = useState(0)
@@ -788,11 +792,57 @@ export default function AnnualSummaryPage() {
                   )}
 
                   {/* Annual detail — expanded */}
-                  {isExpanded && (
-                    <div className="border-t border-gray-100 pt-2">
-                      <AnnualDetailView year={year} payslips={yearSlips} />
-                    </div>
-                  )}
+                  {isExpanded && (() => {
+                    const tab = annualDonutTab[year] ?? 'income'
+                    const aggIncome = yearSlips.reduce((agg, p) => {
+                      const keys = Object.keys(emptyIncome()) as (keyof ReturnType<typeof emptyIncome>)[]
+                      keys.forEach((k) => {
+                        if (k === 'otherIncome' || k === 'detailIncome') return
+                        (agg[k] as number) += p.income[k] as number
+                      })
+                      Object.entries(p.income.otherIncome).forEach(([k, v]) => { agg.otherIncome[k] = (agg.otherIncome[k] || 0) + v })
+                      Object.entries(p.income.detailIncome).forEach(([k, v]) => { agg.detailIncome[k] = (agg.detailIncome[k] || 0) + v })
+                      return agg
+                    }, emptyIncome())
+                    aggIncome.total = totals.totalIncome
+                    const aggDeductions = yearSlips.reduce((agg, p) => {
+                      const keys = Object.keys(emptyDeductions()) as (keyof ReturnType<typeof emptyDeductions>)[]
+                      keys.forEach((k) => {
+                        if (k === 'otherDeductions') return
+                        (agg[k] as number) += p.deductions[k] as number
+                      })
+                      Object.entries(p.deductions.otherDeductions).forEach(([k, v]) => { agg.otherDeductions[k] = (agg.otherDeductions[k] || 0) + v })
+                      return agg
+                    }, emptyDeductions())
+                    return (
+                      <div className="border-t border-gray-100 pt-3 space-y-3">
+                        {/* 収支内訳タブ */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <p className="text-xs font-medium text-gray-500 flex-1">収支内訳</p>
+                            <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs">
+                              {(['income', 'deduction'] as const).map((t) => (
+                                <button
+                                  key={t}
+                                  onClick={() => setAnnualDonutTab((prev) => ({ ...prev, [year]: t }))}
+                                  className={`px-3 py-1 transition-colors ${tab === t ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                  {t === 'income' ? '支給' : '控除'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {tab === 'income'
+                            ? <IncomeDonutChart income={aggIncome} />
+                            : <DeductionDonutChart deductions={aggDeductions} />
+                          }
+                        </div>
+                        <div className="border-t border-gray-100 pt-2">
+                          <AnnualDetailView year={year} payslips={yearSlips} />
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                   {/* Bottom expand/collapse button */}
                   <button
