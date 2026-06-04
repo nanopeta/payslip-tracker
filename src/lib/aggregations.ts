@@ -199,7 +199,7 @@ export function nextPayslip(payslips: Payslip[], current: Payslip): Payslip | nu
   return pickMonthlyFirst(later.filter((p) => p.year * 100 + p.month === minKey))
 }
 
-// 比較用: 同種別（給与は給与、賞与は賞与）の直前明細を返す
+// ナビ・比較共用: 同種別（給与は給与、賞与は賞与）の直前明細を返す
 export function previousSameTypePayslip(payslips: Payslip[], current: Payslip): Payslip | null {
   const currentKey = current.year * 100 + current.month
   const currentType = current.payslipType ?? 'monthly'
@@ -209,6 +209,17 @@ export function previousSameTypePayslip(payslips: Payslip[], current: Payslip): 
   if (earlier.length === 0) return null
   const maxKey = Math.max(...earlier.map((p) => p.year * 100 + p.month))
   return earlier.filter((p) => p.year * 100 + p.month === maxKey)[0] ?? null
+}
+
+export function nextSameTypePayslip(payslips: Payslip[], current: Payslip): Payslip | null {
+  const currentKey = current.year * 100 + current.month
+  const currentType = current.payslipType ?? 'monthly'
+  const later = payslips.filter(
+    (p) => (p.payslipType ?? 'monthly') === currentType && p.year * 100 + p.month > currentKey,
+  )
+  if (later.length === 0) return null
+  const minKey = Math.min(...later.map((p) => p.year * 100 + p.month))
+  return later.filter((p) => p.year * 100 + p.month === minKey)[0] ?? null
 }
 
 export function uniqueYears(payslips: Payslip[]): number[] {
