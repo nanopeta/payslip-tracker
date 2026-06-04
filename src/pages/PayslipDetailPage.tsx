@@ -129,7 +129,7 @@ export default function PayslipDetailPage() {
                 ].map(({ label, delta, invert, fmt }) => (
                   <div key={label}>
                     <p className="text-[10px] text-gray-400 leading-tight">{label}</p>
-                    <p className="text-xs font-semibold tabular-nums mt-0.5"
+                    <p className="text-sm font-semibold tabular-nums mt-0.5"
                       style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}>
                       {fmt
                         ? fmt(delta)
