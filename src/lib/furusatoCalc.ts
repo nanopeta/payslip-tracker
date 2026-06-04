@@ -17,12 +17,17 @@ export const defaultTaxInputs: TaxDeductionInputs = {
 export interface FurusatoResult {
   employmentIncomeDeduction: number
   employmentIncome: number
+  // 所得税側控除
   lifeInsuranceDeduction: number
   earthquakeDeduction: number
   dependentDeduction: number
   basicDeduction: number
   taxableIncome: number
   incomeTaxRate: number
+  // 住民税側控除
+  lifeInsuranceDeductionRT: number
+  earthquakeDeductionRT: number
+  dependentDeductionRT: number
   taxableIncomeResident: number
   residentTaxDividend: number
   furusatoLimit: number
@@ -129,6 +134,9 @@ export function calcFurusato(
     basicDeduction,
     taxableIncome,
     incomeTaxRate,
+    lifeInsuranceDeductionRT: lifeDeductionRT,
+    earthquakeDeductionRT: earthquakeDeductionRT,
+    dependentDeductionRT: dependentDeductionRT,
     taxableIncomeResident,
     residentTaxDividend,
     furusatoLimit,
