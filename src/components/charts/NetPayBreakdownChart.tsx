@@ -114,9 +114,11 @@ export default function NetPayBreakdownChart({ income, deductions, summary, prev
       <div className="w-full min-w-0 divide-y divide-gray-100 sm:flex-1 sm:self-center">
         {data.map((item) => {
           const delta = item.prevValue !== undefined ? item.value - item.prevValue : undefined
-          const deltaColor = delta !== undefined && delta !== 0
-            ? (item.deltaInvert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868'
-            : undefined
+          const hasDelta = delta !== undefined && delta !== 0
+          const deltaColor = hasDelta
+            ? (item.deltaInvert ? delta! <= 0 : delta! >= 0) ? '#5fad9b' : '#d06868'
+            : 'transparent'
+          const hasPrev = prevDeductions !== undefined || prevSummary !== undefined
           return (
             <div key={item.name} className="flex items-center justify-between py-[7px] text-sm">
               <div className="flex items-center gap-2 min-w-0">
@@ -125,9 +127,9 @@ export default function NetPayBreakdownChart({ income, deductions, summary, prev
               </div>
               <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
                 <span className="text-[#243447] font-medium">{formatYen(item.value)}</span>
-                {delta !== undefined && delta !== 0 && (
+                {hasPrev && (
                   <span className="text-xs w-14 text-right" style={{ color: deltaColor }}>
-                    {delta > 0 ? '+' : ''}{formatYen(delta)}
+                    {hasDelta ? `${delta! > 0 ? '+' : ''}${formatYen(delta!)}` : '0'}
                   </span>
                 )}
                 <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / total) * 100).toFixed(1)}%</span>
