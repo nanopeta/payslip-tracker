@@ -1,6 +1,7 @@
 export interface TaxDeductionInputs {
   ideco: number                      // iDeCo 年額（円）
-  lifeInsurancePremium: number       // 生命保険料 年間支払額（円）
+  lifeInsurancePremium: number       // 新生命保険料（一般）年間支払額（円）
+  careInsurancePremium: number       // 介護医療保険料 年間支払額（円）
   earthquakeInsurancePremium: number // 地震保険料 年間支払額（円）
   dependents: number                 // 扶養人数（一般扶養）
 }
@@ -8,6 +9,7 @@ export interface TaxDeductionInputs {
 export const defaultTaxInputs: TaxDeductionInputs = {
   ideco: 0,
   lifeInsurancePremium: 0,
+  careInsurancePremium: 0,
   earthquakeInsurancePremium: 0,
   dependents: 0,
 }
@@ -69,8 +71,12 @@ export function calcFurusato(
   const empDeduction = calcEmploymentIncomeDeduction(annualIncome)
   const empIncome = Math.max(0, annualIncome - empDeduction)
 
-  // 所得税用
-  const lifeDeductionIT = calcLifeInsuranceDeductionIT(inputs.lifeInsurancePremium)
+  // 所得税用（生命保険料控除は新生命・介護医療を別枠で計算し合算、上限120,000）
+  const lifeDeductionIT = Math.min(
+    calcLifeInsuranceDeductionIT(inputs.lifeInsurancePremium) +
+    calcLifeInsuranceDeductionIT(inputs.careInsurancePremium ?? 0),
+    120_000,
+  )
   const earthquakeDeductionIT = Math.min(inputs.earthquakeInsurancePremium, 50_000)
   const dependentDeductionIT = inputs.dependents * 380_000
   const totalDeductionsIT =
@@ -78,8 +84,12 @@ export function calcFurusato(
   const taxableIncome = Math.max(0, empIncome - totalDeductionsIT)
   const incomeTaxRate = getIncomeTaxRate(taxableIncome)
 
-  // 住民税用
-  const lifeDeductionRT = calcLifeInsuranceDeductionRT(inputs.lifeInsurancePremium)
+  // 住民税用（生命保険料控除は別枠で計算し合算、上限70,000）
+  const lifeDeductionRT = Math.min(
+    calcLifeInsuranceDeductionRT(inputs.lifeInsurancePremium) +
+    calcLifeInsuranceDeductionRT(inputs.careInsurancePremium ?? 0),
+    70_000,
+  )
   const earthquakeDeductionRT = Math.min(Math.floor(inputs.earthquakeInsurancePremium / 2), 25_000)
   const dependentDeductionRT = inputs.dependents * 330_000
   const totalDeductionsRT =
