@@ -24,6 +24,7 @@ export interface FurusatoResult {
   basicDeduction: number
   taxableIncome: number
   incomeTaxRate: number
+  incomeTaxAmount: number   // 正確な年税額（課税所得から算出）
   // 住民税側控除
   lifeInsuranceDeductionRT: number
   earthquakeDeductionRT: number
@@ -58,6 +59,20 @@ function calcLifeInsuranceDeductionRT(premium: number): number {
   if (premium <= 32_000) return Math.floor(premium / 2) + 6_000
   if (premium <= 56_000) return Math.floor(premium / 4) + 14_000
   return 28_000
+}
+
+// 速算表による正確な年税額（100円未満切捨て後×1.021）
+function calcIncomeTaxAmount(taxableIncome: number): number {
+  let base: number
+  if (taxableIncome <= 1_950_000) base = taxableIncome * 0.05
+  else if (taxableIncome <= 3_300_000) base = taxableIncome * 0.10 - 97_500
+  else if (taxableIncome <= 6_950_000) base = taxableIncome * 0.20 - 427_500
+  else if (taxableIncome <= 9_000_000) base = taxableIncome * 0.23 - 636_000
+  else if (taxableIncome <= 18_000_000) base = taxableIncome * 0.33 - 1_536_000
+  else if (taxableIncome <= 40_000_000) base = taxableIncome * 0.40 - 2_796_000
+  else base = taxableIncome * 0.45 - 4_796_000
+  const rounded = Math.floor(base / 100) * 100
+  return Math.floor(rounded * 1.021)
 }
 
 function getIncomeTaxRate(taxableIncome: number): number {
@@ -105,6 +120,7 @@ export function calcFurusato(
     socialInsurance + inputs.ideco + lifeDeductionIT + earthquakeDeductionIT + dependentDeductionIT + basicDeduction
   const taxableIncome = Math.max(0, empIncome - totalDeductionsIT)
   const incomeTaxRate = getIncomeTaxRate(taxableIncome)
+  const incomeTaxAmount = calcIncomeTaxAmount(taxableIncome)
 
   // 住民税用（基礎控除は令和7年分も43万円据え置き）
   const lifeDeductionRT = Math.min(
@@ -134,6 +150,7 @@ export function calcFurusato(
     basicDeduction,
     taxableIncome,
     incomeTaxRate,
+    incomeTaxAmount,
     lifeInsuranceDeductionRT: lifeDeductionRT,
     earthquakeDeductionRT: earthquakeDeductionRT,
     dependentDeductionRT: dependentDeductionRT,

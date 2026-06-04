@@ -424,6 +424,25 @@ export default function AnnualSummaryPage() {
               </div>
             )}
 
+            {simResult && !customMode && (() => {
+              const projectedIT = simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum
+              const refund = projectedIT - simResult.incomeTaxAmount
+              return (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">年末調整の推定還付金</p>
+                  <p
+                    className="text-xl font-bold tabular-nums"
+                    style={{ color: refund >= 0 ? '#5fad9b' : '#d06868' }}
+                  >
+                    {refund >= 0 ? '+' : ''}{formatYen(refund)}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {refund >= 0 ? '年末調整で還付見込み' : '年末調整で追加納税の可能性あり'}
+                  </p>
+                </div>
+              )
+            })()}
+
             {simResult && (
               <>
                 <button
@@ -503,6 +522,23 @@ export default function AnnualSummaryPage() {
                         </p>
                       </div>
                       <Row label="推定上限額" value={formatYen(simResult.furusatoLimit)} bold accent />
+
+                      {!customMode && (() => {
+                        const projectedIT = simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum
+                        const refund = projectedIT - simResult.incomeTaxAmount
+                        return (
+                          <>
+                            <Divider label="⑤ 推定年末還付金" />
+                            <Row label="推定年間源泉徴収（月次+賞与）" value={formatYen(projectedIT)} />
+                            <Row label="正確な年税額" value={`-${formatYen(simResult.incomeTaxAmount)}`} sub="課税所得×税率×1.021" indent />
+                            <Row
+                              label="推定還付金"
+                              value={`${refund >= 0 ? '+' : ''}${formatYen(refund)}`}
+                              bold accent
+                            />
+                          </>
+                        )
+                      })()}
                     </div>
                   )
                 })()}
