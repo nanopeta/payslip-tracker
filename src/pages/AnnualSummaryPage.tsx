@@ -707,14 +707,14 @@ export default function AnnualSummaryPage() {
                     </div>
                   </div>
 
-                  {/* Monthly stats: avg / max / min + bar chart */}
+                  {/* Monthly stats: avg / max / min + chart */}
                   {monthlySlips.length > 0 && (() => {
                     const chartData = yearSlips
-                      .reduce<{ month: number; monthlyNetPay: number; bonusNetPay: number; monthlyIncome: number }[]>((acc, p) => {
+                      .reduce<{ month: number; monthlyNetPay: number; bonusNetPay: number; monthlyIncome: number; bonusIncome: number }[]>((acc, p) => {
                         const existing = acc.find((d) => d.month === p.month)
                         const isBonus = p.payslipType === 'bonus'
                         if (existing) {
-                          if (isBonus) existing.bonusNetPay += p.summary.netPay
+                          if (isBonus) { existing.bonusNetPay += p.summary.netPay; existing.bonusIncome += p.income.total }
                           else { existing.monthlyNetPay += p.summary.netPay; existing.monthlyIncome += p.income.total }
                         } else {
                           acc.push({
@@ -722,12 +722,13 @@ export default function AnnualSummaryPage() {
                             monthlyNetPay: isBonus ? 0 : p.summary.netPay,
                             bonusNetPay: isBonus ? p.summary.netPay : 0,
                             monthlyIncome: isBonus ? 0 : p.income.total,
+                            bonusIncome: isBonus ? p.income.total : 0,
                           })
                         }
                         return acc
                       }, [])
                       .sort((a, b) => a.month - b.month)
-                      .map((d) => ({ label: `${d.month}月`, monthlyNetPay: d.monthlyNetPay, bonusNetPay: d.bonusNetPay, monthlyIncome: d.monthlyIncome }))
+                      .map((d) => ({ label: `${d.month}月`, monthlyNetPay: d.monthlyNetPay, bonusNetPay: d.bonusNetPay, monthlyIncome: d.monthlyIncome, bonusIncome: d.bonusIncome }))
                     return (
                       <div className="border-t border-gray-100 pt-2">
                         <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
