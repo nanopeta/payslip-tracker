@@ -794,7 +794,7 @@ export default function AnnualSummaryPage() {
                           {tab === 'deduction' && <DeductionDonutChart deductions={aggDeductions} />}
                         </div>
                         <div className="border-t border-gray-100 pt-2">
-                          <AnnualDetailView year={year} payslips={yearSlips} />
+                          <AnnualDetailView payslips={yearSlips} />
                         </div>
                       </div>
                     )
