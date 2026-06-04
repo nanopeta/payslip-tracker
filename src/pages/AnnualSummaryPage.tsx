@@ -587,7 +587,7 @@ export default function AnnualSummaryPage() {
             }
           })
         return (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-4">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 pt-3 pb-4">
             <p className="text-sm font-semibold text-gray-700 mb-3">年別推移</p>
             <AnnualTotalsBarChart data={chartData} />
           </div>
@@ -676,7 +676,7 @@ export default function AnnualSummaryPage() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-400">控除合計</p>
-                      <p className="text-base font-semibold tabular-nums text-red-500 mt-0.5">{formatYen(totals.totalDeductions)}</p>
+                      <p className="text-base font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(totals.totalDeductions)}</p>
                     </div>
                   </div>
 
