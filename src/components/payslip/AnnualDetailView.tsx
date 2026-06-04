@@ -68,7 +68,7 @@ export default function AnnualDetailView({ payslips }: Props) {
             </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">残業時間合計</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{formatHoursMinutes(ytdActualHours)}</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{ytdActualHours.toFixed(1)}h</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">年間使用率</p>
@@ -96,19 +96,19 @@ export default function AnnualDetailView({ payslips }: Props) {
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">得した時間</p>
               <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: ytdGainHours >= 0 ? '#5fad9b' : '#d06868' }}>
-                {ytdGainHours >= 0 ? '+' : ''}{formatHoursMinutes(Math.abs(ytdGainHours))}
+                {ytdGainHours >= 0 ? '+' : '-'}{Math.abs(ytdGainHours).toFixed(1)}h
               </p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">残業時給平均</p>
               <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
-                {ytdOvertimeHourlyRate > 0 ? formatYen(ytdOvertimeHourlyRate) : '—'}
+                {ytdOvertimeHourlyRate > 0 ? `${formatYen(ytdOvertimeHourlyRate)}/h` : '—'}
               </p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">基本時給平均</p>
               <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
-                {ytdBasicHourlyRate > 0 ? formatYen(ytdBasicHourlyRate) : '—'}
+                {ytdBasicHourlyRate > 0 ? `${formatYen(ytdBasicHourlyRate)}/h` : '—'}
               </p>
             </div>
           </div>
