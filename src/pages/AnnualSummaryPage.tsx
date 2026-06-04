@@ -645,10 +645,7 @@ export default function AnnualSummaryPage() {
               <div key={year} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 {/* Header row */}
                 <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-                  <button
-                    onClick={() => toggleYear(year)}
-                    className="flex-1 flex items-center justify-between text-left hover:bg-gray-50 rounded transition-colors"
-                  >
+                  <div className="flex-1">
                     <p className="font-bold text-gray-900">
                       {year}年
                       <span className="text-sm font-normal text-gray-400 ml-2">{monthlyCount}ヶ月分{hasBonus ? `・賞与${bonusSlips.length}件` : ''}</span>
@@ -662,13 +659,7 @@ export default function AnnualSummaryPage() {
                         </span>
                       )}
                     </p>
-                    <svg
-                      className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
+                  </div>
                   <button
                     onClick={() => exportCsv(year, yearSlips)}
                     title={`${year}年のCSVをダウンロード`}
@@ -719,23 +710,24 @@ export default function AnnualSummaryPage() {
                   {/* Monthly stats: avg / max / min + bar chart */}
                   {monthlySlips.length > 0 && (() => {
                     const chartData = yearSlips
-                      .reduce<{ month: number; monthlyNetPay: number; bonusNetPay: number }[]>((acc, p) => {
+                      .reduce<{ month: number; monthlyNetPay: number; bonusNetPay: number; monthlyIncome: number }[]>((acc, p) => {
                         const existing = acc.find((d) => d.month === p.month)
                         const isBonus = p.payslipType === 'bonus'
                         if (existing) {
                           if (isBonus) existing.bonusNetPay += p.summary.netPay
-                          else existing.monthlyNetPay += p.summary.netPay
+                          else { existing.monthlyNetPay += p.summary.netPay; existing.monthlyIncome += p.income.total }
                         } else {
                           acc.push({
                             month: p.month,
                             monthlyNetPay: isBonus ? 0 : p.summary.netPay,
                             bonusNetPay: isBonus ? p.summary.netPay : 0,
+                            monthlyIncome: isBonus ? 0 : p.income.total,
                           })
                         }
                         return acc
                       }, [])
                       .sort((a, b) => a.month - b.month)
-                      .map((d) => ({ label: `${d.month}月`, monthlyNetPay: d.monthlyNetPay, bonusNetPay: d.bonusNetPay }))
+                      .map((d) => ({ label: `${d.month}月`, monthlyNetPay: d.monthlyNetPay, bonusNetPay: d.bonusNetPay, monthlyIncome: d.monthlyIncome }))
                     return (
                       <div className="border-t border-gray-100 pt-2">
                         <p className="text-xs text-gray-400 mb-2">月次手取（給与のみ）</p>
@@ -821,6 +813,20 @@ export default function AnnualSummaryPage() {
                       <AnnualDetailView year={year} payslips={yearSlips} />
                     </div>
                   )}
+
+                  {/* Bottom expand/collapse button */}
+                  <button
+                    onClick={() => toggleYear(year)}
+                    className="w-full flex items-center justify-center gap-1 pt-2 border-t border-gray-100 text-xs text-gray-400 hover:text-brand-600 transition-colors py-1"
+                  >
+                    {isExpanded ? '閉じる' : '詳細を見る'}
+                    <svg
+                      className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             )
