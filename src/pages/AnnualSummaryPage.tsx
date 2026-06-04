@@ -378,25 +378,65 @@ export default function AnnualSummaryPage() {
                   </svg>
                 </button>
 
-                {showSimDetail && (
-                  <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-xs">
-                    {([
-                      { label: '給与所得控除', value: `-${formatYen(simResult.employmentIncomeDeduction)}`, bold: false, accent: false },
-                      { label: '給与所得', value: formatYen(simResult.employmentIncome), bold: false, accent: false },
-                      { label: '基礎控除（令和7-8年）', value: `-${formatYen(simResult.basicDeduction)}`, bold: false, accent: false },
-                      { label: '課税所得（所得税）', value: formatYen(simResult.taxableIncome), bold: true, accent: false },
-                      { label: '所得税率', value: `${(simResult.incomeTaxRate * 100).toFixed(0)}%`, bold: true, accent: false },
-                      { label: '課税所得（住民税）', value: formatYen(simResult.taxableIncomeResident), bold: false, accent: false },
-                      { label: '住民税所得割（10%）', value: formatYen(simResult.residentTaxDividend), bold: true, accent: false },
-                      { label: '推定上限額', value: formatYen(simResult.furusatoLimit), bold: true, accent: true },
-                    ]).map(({ label, value, bold, accent }) => (
-                      <div key={label} className="flex justify-between">
-                        <span className={accent ? 'text-brand-700 font-medium' : 'text-gray-500'}>{label}</span>
-                        <span className={`tabular-nums ${bold ? 'font-semibold' : ''} ${accent ? 'text-brand-700' : 'text-gray-700'}`}>{value}</span>
+                {showSimDetail && (() => {
+                  const Row = ({ label, value, sub, bold, accent, indent }: {
+                    label: string; value: string; sub?: string; bold?: boolean; accent?: boolean; indent?: boolean
+                  }) => (
+                    <div className={`flex justify-between items-baseline gap-2 ${indent ? 'pl-3' : ''}`}>
+                      <span className={`${accent ? 'text-brand-700 font-medium' : 'text-gray-500'} shrink-0`}>
+                        {label}{sub && <span className="text-gray-400 ml-1">{sub}</span>}
+                      </span>
+                      <span className={`tabular-nums text-right ${bold ? 'font-semibold' : ''} ${accent ? 'text-brand-700' : 'text-gray-700'}`}>{value}</span>
+                    </div>
+                  )
+                  const Divider = ({ label }: { label: string }) => (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] font-semibold text-gray-400 tracking-wide whitespace-nowrap">{label}</span>
+                      <div className="flex-1 border-t border-gray-200" />
+                    </div>
+                  )
+                  const itRate = simResult.incomeTaxRate
+                  return (
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-xs">
+                      <Divider label="① 給与所得" />
+                      <Row label="給与収入（年額）" value={formatYen(simIncome)} />
+                      <Row label="給与所得控除" value={`-${formatYen(simResult.employmentIncomeDeduction)}`} indent />
+                      <Row label="給与所得" value={formatYen(simResult.employmentIncome)} bold />
+
+                      <Divider label="② 所得税の課税所得" />
+                      <Row label="給与所得" value={formatYen(simResult.employmentIncome)} />
+                      <Row label="社会保険料控除" value={`-${formatYen(simSocialInsurance)}`} indent />
+                      {taxInputs.ideco > 0 && <Row label="iDeCo（小規模共済等）" value={`-${formatYen(taxInputs.ideco)}`} indent />}
+                      {simResult.lifeInsuranceDeduction > 0 && <Row label="生命保険料控除" value={`-${formatYen(simResult.lifeInsuranceDeduction)}`} indent />}
+                      {simResult.earthquakeDeduction > 0 && <Row label="地震保険料控除" value={`-${formatYen(simResult.earthquakeDeduction)}`} indent />}
+                      {simResult.dependentDeduction > 0 && <Row label="扶養控除" value={`-${formatYen(simResult.dependentDeduction)}`} indent />}
+                      <Row label="基礎控除（令和7-8年）" value={`-${formatYen(simResult.basicDeduction)}`} indent />
+                      <Row label="課税所得（所得税）" value={formatYen(simResult.taxableIncome)} bold />
+                      <Row label="所得税率" value={`${(itRate * 100).toFixed(0)}%`} bold accent />
+
+                      <Divider label="③ 住民税の課税所得" />
+                      <Row label="給与所得" value={formatYen(simResult.employmentIncome)} />
+                      <Row label="社会保険料控除" value={`-${formatYen(simSocialInsurance)}`} indent />
+                      {taxInputs.ideco > 0 && <Row label="iDeCo（小規模共済等）" value={`-${formatYen(taxInputs.ideco)}`} indent />}
+                      {simResult.lifeInsuranceDeductionRT > 0 && <Row label="生命保険料控除（住民税）" value={`-${formatYen(simResult.lifeInsuranceDeductionRT)}`} indent />}
+                      {simResult.earthquakeDeductionRT > 0 && <Row label="地震保険料控除（住民税）" value={`-${formatYen(simResult.earthquakeDeductionRT)}`} indent />}
+                      {simResult.dependentDeductionRT > 0 && <Row label="扶養控除（住民税）" value={`-${formatYen(simResult.dependentDeductionRT)}`} indent />}
+                      <Row label="基礎控除（住民税・固定）" value="-¥430,000" indent />
+                      <Row label="課税所得（住民税）" value={formatYen(simResult.taxableIncomeResident)} bold />
+                      <Row label="住民税所得割" value={formatYen(simResult.residentTaxDividend)} sub="課税所得×10%" bold />
+
+                      <Divider label="④ ふるさと納税上限" />
+                      <div className="bg-white rounded p-2 border border-gray-200 text-[10px] text-gray-500 leading-relaxed space-y-0.5">
+                        <p className="font-medium text-gray-600">計算式</p>
+                        <p>住民税所得割×20% ÷ (1 − 所得税率×1.021 − 0.1) + 2,000</p>
+                        <p className="text-gray-400">
+                          {formatYen(simResult.residentTaxDividend)}×20% ÷ (1 − {(itRate * 100).toFixed(0)}%×1.021 − 10%) + ¥2,000
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <Row label="推定上限額" value={formatYen(simResult.furusatoLimit)} bold accent />
+                    </div>
+                  )
+                })()}
               </>
             )}
           </div>
