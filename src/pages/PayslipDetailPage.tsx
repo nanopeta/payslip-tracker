@@ -116,9 +116,12 @@ export default function PayslipDetailPage() {
 
           {/* 前月比（コンパクト統合・同種別比較） */}
           {prevSameType && (
-            <div className="bg-white rounded-xl px-3 py-2 shadow-sm border border-brand-200">
-              <p className="text-[10px] text-gray-400 mb-1.5">{prevSameType.year}年{prevSameType.month}月との比較</p>
-              <div className="grid grid-cols-3 gap-x-3 gap-y-2">
+            <div className="bg-white rounded-xl p-3 shadow-sm border border-brand-200">
+              <p className="text-sm font-bold text-gray-600 mb-2.5 flex items-center gap-2">
+                <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
+                {prevSameType.year}年{prevSameType.month}月との比較
+              </p>
+              <div className="grid grid-cols-3 gap-3">
                 {[
                   { label: '手取り', delta: payslip.summary.netPay - prevSameType.summary.netPay, invert: false },
                   { label: '総支給', delta: payslip.income.total - prevSameType.income.total, invert: false },
