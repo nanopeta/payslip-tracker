@@ -636,11 +636,6 @@ export default function AnnualSummaryPage() {
                 p.deductions.employmentInsurance,
               0
             )
-            const taxRate =
-              totals.totalIncome > 0
-                ? ((totals.totalIncomeTax + totals.totalResidentTax) / totals.totalIncome) * 100
-                : 0
-
             return (
               <div key={year} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 {/* Header row */}
@@ -794,23 +789,7 @@ export default function AnnualSummaryPage() {
 
                   {/* Annual detail — expanded */}
                   {isExpanded && (
-                    <div className="border-t border-gray-100 pt-2 space-y-3">
-                      {/* Tax burden rate */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-xs font-medium text-brand-700">税負担率（所得税＋住民税）</p>
-                          <p className="text-sm font-bold tabular-nums text-brand-700">{taxRate.toFixed(1)}%</p>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2">
-                          <div
-                            className="bg-brand-400 h-2 rounded-full"
-                            style={{ width: `${Math.min(taxRate, 100)}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {formatYen(totals.totalIncomeTax + totals.totalResidentTax)} ÷ {formatYen(totals.totalIncome)}
-                        </p>
-                      </div>
+                    <div className="border-t border-gray-100 pt-2">
                       <AnnualDetailView year={year} payslips={yearSlips} />
                     </div>
                   )}
