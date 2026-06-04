@@ -6,7 +6,7 @@ import PayslipReviewForm from '../components/upload/PayslipReviewForm'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import IncomeDonutChart from '../components/charts/IncomeDonutChart'
 import NetPayBreakdownChart from '../components/charts/NetPayBreakdownChart'
-import { previousPayslip, nextPayslip } from '../lib/aggregations'
+import { previousPayslip, nextPayslip, previousSameTypePayslip } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 import type { Payslip } from '../types/payslip'
 
@@ -21,6 +21,7 @@ export default function PayslipDetailPage() {
   const [donutTab, setDonutTab] = useState<'overview' | 'income' | 'deduction'>('overview')
 
   const prev = payslip ? previousPayslip(payslips, payslip) : null
+  const prevSameType = payslip ? previousSameTypePayslip(payslips, payslip) : null
   const next = payslip ? nextPayslip(payslips, payslip) : null
 
   if (!payslip) {
@@ -114,18 +115,18 @@ export default function PayslipDetailPage() {
           {/* ヒーロー・みなし残業・勤怠 */}
           <PayslipDetailView payslip={payslip} />
 
-          {/* 前月比（コンパクト統合） */}
-          {prev && (
+          {/* 前月比（コンパクト統合・同種別比較） */}
+          {prevSameType && (
             <div className="bg-white rounded-xl px-3 py-2 shadow-sm border border-brand-200">
-              <p className="text-[10px] text-gray-400 mb-1.5">{prev.year}年{prev.month}月との比較</p>
+              <p className="text-[10px] text-gray-400 mb-1.5">{prevSameType.year}年{prevSameType.month}月との比較</p>
               <div className="grid grid-cols-3 gap-x-3 gap-y-2">
                 {[
-                  { label: '手取り', delta: payslip.summary.netPay - prev.summary.netPay, invert: false },
-                  { label: '総支給', delta: payslip.income.total - prev.income.total, invert: false },
-                  { label: '控除', delta: payslip.deductions.total - prev.deductions.total, invert: true },
-                  { label: '出勤日数', delta: payslip.attendance.workDays - prev.attendance.workDays, invert: false, fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
-                  { label: '残業時間', delta: payslip.attendance.overtimeHours - prev.attendance.overtimeHours, invert: true, fmt: (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}h` },
-                  { label: '有給残', delta: payslip.attendance.paidLeaveRemaining - prev.attendance.paidLeaveRemaining, invert: false, fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
+                  { label: '手取り', delta: payslip.summary.netPay - prevSameType.summary.netPay, invert: false },
+                  { label: '総支給', delta: payslip.income.total - prevSameType.income.total, invert: false },
+                  { label: '控除', delta: payslip.deductions.total - prevSameType.deductions.total, invert: true },
+                  { label: '出勤日数', delta: payslip.attendance.workDays - prevSameType.attendance.workDays, invert: false, fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
+                  { label: '残業時間', delta: payslip.attendance.overtimeHours - prevSameType.attendance.overtimeHours, invert: true, fmt: (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}h` },
+                  { label: '有給残', delta: payslip.attendance.paidLeaveRemaining - prevSameType.attendance.paidLeaveRemaining, invert: false, fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
                 ].map(({ label, delta, invert, fmt }) => (
                   <div key={label}>
                     <p className="text-[10px] text-gray-400 leading-tight">{label}</p>
@@ -163,10 +164,10 @@ export default function PayslipDetailPage() {
                 </div>
               </div>
               {donutTab === 'overview'
-                ? <NetPayBreakdownChart income={payslip.income} deductions={payslip.deductions} summary={payslip.summary} prevDeductions={prev?.deductions} prevSummary={prev?.summary} />
+                ? <NetPayBreakdownChart income={payslip.income} deductions={payslip.deductions} summary={payslip.summary} prevDeductions={prevSameType?.deductions} prevSummary={prevSameType?.summary} />
                 : donutTab === 'income'
-                  ? <IncomeDonutChart income={payslip.income} prevIncome={prev?.income} />
-                  : <DeductionDonutChart deductions={payslip.deductions} prevDeductions={prev?.deductions} />}
+                  ? <IncomeDonutChart income={payslip.income} prevIncome={prevSameType?.income} />
+                  : <DeductionDonutChart deductions={payslip.deductions} prevDeductions={prevSameType?.deductions} />}
             </div>
           )}
         </>
