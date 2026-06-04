@@ -7,6 +7,7 @@ import AnnualDetailView from '../components/payslip/AnnualDetailView'
 import MonthlyNetPayBarChart from '../components/charts/MonthlyNetPayBarChart'
 import IncomeDonutChart from '../components/charts/IncomeDonutChart'
 import DeductionDonutChart from '../components/charts/DeductionDonutChart'
+import NetPayBreakdownChart from '../components/charts/NetPayBreakdownChart'
 import { annualTotals, uniqueYears } from '../lib/aggregations'
 import { formatYen } from '../lib/formatters'
 import { calcFurusato, defaultTaxInputs, type TaxDeductionInputs } from '../lib/furusatoCalc'
@@ -52,7 +53,7 @@ export default function AnnualSummaryPage() {
   const [showSimDetail, setShowSimDetail] = useState(false)
   const [showIncomeDetail, setShowIncomeDetail] = useState(false)
   const [showRefundDetail, setShowRefundDetail] = useState(false)
-  const [annualDonutTab, setAnnualDonutTab] = useState<Record<number, 'income' | 'deduction'>>({})
+  const [annualDonutTab, setAnnualDonutTab] = useState<Record<number, 'overview' | 'income' | 'deduction'>>({})
   const [customMode, setCustomMode] = useState(false)
   const [customIncome, setCustomIncome] = useState(0)
   const [customSocialInsurance, setCustomSocialInsurance] = useState(0)
@@ -793,7 +794,7 @@ export default function AnnualSummaryPage() {
 
                   {/* Annual detail — expanded */}
                   {isExpanded && (() => {
-                    const tab = annualDonutTab[year] ?? 'income'
+                    const tab = annualDonutTab[year] ?? 'overview'
                     const aggIncome = yearSlips.reduce((agg, p) => {
                       const keys = Object.keys(emptyIncome()) as (keyof ReturnType<typeof emptyIncome>)[]
                       keys.forEach((k) => {
@@ -814,6 +815,7 @@ export default function AnnualSummaryPage() {
                       Object.entries(p.deductions.otherDeductions).forEach(([k, v]) => { agg.otherDeductions[k] = (agg.otherDeductions[k] || 0) + v })
                       return agg
                     }, emptyDeductions())
+                    const aggSummary = { netPay: totals.totalNetPay, bankTransfer: 0 }
                     return (
                       <div className="border-t border-gray-100 pt-3 space-y-3">
                         {/* 収支内訳タブ */}
@@ -821,21 +823,20 @@ export default function AnnualSummaryPage() {
                           <div className="flex items-center gap-2 mb-3">
                             <p className="text-xs font-medium text-gray-500 flex-1">収支内訳</p>
                             <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs">
-                              {(['income', 'deduction'] as const).map((t) => (
+                              {(['overview', 'income', 'deduction'] as const).map((t) => (
                                 <button
                                   key={t}
                                   onClick={() => setAnnualDonutTab((prev) => ({ ...prev, [year]: t }))}
                                   className={`px-3 py-1 transition-colors ${tab === t ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                                 >
-                                  {t === 'income' ? '支給' : '控除'}
+                                  {t === 'overview' ? '概要' : t === 'income' ? '支給' : '控除'}
                                 </button>
                               ))}
                             </div>
                           </div>
-                          {tab === 'income'
-                            ? <IncomeDonutChart income={aggIncome} />
-                            : <DeductionDonutChart deductions={aggDeductions} />
-                          }
+                          {tab === 'overview' && <NetPayBreakdownChart income={aggIncome} deductions={aggDeductions} summary={aggSummary} />}
+                          {tab === 'income' && <IncomeDonutChart income={aggIncome} />}
+                          {tab === 'deduction' && <DeductionDonutChart deductions={aggDeductions} />}
                         </div>
                         <div className="border-t border-gray-100 pt-2">
                           <AnnualDetailView year={year} payslips={yearSlips} />
