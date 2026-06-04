@@ -239,12 +239,6 @@ export default function AnnualSummaryPage() {
                             <span className="tabular-nums text-gray-700">{formatYen(simMonthlySIAvg * simRemainingMonths)}</span>
                           </div>
                         )}
-                        {simBonusSISum > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">社会保険料（賞与）</span>
-                            <span className="tabular-nums text-gray-700">{formatYen(simBonusSISum)}</span>
-                          </div>
-                        )}
                         <div className="flex justify-between">
                           <span className="text-gray-400">所得税実績（{simMonthlyCount}ヶ月）</span>
                           <span className="tabular-nums text-gray-700">{formatYen(simMonthlyIncomeTaxSum)}</span>
@@ -253,12 +247,6 @@ export default function AnnualSummaryPage() {
                           <div className="flex justify-between">
                             <span className="text-gray-400">所得税月平均×残り{simRemainingMonths}ヶ月</span>
                             <span className="tabular-nums text-gray-700">{formatYen(simMonthlyIncomeTaxAvg * simRemainingMonths)}</span>
-                          </div>
-                        )}
-                        {simBonusIncomeTaxSum > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">所得税（賞与）</span>
-                            <span className="tabular-nums text-gray-700">{formatYen(simBonusIncomeTaxSum)}</span>
                           </div>
                         )}
                         <div className="flex justify-between">
@@ -271,26 +259,18 @@ export default function AnnualSummaryPage() {
                             <span className="tabular-nums text-gray-700">{formatYen(simMonthlyResidentTaxAvg * simRemainingMonths)}</span>
                           </div>
                         )}
-                        {simBonusResidentTaxSum > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">住民税（賞与）</span>
-                            <span className="tabular-nums text-gray-700">{formatYen(simBonusResidentTaxSum)}</span>
-                          </div>
-                        )}
                         {simMonthlyDeductionAdjustment !== 0 && (
                           <div className="flex justify-between">
-                            <span className="text-gray-400">その他調整（月次）</span>
+                            <span className="text-gray-400">その他調整</span>
                             <span className="tabular-nums text-gray-700">
                               {simMonthlyDeductionAdjustment >= 0 ? formatYen(simMonthlyDeductionAdjustment) : `−${formatYen(Math.abs(simMonthlyDeductionAdjustment))}`}
                             </span>
                           </div>
                         )}
-                        {simBonusDeductionAdjustment !== 0 && (
+                        {simBonusSlips.length > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-gray-400">その他調整（賞与）</span>
-                            <span className="tabular-nums text-gray-700">
-                              {simBonusDeductionAdjustment >= 0 ? formatYen(simBonusDeductionAdjustment) : `−${formatYen(Math.abs(simBonusDeductionAdjustment))}`}
-                            </span>
+                            <span className="text-gray-400">賞与控除実績</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simBonusIncomeSum - simBonusNetPaySum)}</span>
                           </div>
                         )}
                         <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
