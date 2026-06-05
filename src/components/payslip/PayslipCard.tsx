@@ -89,7 +89,7 @@ export default function PayslipCard({ payslip, prevNetPay, searchQuery = '' }: P
         {payslip.payslipType !== 'bonus' && payslip.attendance.overtimeHours > 0 && (
           <>
             <span className="text-gray-300">·</span>
-            <span>残業 {payslip.attendance.overtimeHours.toFixed(1)}h</span>
+            <span>残業 {privacyMode ? '─ ─ ─' : `${payslip.attendance.overtimeHours.toFixed(1)}h`}</span>
           </>
         )}
       </div>

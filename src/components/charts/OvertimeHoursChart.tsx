@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import Chart from 'chart.js/auto'
 import annotationPlugin from 'chartjs-plugin-annotation'
+import useStore from '../../store/useStore'
 
 Chart.register(annotationPlugin)
 
@@ -17,6 +18,7 @@ interface Props {
 export default function OvertimeHoursChart({ data, deemedHours = 45 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
+  const privacyMode = useStore((s) => s.privacyMode)
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -80,7 +82,7 @@ export default function OvertimeHoursChart({ data, deemedHours = 45 }: Props) {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${(ctx.raw as number).toFixed(1)}h`,
+              label: (ctx) => privacyMode ? ' ─ ─ ─' : ` ${(ctx.raw as number).toFixed(1)}h`,
               title: (items) => items[0].label,
             },
             bodyFont: { size: 12 },
@@ -102,7 +104,7 @@ export default function OvertimeHoursChart({ data, deemedHours = 45 }: Props) {
             ticks: {
               font: { size: 11 },
               color: '#6b7280',
-              callback: (v) => `${v}h`,
+              callback: (v) => privacyMode ? '─ ─ ─' : `${v}h`,
               precision: 0,
             },
             grid: { color: '#f0f0f0' },
@@ -113,7 +115,7 @@ export default function OvertimeHoursChart({ data, deemedHours = 45 }: Props) {
     })
 
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(data), deemedHours])
+  }, [JSON.stringify(data), deemedHours, privacyMode])
 
   if (data.length === 0) {
     return (

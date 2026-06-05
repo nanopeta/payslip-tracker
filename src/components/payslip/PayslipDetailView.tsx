@@ -11,7 +11,7 @@ interface Props {
 export default function PayslipDetailView({ payslip }: Props) {
   const { income, attendance, summary } = payslip
   const settings = useStore((s) => s.overtimeSettings)
-  const { fmt } = usePrivacy()
+  const { fmt, fmtHidden } = usePrivacy()
 
   const deemedAmt = getIncomeValueByLabel(income, settings.deemedLabel)
   const actualAmt = settings.actualLabels.reduce(
@@ -79,11 +79,11 @@ export default function PayslipDetailView({ payslip }: Props) {
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 leading-tight">残業時間</p>
-                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{attendance.overtimeHours.toFixed(1)}h</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmtHidden(`${attendance.overtimeHours.toFixed(1)}h`)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 leading-tight">使用率</p>
-                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{usagePercent.toFixed(1)}%</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmtHidden(`${usagePercent.toFixed(1)}%`)}</p>
                     <div className="mt-1 h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${Math.min(100, usagePercent)}%`, backgroundColor: usagePercent > 100 ? '#d06868' : '#5b8fa8' }} />
                     </div>
@@ -99,7 +99,7 @@ export default function PayslipDetailView({ payslip }: Props) {
                   <div>
                     <p className="text-[10px] text-gray-400 leading-tight">得した時間</p>
                     <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: gainHours >= 0 ? '#5fad9b' : '#d06868' }}>
-                      {gainHours >= 0 ? '+' : '-'}{Math.abs(gainHours).toFixed(1)}h
+                      {fmtHidden(`${gainHours >= 0 ? '+' : '-'}${Math.abs(gainHours).toFixed(1)}h`)}
                     </p>
                   </div>
                   <div>
@@ -139,7 +139,7 @@ export default function PayslipDetailView({ payslip }: Props) {
               (item.alwaysShow || item.value > 0) ? (
                 <div key={item.label}>
                   <p className="text-[10px] text-gray-400 leading-tight">{item.label}</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{item.display}</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmtHidden(item.display)}</p>
                 </div>
               ) : null
             )}

@@ -11,7 +11,7 @@ import { usePrivacy } from '../hooks/usePrivacy'
 import type { Payslip } from '../types/payslip'
 
 export default function PayslipDetailPage() {
-  const { fmt } = usePrivacy()
+  const { fmt, fmtHidden } = usePrivacy()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const payslips = useStore((s) => s.payslips)
@@ -136,7 +136,7 @@ export default function PayslipDetailPage() {
                     <p className="text-sm font-semibold tabular-nums mt-0.5"
                       style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}>
                       {fmtFn
-                        ? fmtFn(delta)
+                        ? fmtHidden(fmtFn(delta))
                         : `${delta >= 0 ? '+' : '-'}${fmt(Math.abs(delta))}`}
                     </p>
                   </div>

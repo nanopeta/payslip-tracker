@@ -12,7 +12,7 @@ interface Props {
 
 export default function AnnualDetailView({ payslips }: Props) {
   const settings = useStore((s) => s.overtimeSettings)
-  const { fmt } = usePrivacy()
+  const { fmt, fmtHidden } = usePrivacy()
 
   const monthlyPayslips = [...payslips]
     .filter((p) => !p.payslipType || p.payslipType === 'monthly')
@@ -70,11 +70,11 @@ export default function AnnualDetailView({ payslips }: Props) {
             </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">残業時間合計</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{ytdActualHours.toFixed(1)}h</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmtHidden(`${ytdActualHours.toFixed(1)}h`)}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">年間使用率</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{ytdUsagePercent.toFixed(1)}%</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmtHidden(`${ytdUsagePercent.toFixed(1)}%`)}</p>
               {ytdDeemedHours > 0 && (
                 <div className="mt-1 h-1 bg-gray-100 rounded-full overflow-hidden">
                   <div
@@ -98,7 +98,7 @@ export default function AnnualDetailView({ payslips }: Props) {
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">得した時間</p>
               <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: ytdGainHours >= 0 ? '#5fad9b' : '#d06868' }}>
-                {ytdGainHours >= 0 ? '+' : '-'}{Math.abs(ytdGainHours).toFixed(1)}h
+                {fmtHidden(`${ytdGainHours >= 0 ? '+' : '-'}${Math.abs(ytdGainHours).toFixed(1)}h`)}
               </p>
             </div>
             <div>
@@ -138,7 +138,7 @@ export default function AnnualDetailView({ payslips }: Props) {
               item.value > 0 ? (
                 <div key={item.label}>
                   <p className="text-[10px] text-gray-400 leading-tight">{item.label}</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{item.display}</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmtHidden(item.display)}</p>
                 </div>
               ) : null
             )}
