@@ -1,3 +1,6 @@
+import useStore from '../../store/useStore'
+import { PRIVACY_PLACEHOLDER } from '../../hooks/usePrivacy'
+
 interface StatCardProps {
   title: string
   value: string
@@ -14,6 +17,9 @@ const DANGER  = '#d06868'
 const CARD_SHADOW = '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)'
 
 export default function StatCard({ title, value, sub, delta, deltaLabel, deltaText, deltaPositive, highlight }: StatCardProps) {
+  const privacyMode = useStore((s) => s.privacyMode)
+  const deltaDisplay = (d: number) =>
+    privacyMode ? PRIVACY_PLACEHOLDER : `${d >= 0 ? '+' : '-'}¥${Math.abs(d).toLocaleString('ja-JP')}`
   if (highlight) {
     return (
       <div
@@ -25,7 +31,7 @@ export default function StatCard({ title, value, sub, delta, deltaLabel, deltaTe
         {sub && <p className="text-[11px] mt-1 text-blue-200">{sub}</p>}
         {delta !== undefined && (
           <p className="text-xs mt-1 font-medium" style={{ color: delta >= 0 ? SUCCESS : DANGER }}>
-            {delta >= 0 ? '+' : '-'}¥{Math.abs(delta).toLocaleString('ja-JP')}
+            {deltaDisplay(delta)}
             <span className="font-normal ml-1" style={{ color: 'rgba(255,255,255,0.6)' }}>{deltaLabel ?? '前月比'}</span>
           </p>
         )}
@@ -49,7 +55,7 @@ export default function StatCard({ title, value, sub, delta, deltaLabel, deltaTe
       {sub && <p className="text-[11px] mt-1 text-[#7a94a6]">{sub}</p>}
       {delta !== undefined && (
         <p className="text-xs mt-1 font-medium" style={{ color: delta >= 0 ? SUCCESS : DANGER }}>
-          {delta >= 0 ? '+' : '-'}¥{Math.abs(delta).toLocaleString('ja-JP')}
+          {deltaDisplay(delta)}
           <span className="font-normal ml-1 text-[#9ca3af]">{deltaLabel ?? '前月比'}</span>
         </p>
       )}

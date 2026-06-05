@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import Chart from 'chart.js/auto'
 import type { PayslipDeductions } from '../../types/payslip'
 import { formatYen } from '../../lib/formatters'
+import { usePrivacy } from '../../hooks/usePrivacy'
 
 
 const SLICES: { key: keyof PayslipDeductions; label: string; color: string }[] = [
@@ -27,6 +28,7 @@ interface Props {
 export default function DeductionDonutChart({ deductions, prevDeductions }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
+  const { privacyMode, fmt } = usePrivacy()
 
   const allNamed = SLICES
     .map((s) => ({
@@ -82,7 +84,7 @@ export default function DeductionDonutChart({ deductions, prevDeductions }: Prop
               label: (ctx) => {
                 const v = ctx.raw as number
                 const pct = grossPositiveTotal > 0 ? ((v / grossPositiveTotal) * 100).toFixed(1) : '0.0'
-                return ` ${formatYen(v)} (${pct}%)`
+                return ` ${fmt(v)} (${pct}%)`
               },
             },
             bodyFont: { size: 12 },
@@ -94,7 +96,7 @@ export default function DeductionDonutChart({ deductions, prevDeductions }: Prop
       },
     })
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(donutData), grossPositiveTotal])
+  }, [JSON.stringify(donutData), grossPositiveTotal, privacyMode])
 
   if (legendData.length === 0 || deductions.total === 0) {
     return (
@@ -120,11 +122,11 @@ export default function DeductionDonutChart({ deductions, prevDeductions }: Prop
                 <span className="text-[#243447] truncate">{item.name}</span>
               </div>
               <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
-                <span className="font-medium" style={{ color: isCredit ? '#5fad9b' : '#243447' }}>{formatYen(item.value)}</span>
+                <span className="font-medium" style={{ color: isCredit ? '#5fad9b' : '#243447' }}>{fmt(item.value)}</span>
                 {prevDeductions && (
                   <span className="text-xs w-14 text-right"
                     style={{ color: delta !== undefined && delta !== 0 ? (delta <= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
-                    {delta !== undefined && delta !== 0 ? `${delta > 0 ? '+' : ''}${formatYen(delta)}` : '0'}
+                    {delta !== undefined && delta !== 0 ? `${delta > 0 ? '+' : ''}${fmt(delta)}` : '0'}
                   </span>
                 )}
                 {!isCredit
@@ -138,13 +140,13 @@ export default function DeductionDonutChart({ deductions, prevDeductions }: Prop
         <div className="flex items-center justify-between py-[7px]">
           <span className="text-sm text-[#7a94a6] font-medium">合計</span>
           <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
-            <span className="text-sm text-[#243447] font-semibold">{formatYen(deductions.total)}</span>
+            <span className="text-sm text-[#243447] font-semibold">{fmt(deductions.total)}</span>
             {prevDeductions && (() => {
               const d = deductions.total - prevDeductions.total
               return (
                 <span className="text-xs w-14 text-right font-semibold"
                   style={{ color: d !== 0 ? (d <= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
-                  {d !== 0 ? `${d > 0 ? '+' : ''}${formatYen(d)}` : '0'}
+                  {d !== 0 ? `${d > 0 ? '+' : ''}${fmt(d)}` : '0'}
                 </span>
               )
             })()}

@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import Chart from 'chart.js/auto'
 import type { PayslipIncome, PayslipDeductions, PayslipSummary } from '../../types/payslip'
 import { formatYen } from '../../lib/formatters'
+import { usePrivacy } from '../../hooks/usePrivacy'
 
 const DEDUCTION_SLICES: { key: keyof PayslipDeductions; label: string; color: string }[] = [
   { key: 'healthInsurance',       label: '健康保険',  color: '#5b8fa8' },
@@ -23,6 +24,7 @@ interface Props {
 export default function NetPayBreakdownChart({ income, deductions, summary, prevDeductions, prevSummary }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
+  const { privacyMode, fmt } = usePrivacy()
 
   const netPaySlice = {
     name: '手取り',
@@ -84,7 +86,7 @@ export default function NetPayBreakdownChart({ income, deductions, summary, prev
               label: (ctx) => {
                 const v = ctx.raw as number
                 const pct = ((v / total) * 100).toFixed(1)
-                return ` ${formatYen(v)} (${pct}%)`
+                return ` ${fmt(v)} (${pct}%)`
               },
             },
             bodyFont: { size: 12 },
@@ -96,7 +98,7 @@ export default function NetPayBreakdownChart({ income, deductions, summary, prev
       },
     })
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(data), total])
+  }, [JSON.stringify(data), total, privacyMode])
 
   if (total === 0) {
     return (
@@ -126,10 +128,10 @@ export default function NetPayBreakdownChart({ income, deductions, summary, prev
                 <span className="text-[#243447] truncate">{item.name}</span>
               </div>
               <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
-                <span className="text-[#243447] font-medium">{formatYen(item.value)}</span>
+                <span className="text-[#243447] font-medium">{fmt(item.value)}</span>
                 {hasPrev && (
                   <span className="text-xs w-14 text-right" style={{ color: deltaColor }}>
-                    {hasDelta ? `${delta! > 0 ? '+' : ''}${formatYen(delta!)}` : '0'}
+                    {hasDelta ? `${delta! > 0 ? '+' : ''}${fmt(delta!)}` : '0'}
                   </span>
                 )}
                 <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / total) * 100).toFixed(1)}%</span>
@@ -139,7 +141,7 @@ export default function NetPayBreakdownChart({ income, deductions, summary, prev
         })}
         <div className="flex items-center justify-between py-[7px]">
           <span className="text-sm text-[#7a94a6] font-medium">総支給</span>
-          <span className="text-sm text-[#243447] font-semibold tabular-nums">{formatYen(total)}</span>
+          <span className="text-sm text-[#243447] font-semibold tabular-nums">{fmt(total)}</span>
         </div>
       </div>
     </div>

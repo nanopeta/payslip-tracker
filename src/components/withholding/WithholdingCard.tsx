@@ -1,5 +1,6 @@
 import type { WithholdingTaxCertificate } from '../../types/withholding'
-import { formatYen, toReiwa } from '../../lib/formatters'
+import { toReiwa } from '../../lib/formatters'
+import { usePrivacy } from '../../hooks/usePrivacy'
 
 interface Props {
   cert: WithholdingTaxCertificate
@@ -13,14 +14,15 @@ interface FieldRowProps {
 }
 
 function FieldRow({ label, value, sub }: FieldRowProps) {
+  const { fmt } = usePrivacy()
   if (value === 0) return null
   return (
     <div className="flex justify-between py-1.5 border-b border-gray-100">
       <span className="text-sm text-gray-600">{label}</span>
       <div className="text-right">
-        <span className="text-sm font-medium tabular-nums text-gray-900">{formatYen(value)}</span>
+        <span className="text-sm font-medium tabular-nums text-gray-900">{fmt(value)}</span>
         {sub !== undefined && sub > 0 && (
-          <span className="text-xs text-gray-400 ml-1">（内 {formatYen(sub)}）</span>
+          <span className="text-xs text-gray-400 ml-1">（内 {fmt(sub)}）</span>
         )}
       </div>
     </div>

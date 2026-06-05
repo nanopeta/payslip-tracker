@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import Chart from 'chart.js/auto'
 import type { PayslipIncome } from '../../types/payslip'
 import { formatYen } from '../../lib/formatters'
+import { usePrivacy } from '../../hooks/usePrivacy'
 
 const NAMED_SLICES: { key: keyof PayslipIncome; label: string; color: string }[] = [
   { key: 'basicSalary',             label: '基本給',           color: '#5b8fa8' },
@@ -26,6 +27,7 @@ interface Props {
 export default function IncomeDonutChart({ income, prevIncome }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
+  const { privacyMode, fmt } = usePrivacy()
 
   const named = NAMED_SLICES
     .map((s) => ({
@@ -77,7 +79,7 @@ export default function IncomeDonutChart({ income, prevIncome }: Props) {
               label: (ctx) => {
                 const v = ctx.raw as number
                 const pct = ((v / income.total) * 100).toFixed(1)
-                return ` ${formatYen(v)} (${pct}%)`
+                return ` ${fmt(v)} (${pct}%)`
               },
             },
             bodyFont: { size: 12 },
@@ -89,7 +91,7 @@ export default function IncomeDonutChart({ income, prevIncome }: Props) {
       },
     })
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(data), income.total])
+  }, [JSON.stringify(data), income.total, privacyMode])
 
   if (data.length === 0 || income.total === 0) {
     return (
@@ -114,11 +116,11 @@ export default function IncomeDonutChart({ income, prevIncome }: Props) {
                 <span className="text-[#243447] truncate">{item.name}</span>
               </div>
               <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
-                <span className="text-[#243447] font-medium">{formatYen(item.value)}</span>
+                <span className="text-[#243447] font-medium">{fmt(item.value)}</span>
                 {prevIncome && (
                   <span className="text-xs w-14 text-right"
                     style={{ color: delta !== undefined && delta !== 0 ? (delta >= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
-                    {delta !== undefined && delta !== 0 ? `${delta > 0 ? '+' : ''}${formatYen(delta)}` : '0'}
+                    {delta !== undefined && delta !== 0 ? `${delta > 0 ? '+' : ''}${fmt(delta)}` : '0'}
                   </span>
                 )}
                 <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / income.total) * 100).toFixed(1)}%</span>
@@ -129,13 +131,13 @@ export default function IncomeDonutChart({ income, prevIncome }: Props) {
         <div className="flex items-center justify-between py-[7px]">
           <span className="text-sm text-[#7a94a6] font-medium">合計</span>
           <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
-            <span className="text-sm text-[#243447] font-semibold">{formatYen(income.total)}</span>
+            <span className="text-sm text-[#243447] font-semibold">{fmt(income.total)}</span>
             {prevIncome && (() => {
               const d = income.total - prevIncome.total
               return (
                 <span className="text-xs w-14 text-right font-semibold"
                   style={{ color: d !== 0 ? (d >= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
-                  {d !== 0 ? `${d > 0 ? '+' : ''}${formatYen(d)}` : '0'}
+                  {d !== 0 ? `${d > 0 ? '+' : ''}${fmt(d)}` : '0'}
                 </span>
               )
             })()}

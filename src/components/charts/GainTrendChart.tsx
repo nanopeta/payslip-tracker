@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import Chart from 'chart.js/auto'
 import annotationPlugin from 'chartjs-plugin-annotation'
 import { formatYen } from '../../lib/formatters'
+import useStore from '../../store/useStore'
 
 Chart.register(annotationPlugin)
 
@@ -17,6 +18,8 @@ interface Props {
 export default function GainTrendChart({ data }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
+  const privacyMode = useStore((s) => s.privacyMode)
+  const fmt = (n: number) => (privacyMode ? '¥ ─ ─ ─' : formatYen(n))
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -46,7 +49,7 @@ export default function GainTrendChart({ data }: Props) {
             callbacks: {
               label: (ctx) => {
                 const v = ctx.raw as number
-                return ` ${v >= 0 ? '+' : '-'}${formatYen(Math.abs(v))}`
+                return ` ${v >= 0 ? '+' : '-'}${fmt(Math.abs(v))}`
               },
               title: (items) => items[0].label,
             },
@@ -93,7 +96,7 @@ export default function GainTrendChart({ data }: Props) {
     })
 
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(data)])
+  }, [JSON.stringify(data), privacyMode])
 
   return (
     <div style={{ height: 200 }}>

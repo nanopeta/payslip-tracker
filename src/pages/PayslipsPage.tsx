@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import PayslipCard from '../components/payslip/PayslipCard'
-import { formatYen } from '../lib/formatters'
+import { usePrivacy } from '../hooks/usePrivacy'
 
 export default function PayslipsPage() {
+  const { fmt } = usePrivacy()
   const payslips = useStore((s) => s.payslips)
   const deletePayslips = useStore((s) => s.deletePayslips)
 
@@ -350,7 +351,7 @@ export default function PayslipsPage() {
                 <span className="text-gray-400 text-sm">·</span>
                 <span className="text-gray-500 text-sm">{count}件</span>
                 <span className="text-gray-400 text-sm">·</span>
-                <span className="text-gray-500 text-sm">手取合計 <span className="font-medium text-gray-700">{formatYen(totalNetPay)}</span></span>
+                <span className="text-gray-500 text-sm">手取合計 <span className="font-medium text-gray-700">{fmt(totalNetPay)}</span></span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {items.map((p) => {
@@ -429,9 +430,9 @@ export default function PayslipsPage() {
         <div className="bg-white rounded-xl border border-brand-200 shadow-sm px-5 py-3 flex flex-wrap gap-x-6 gap-y-1 items-center text-sm">
           <span className="text-gray-500">絞り込み <span className="font-semibold text-gray-800">{filtered.length}件</span></span>
           <span className="text-gray-400">·</span>
-          <span className="text-gray-500">手取合計 <span className="font-semibold text-gray-800">{formatYen(filteredNetPayTotal)}</span></span>
+          <span className="text-gray-500">手取合計 <span className="font-semibold text-gray-800">{fmt(filteredNetPayTotal)}</span></span>
           <span className="text-gray-400">·</span>
-          <span className="text-gray-500">平均手取 <span className="font-semibold text-gray-800">{formatYen(filteredNetPayAvg)}</span></span>
+          <span className="text-gray-500">平均手取 <span className="font-semibold text-gray-800">{fmt(filteredNetPayAvg)}</span></span>
         </div>
       )}
     </div>

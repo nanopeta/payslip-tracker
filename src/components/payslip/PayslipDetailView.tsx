@@ -1,7 +1,8 @@
 import type { Payslip } from '../../types/payslip'
-import { formatYen, formatYearMonth, formatHoursMinutes } from '../../lib/formatters'
+import { formatYearMonth, formatHoursMinutes } from '../../lib/formatters'
 import { getIncomeValueByLabel } from '../../lib/aggregations'
 import useStore from '../../store/useStore'
+import { usePrivacy } from '../../hooks/usePrivacy'
 
 interface Props {
   payslip: Payslip
@@ -10,6 +11,7 @@ interface Props {
 export default function PayslipDetailView({ payslip }: Props) {
   const { income, attendance, summary } = payslip
   const settings = useStore((s) => s.overtimeSettings)
+  const { fmt } = usePrivacy()
 
   const deemedAmt = getIncomeValueByLabel(income, settings.deemedLabel)
   const actualAmt = settings.actualLabels.reduce(
@@ -36,18 +38,18 @@ export default function PayslipDetailView({ payslip }: Props) {
         {payslip.companyName && <p className="text-brand-300 text-xs mt-0.5">{payslip.companyName}</p>}
         <div className="flex items-end justify-between mt-2">
           <div>
-            <p className="text-3xl font-bold tabular-nums">{formatYen(summary.netPay)}</p>
+            <p className="text-3xl font-bold tabular-nums">{fmt(summary.netPay)}</p>
             <p className="text-brand-200 text-xs mt-0.5">差引支給額</p>
           </div>
           {income.total > 0 && (
             <div className="text-right">
-              <p className="text-xl font-semibold tabular-nums text-brand-100">{formatYen(income.total)}</p>
+              <p className="text-xl font-semibold tabular-nums text-brand-100">{fmt(income.total)}</p>
               <p className="text-brand-300 text-xs mt-0.5">総支給額</p>
             </div>
           )}
         </div>
         {summary.extras && Object.entries(summary.extras).map(([k, v]) => (
-          <p key={k} className="text-brand-300 text-xs mt-1">{k} +{formatYen(v)}</p>
+          <p key={k} className="text-brand-300 text-xs mt-1">{k} +{fmt(v)}</p>
         ))}
       </div>
 
@@ -69,11 +71,11 @@ export default function PayslipDetailView({ payslip }: Props) {
                 <div className="grid grid-cols-4 gap-3 mb-3">
                   <div>
                     <p className="text-[10px] text-gray-400 leading-tight">みなし（45h）</p>
-                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{formatYen(deemedAmt)}</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(deemedAmt)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 leading-tight">実残業代</p>
-                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{formatYen(actualAmt)}</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(actualAmt)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 leading-tight">残業時間</p>
@@ -91,7 +93,7 @@ export default function PayslipDetailView({ payslip }: Props) {
                   <div>
                     <p className="text-[10px] text-gray-400 leading-tight">差額</p>
                     <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: gain >= 0 ? '#5fad9b' : '#d06868' }}>
-                      {gain >= 0 ? '+' : ''}{formatYen(gain)}
+                      {gain >= 0 ? '+' : ''}{fmt(gain)}
                     </p>
                   </div>
                   <div>
@@ -102,11 +104,11 @@ export default function PayslipDetailView({ payslip }: Props) {
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 leading-tight">残業時給</p>
-                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{overtimeHourlyRate > 0 ? `${formatYen(overtimeHourlyRate)}/h` : '—'}</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{overtimeHourlyRate > 0 ? `${fmt(overtimeHourlyRate)}/h` : '—'}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 leading-tight">基本時給</p>
-                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{basicHourlyRate > 0 ? `${formatYen(basicHourlyRate)}/h` : '—'}</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{basicHourlyRate > 0 ? `${fmt(basicHourlyRate)}/h` : '—'}</p>
                   </div>
                 </div>
               </>

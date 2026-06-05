@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import Chart from 'chart.js/auto'
 import { formatYen } from '../../lib/formatters'
+import useStore from '../../store/useStore'
 
 export interface IncomeBreakdownPoint {
   label: string
@@ -19,6 +20,8 @@ export default function IncomeBreakdownTrendChart({ data }: Props) {
   const chartRef = useRef<Chart | null>(null)
 
   const totals = data.map((d) => d.basicSalary + d.deemedOvertime + d.wlbAllowance + d.lifePlanAllowance)
+  const privacyMode = useStore((s) => s.privacyMode)
+  const fmt = (n: number) => (privacyMode ? '¥ ─ ─ ─' : formatYen(n))
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -55,9 +58,9 @@ export default function IncomeBreakdownTrendChart({ data }: Props) {
                 const v = ctx.raw as number
                 const prev = i > 0 ? totals[i - 1] : null
                 const delta = prev != null ? v - prev : null
-                const lines = [`合算: ${formatYen(v)}`]
+                const lines = [`合算: ${fmt(v)}`]
                 if (delta != null && delta !== 0) {
-                  lines.push(`前月比: ${delta > 0 ? '+' : ''}${formatYen(delta)}`)
+                  lines.push(`前月比: ${delta > 0 ? '+' : ''}${fmt(delta)}`)
                 }
                 return lines
               },
@@ -85,7 +88,7 @@ export default function IncomeBreakdownTrendChart({ data }: Props) {
     })
 
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(totals)])
+  }, [JSON.stringify(totals), privacyMode])
 
   if (data.length === 0) {
     return (

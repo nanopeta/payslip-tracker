@@ -1,7 +1,8 @@
 import type { Payslip } from '../../types/payslip'
-import { formatYen, formatHoursMinutes } from '../../lib/formatters'
+import { formatHoursMinutes } from '../../lib/formatters'
 import { getIncomeValueByLabel } from '../../lib/aggregations'
 import useStore from '../../store/useStore'
+import { usePrivacy } from '../../hooks/usePrivacy'
 
 const DEEMED_HOURS = 45
 
@@ -11,6 +12,7 @@ interface Props {
 
 export default function AnnualDetailView({ payslips }: Props) {
   const settings = useStore((s) => s.overtimeSettings)
+  const { fmt } = usePrivacy()
 
   const monthlyPayslips = [...payslips]
     .filter((p) => !p.payslipType || p.payslipType === 'monthly')
@@ -60,11 +62,11 @@ export default function AnnualDetailView({ payslips }: Props) {
           <div className="grid grid-cols-4 gap-3 mb-3">
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">みなし（{ytdDeemedHours}h）</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{formatYen(ytdDeemedTotal)}</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(ytdDeemedTotal)}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">実残業代合計</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{formatYen(ytdActualTotal)}</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(ytdActualTotal)}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">残業時間合計</p>
@@ -90,7 +92,7 @@ export default function AnnualDetailView({ payslips }: Props) {
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">年間差額</p>
               <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: ytdGainTotal >= 0 ? '#5fad9b' : '#d06868' }}>
-                {ytdGainTotal >= 0 ? '+' : ''}{formatYen(ytdGainTotal)}
+                {ytdGainTotal >= 0 ? '+' : ''}{fmt(ytdGainTotal)}
               </p>
             </div>
             <div>
@@ -102,13 +104,13 @@ export default function AnnualDetailView({ payslips }: Props) {
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">残業時給平均</p>
               <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
-                {ytdOvertimeHourlyRate > 0 ? `${formatYen(ytdOvertimeHourlyRate)}/h` : '—'}
+                {ytdOvertimeHourlyRate > 0 ? `${fmt(ytdOvertimeHourlyRate)}/h` : '—'}
               </p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">基本時給平均</p>
               <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
-                {ytdBasicHourlyRate > 0 ? `${formatYen(ytdBasicHourlyRate)}/h` : '—'}
+                {ytdBasicHourlyRate > 0 ? `${fmt(ytdBasicHourlyRate)}/h` : '—'}
               </p>
             </div>
           </div>
