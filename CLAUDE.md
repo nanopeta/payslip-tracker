@@ -96,10 +96,10 @@ src/
 ├── lib/
 │   ├── storage.ts          # localStorage CRUD + OvertimeSettings
 │   ├── mhtParser.ts        # MHTファイル解析（メイン）
-│   ├── pdfParser.ts        # PDF解析（旧・ほぼ未使用）
 │   ├── formatters.ts       # 円表示・和暦・時間フォーマット
 │   ├── aggregations.ts     # 月次集計・年次集計・みなし残業計算・社会保険料集計・前後明細ナビゲーション
-│   └── furusatoCalc.ts     # ふるさと納税上限額計算（TaxDeductionInputs, FurusatoResult, calcFurusato）
+│   ├── furusatoCalc.ts     # ふるさと納税上限額計算（TaxDeductionInputs, FurusatoResult, calcFurusato）
+│   └── exporters.ts        # JSON バックアップ・CSV エクスポート（exportJSON, exportCSV）
 ├── store/
 │   └── useStore.ts         # Zustand store（localStorage と同期）
 ├── components/
@@ -120,8 +120,11 @@ src/
 │   │   ├── PayslipCard.tsx            # 明細一覧のカード（monthly かつ overtimeHours > 0 のとき残業時間を表示）
 │   │   ├── PayslipDetailView.tsx      # 1件の明細詳細
 │   │   └── AnnualDetailView.tsx       # 年間集計詳細（PayslipDetailView スタイル）
+│   ├── forms/
+│   │   ├── PayslipReviewForm.tsx      # 給与明細の手入力修正フォーム（アップロード時・編集時の両方で使用）
+│   │   └── WithholdingReviewForm.tsx  # 源泉徴収票の手入力修正フォーム
 │   ├── withholding/        # WithholdingCard
-│   └── upload/             # DropZone、PayslipReviewForm（重複検出付き）、WithholdingReviewForm
+│   └── upload/             # DropZone のみ（フォームは forms/ へ移動済み）
 └── pages/
     ├── DashboardPage.tsx   # ダッシュボード（StatCards・収支内訳タブ・みなし残業効率・今年の累計・チャート群）
     ├── PayslipsPage.tsx    # 給与明細一覧（ソート切り替え・年別グループトグル・月フィルター・フリーテキスト検索・アクティブフィルターチップス・一括削除）
@@ -693,7 +696,7 @@ git push --force-with-lease origin <branch>
 1. `src/lib/mhtParser.ts` の `INCOME_LABELS` または `DEDUCTION_LABELS` にラベル→フィールド名のマッピングを追加
 2. `src/types/payslip.ts` の `PayslipIncome` / `PayslipDeductions` にフィールドを追加
 3. `emptyIncome()` / `emptyDeductions()` の初期値に `0` を追加
-4. `PayslipReviewForm.tsx` の入力欄に `<NumInput>` を追加（控除の場合はクレジット項目になるか確認）
+4. `src/components/forms/PayslipReviewForm.tsx` の入力欄に `<NumInput>` を追加（控除の場合はクレジット項目になるか確認）
 5. `PayslipDetailView.tsx` の表示行に追加（勤怠の `alwaysShow` パターン参照）
 6. `DeductionDonutChart.tsx` の `SLICES` に追加（負値になる項目は自動的にクレジット扱いになる）
 
