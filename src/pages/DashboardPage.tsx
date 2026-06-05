@@ -34,7 +34,7 @@ function applyPeriodFilter<T extends { label: string }>(rows: T[], filter: Perio
 }
 
 export default function DashboardPage() {
-  const { fmt } = usePrivacy()
+  const { fmt, fmtHidden } = usePrivacy()
   const payslips = useStore((s) => s.payslips)
   const settings = useStore((s) => s.overtimeSettings)
   const sorted = [...payslips].sort((a, b) => b.year * 100 + b.month - (a.year * 100 + a.month))
@@ -222,17 +222,17 @@ export default function DashboardPage() {
           {paidLeaveStats !== null && (
             <StatCard
               title="有給残日数"
-              value={`${paidLeaveStats.remaining}日`}
-              deltaText={paidLeaveStats.delta !== null ? `${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日` : undefined}
+              value={fmtHidden(`${paidLeaveStats.remaining}日`)}
+              deltaText={paidLeaveStats.delta !== null ? fmtHidden(`${paidLeaveStats.delta >= 0 ? '+' : ''}${paidLeaveStats.delta}日`) : undefined}
               deltaPositive={paidLeaveStats.delta !== null && paidLeaveStats.delta >= 0}
             />
           )}
           {ytdOvertime.monthCount >= 6 && (
             <StatCard
               title="累計残業時間"
-              value={`${ytdOvertime.total.toFixed(1)}h`}
+              value={fmtHidden(`${ytdOvertime.total.toFixed(1)}h`)}
               sub={`${currentYear}年 ${ytdOvertime.monthCount}ヶ月分`}
-              deltaText={ytdOvertime.delta !== null ? `${ytdOvertime.delta >= 0 ? '+' : ''}${ytdOvertime.delta.toFixed(1)}h` : undefined}
+              deltaText={ytdOvertime.delta !== null ? fmtHidden(`${ytdOvertime.delta >= 0 ? '+' : ''}${ytdOvertime.delta.toFixed(1)}h`) : undefined}
               deltaLabel="前年同月比"
               deltaPositive={ytdOvertime.delta !== null && ytdOvertime.delta <= 0}
             />
@@ -339,11 +339,11 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-0.5">残業時間</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">{overtimeHoursLatest.toFixed(1)}h</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{fmtHidden(`${overtimeHoursLatest.toFixed(1)}h`)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-0.5">使用率</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">{usagePercent.toFixed(0)}%</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{fmtHidden(`${usagePercent.toFixed(0)}%`)}</p>
               <div className="mt-1 bg-gray-200 rounded-full h-1 overflow-hidden">
                 <div className="h-1 rounded-full" style={{
                   width: `${Math.min(100, usagePercent)}%`,
@@ -419,11 +419,11 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">残業時間合計</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-900">{ytdActualHours.toFixed(1)}h</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{fmtHidden(`${ytdActualHours.toFixed(1)}h`)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">年間使用率</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-900">{ytdUsagePercent.toFixed(0)}%</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{fmtHidden(`${ytdUsagePercent.toFixed(0)}%`)}</p>
                   <div className="mt-1 bg-gray-200 rounded-full h-1 overflow-hidden">
                     <div className="h-1 rounded-full" style={{
                       width: `${Math.min(100, ytdUsagePercent)}%`,
@@ -442,7 +442,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">得した時間</p>
                   <p className="text-sm font-semibold tabular-nums" style={{ color: ytdGainHours >= 0 ? '#5fad9b' : '#d06868' }}>
-                    {ytdGainHours >= 0 ? '+' : ''}{ytdGainHours.toFixed(1)}h
+                    {fmtHidden(`${ytdGainHours >= 0 ? '+' : ''}${ytdGainHours.toFixed(1)}h`)}
                   </p>
                 </div>
                 <div>

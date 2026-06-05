@@ -6,5 +6,6 @@ export const PRIVACY_PLACEHOLDER = '¥ ─ ─ ─'
 export function usePrivacy() {
   const privacyMode = useStore((s) => s.privacyMode)
   const fmt = (n: number) => (privacyMode ? PRIVACY_PLACEHOLDER : formatYen(n))
-  return { privacyMode, fmt }
+  const fmtHidden = (s: string) => (privacyMode ? '─ ─ ─' : s)
+  return { privacyMode, fmt, fmtHidden }
 }
