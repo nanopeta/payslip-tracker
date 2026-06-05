@@ -347,17 +347,80 @@ export default function AnnualSummaryPage() {
                     </svg>
                   </button>
                   {showRefundDetail && (
-                    <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">推定年間源泉徴収（月次＋賞与）</span>
-                        <span className="tabular-nums text-gray-700">{formatYen(projectedIT)}</span>
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2.5 text-xs">
+                      {/* ① 推定年間源泉徴収の内訳 */}
+                      <div>
+                        <p className="text-gray-500 font-medium mb-1">① 推定年間源泉徴収</p>
+                        <div className="space-y-1 pl-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">所得税実績（{simMonthlyCount}ヶ月）</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(simMonthlyIncomeTaxSum)}</span>
+                          </div>
+                          {simRemainingMonths > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">月平均（{formatYen(simMonthlyIncomeTaxAvg)}）× 残り{simRemainingMonths}ヶ月</span>
+                              <span className="tabular-nums text-gray-700">{formatYen(simMonthlyIncomeTaxAvg * simRemainingMonths)}</span>
+                            </div>
+                          )}
+                          {simBonusIncomeTaxSum > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">賞与実績</span>
+                              <span className="tabular-nums text-gray-700">{formatYen(simBonusIncomeTaxSum)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                            <span className="text-gray-600">合計</span>
+                            <span className="tabular-nums text-gray-700">{formatYen(projectedIT)}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-between pl-3">
-                        <span className="text-gray-400">正確な年税額 <span className="text-gray-300">課税所得×税率×1.021</span></span>
-                        <span className="tabular-nums text-gray-700">−{formatYen(simResult.incomeTaxAmount)}</span>
-                      </div>
-                      <div className="flex justify-between font-semibold border-t border-gray-200 pt-1 mt-1">
-                        <span className="text-gray-600">推定還付金</span>
+                      {/* ② 正確な年税額の内訳（速算表） */}
+                      {(() => {
+                        const ti = simResult.taxableIncome
+                        const rate = simResult.incomeTaxRate
+                        const speedDeduction = (() => {
+                          if (ti <= 1_950_000) return 0
+                          if (ti <= 3_300_000) return 97_500
+                          if (ti <= 6_950_000) return 427_500
+                          if (ti <= 9_000_000) return 636_000
+                          if (ti <= 18_000_000) return 1_536_000
+                          if (ti <= 40_000_000) return 2_796_000
+                          return 4_796_000
+                        })()
+                        const taxBaseRounded = Math.floor(Math.floor(ti * rate - speedDeduction) / 100) * 100
+                        return (
+                          <div>
+                            <p className="text-gray-500 font-medium mb-1">② 正確な年税額（速算表）</p>
+                            <div className="space-y-1 pl-2">
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">課税所得（所得税）</span>
+                                <span className="tabular-nums text-gray-700">{formatYen(ti)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">× 税率</span>
+                                <span className="tabular-nums text-gray-700">{(rate * 100).toFixed(0)}%</span>
+                              </div>
+                              {speedDeduction > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">− 速算控除額</span>
+                                  <span className="tabular-nums text-gray-700">{formatYen(speedDeduction)}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">= 税額（100円未満切捨て）</span>
+                                <span className="tabular-nums text-gray-700">{formatYen(taxBaseRounded)}</span>
+                              </div>
+                              <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                                <span className="text-gray-400">× 1.021（復興特別所得税）</span>
+                                <span className="tabular-nums text-gray-700">{formatYen(simResult.incomeTaxAmount)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })()}
+                      {/* 差引 */}
+                      <div className="flex justify-between font-semibold border-t border-gray-200 pt-2">
+                        <span className="text-gray-600">推定還付金（① − ②）</span>
                         <span className="tabular-nums" style={{ color: refund >= 0 ? '#5fad9b' : '#d06868' }}>
                           {refund >= 0 ? '+' : ''}{formatYen(refund)}
                         </span>
