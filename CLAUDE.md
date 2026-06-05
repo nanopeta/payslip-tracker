@@ -102,6 +102,8 @@ src/
 │   └── exporters.ts        # JSON バックアップ・CSV エクスポート（exportJSON, exportCSV）
 ├── store/
 │   └── useStore.ts         # Zustand store（localStorage と同期）
+├── hooks/
+│   └── usePrivacy.ts       # プライバシーモードフック（fmt・fmtHidden を提供）
 ├── components/
 │   ├── layout/             # Sidebar（PC）、BottomNav（スマホ）、Layout
 │   ├── ui/                 # StatCard
@@ -208,6 +210,7 @@ interface Payslip {
 | `payslip_tracker_v1` | `StorageState { version, payslips[], withholdingCerts[] }` |
 | `payslip_tracker_settings` | `OvertimeSettings { deemedLabel, actualLabels[] }` |
 | `payslip_tracker_tax_inputs` | `TaxDeductionInputs { ideco, lifeInsurancePremium, careInsurancePremium, earthquakeInsurancePremium, dependents }` |
+| `payslip_tracker_privacy` | `"true"` / `"false"`（プライバシーモードのON/OFF） |
 
 - バージョンが変わったらデータを空リセット
 - 初回アクセスは空状態スタート（サンプルデータなし）
@@ -1432,6 +1435,60 @@ npm run agent-team -- --no-push             # プッシュを省略
 - `furusatoCalc.ts` の型変更（税制改正で頻繁に変わる）
 - `TaxDeductionInputs` に項目追加 → localStorage スキーマも更新
 - 新しい state（`useState`）や計算パターンの追加
+
+### プライバシーモードの実装パターン
+
+`src/hooks/usePrivacy.ts` の `usePrivacy()` フックを使う。すべての数値表示箇所でこのフックを経由すること。
+
+```typescript
+const { privacyMode, fmt, fmtHidden } = usePrivacy()
+
+// 金額（¥ 表示） → privacyMode 時は '¥ ─ ─ ─'
+fmt(n)              // formatYen(n) と同等
+
+// 時間・日数・使用率など金額以外の数値 → privacyMode 時は '─ ─ ─'
+fmtHidden(`${h.toFixed(1)}h`)   // 時間
+fmtHidden(`${d}日`)              // 日数
+fmtHidden(`${pct.toFixed(1)}%`) // パーセント
+```
+
+#### プライバシーモード適用箇所一覧
+
+| 種別 | 関数 | 適用ファイル |
+|---|---|---|
+| 金額表示 | `fmt()` | 全ページ・全コンポーネント |
+| チャートY軸（金額） | `privacyMode ? '─ ─ ─' : \`¥...\`` | 折れ線・棒グラフ全チャート |
+| チャートY軸（時間） | `privacyMode ? '─ ─ ─' : \`${v}h\`` | OvertimeHoursChart |
+| チャートツールチップ | `privacyMode ? '...' : formatYen(...)` | 全チャート |
+| 残業時間・勤怠日数・使用率 | `fmtHidden(...)` | PayslipDetailView / AnnualDetailView / DashboardPage / PayslipDetailPage / PayslipCard |
+| StatCard の value/deltaText（時間・日数） | `fmtHidden(...)` | DashboardPage（累計残業時間・有給残日数） |
+
+#### Chart.js チャートでの注意点
+
+`privacyMode` を `useEffect` の外（コンポーネント本体）で取得し、`useEffect` の依存配列に含める。
+
+```typescript
+const privacyMode = useStore((s) => s.privacyMode) // or usePrivacy()
+
+useEffect(() => {
+  chartRef.current = new Chart(canvas, {
+    options: {
+      scales: {
+        y: { ticks: { callback: (v) => privacyMode ? '─ ─ ─' : `¥${...}万` } }
+      },
+      plugins: {
+        tooltip: { callbacks: { label: (ctx) => privacyMode ? '─ ─ ─' : fmt(ctx.raw) } }
+      }
+    }
+  })
+}, [JSON.stringify(data), privacyMode]) // ← privacyMode を deps に含める
+```
+
+#### トグルUI
+
+- PC: `Sidebar.tsx` のボタン（「金額を隠す」/「金額を表示」）
+- スマホ: `Layout.tsx` の右上フローティングボタン（「隠す」/「表示」）
+- 状態は Zustand `useStore` の `privacyMode` で管理、`payslip_tracker_privacy` に永続化
 
 ### チャートライブラリ選択の指針
 
