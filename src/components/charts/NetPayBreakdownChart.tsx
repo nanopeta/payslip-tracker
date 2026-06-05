@@ -1,7 +1,6 @@
 import { useRef, useEffect } from 'react'
 import Chart from 'chart.js/auto'
 import type { PayslipIncome, PayslipDeductions, PayslipSummary } from '../../types/payslip'
-import { formatYen } from '../../lib/formatters'
 import { usePrivacy } from '../../hooks/usePrivacy'
 
 const DEDUCTION_SLICES: { key: keyof PayslipDeductions; label: string; color: string }[] = [
