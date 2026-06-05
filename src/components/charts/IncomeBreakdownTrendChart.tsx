@@ -78,7 +78,7 @@ export default function IncomeBreakdownTrendChart({ data }: Props) {
             ticks: {
               font: { size: 11 },
               color: '#6b7280',
-              callback: (v) => `¥${((v as number) / 10000).toFixed(1)}万`,
+              callback: (v) => privacyMode ? '─ ─ ─' : `¥${((v as number) / 10000).toFixed(1)}万`,
             },
             grid: { color: '#f0f0f0' },
           },
