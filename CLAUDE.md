@@ -1187,7 +1187,13 @@ furusatoLimit = floor(residentTaxDividend * 0.2 / (1 - incomeTaxRate * 1.021 - 0
 2. **年末調整 推定還付金セクション**（`simResult` があり `!customMode` のとき表示）
    - `refund = projectedIT - simResult.incomeTaxAmount`（毎月天引き合計 − 正確な年税額）
    - 還付 → `#5fad9b`、追加納税 → `#d06868`
-   - 「計算内訳」トグル（`showRefundDetail` state）
+   - 「計算内訳」トグル（`showRefundDetail` state）で以下を展開表示:
+     - **① 推定年間源泉徴収**: 所得税実績（N ヶ月）+ 月平均×残りM ヶ月（試算月のみ）+ 賞与実績 = 合計
+     - **② 正確な年税額（速算表）**: 課税所得 → ×税率 → −速算控除額 → 100円未満切捨て → ×1.021 = 年税額
+     - **推定還付金（① − ②）**
+   - `projectedIT = simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum`
+   - 速算控除額はコンポーネント内でインライン計算（`taxableIncome` の区分に応じた定数）
+   - 課税所得は `simResult.taxableIncome`（ふるさと納税シミュレーターと同じ値・同じ `calcFurusato()` 結果を共有）
 
 **Card 2: ふるさと納税シミュレーター**
 
