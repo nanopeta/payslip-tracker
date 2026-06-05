@@ -449,6 +449,19 @@ pickMonthlyFirst(candidates)   // 候補から monthly 優先（undefined は mo
 - 比較キーは `year*100+month`。年またぎも正しく動作
 - 同月複数明細がある場合は `pickMonthlyFirst` でボーナスより給与を優先
 
+### previousSameTypePayslip / nextSameTypePayslip
+
+同種別（給与は給与、賞与は賞与）の前後明細を返す。`PayslipDetailPage.tsx` のナビゲーション・比較に使用。
+
+```typescript
+previousSameTypePayslip(payslips, current)  // 同 payslipType で直前の明細
+nextSameTypePayslip(payslips, current)      // 同 payslipType で直後の明細
+```
+
+- `payslipType` が未設定のものは `'monthly'` 扱い
+- 給与ナビでは賞与をスキップ、賞与ナビでは給与をスキップ
+- `PayslipDetailPage.tsx` の前後ボタンと前月比カードは両方ともこの関数を使って統一
+
 ### AnnualTotals（月次手取統計）
 
 `annualTotals()` で以下の統計フィールドも計算される:
@@ -625,13 +638,6 @@ git push --force-with-lease origin <branch>
 
 ---
 
-### DeductionDonutChart の凡例でレイアウト崩れ
-
-**原因**: 健康保険・厚生年金等の長いラベルが凡例に並ぶとチャートエリアを圧迫する。
-
-**対処**: `<Legend wrapperStyle={{ fontSize: 10 }} />` でフォントを縮小し、各 `<Cell>` に `legendType="square"` を付与。→ **実装済み（DeductionDonutChart.tsx）**
-
----
 
 ### みなし残業差額ツールチップの金額表示が `¥` なしになる
 
@@ -651,14 +657,41 @@ git push --force-with-lease origin <branch>
 
 ## 開発時の注意点
 
+### PayslipDetailPage のレイアウト順
+
+```
+1. ヒーローカード（PayslipDetailView）
+   ├── 差引支給額（左・大）
+   └── 総支給額（右・小）
+2. みなし残業効率カード（PayslipDetailView）
+3. 勤怠カード（PayslipDetailView）
+4. 前月比カード（prevSameType があるときのみ）
+5. 収支内訳カード（income > 0 || deductions > 0 のとき）
+   └── 概要/支給/控除 タブ
+```
+
+### PayslipDetailView 勤怠カードの alwaysShow パターン
+
+有休取得は0でも常に表示する（その月に有休を取っていなくてもカードに出す）。
+
+```typescript
+{ label: '有休取得', value: attendance.paidLeave, display: `${attendance.paidLeave}日`, alwaysShow: true },
+// その他の項目は alwaysShow: false（value > 0 のときのみ表示）
+```
+
+フィルタリング:
+```tsx
+.map((item) => (item.alwaysShow || item.value > 0) ? <div>...</div> : null)
+```
+
 ### 新しい支給・控除項目を追加したいとき
 
 1. `src/lib/mhtParser.ts` の `INCOME_LABELS` または `DEDUCTION_LABELS` にラベル→フィールド名のマッピングを追加
 2. `src/types/payslip.ts` の `PayslipIncome` / `PayslipDeductions` にフィールドを追加
 3. `emptyIncome()` / `emptyDeductions()` の初期値に `0` を追加
-4. `PayslipReviewForm.tsx` の入力欄に `<NumInput>` を追加
-5. `PayslipDetailView.tsx` の表示行に `<Row>` を追加
-6. `aggregations.ts` の `calcIncomeSum` / `calcDeductionSum` に加算を追加
+4. `PayslipReviewForm.tsx` の入力欄に `<NumInput>` を追加（控除の場合はクレジット項目になるか確認）
+5. `PayslipDetailView.tsx` の表示行に追加（勤怠の `alwaysShow` パターン参照）
+6. `DeductionDonutChart.tsx` の `SLICES` に追加（負値になる項目は自動的にクレジット扱いになる）
 
 ### 新しいページを追加したいとき
 
@@ -859,6 +892,25 @@ export interface IncomeBreakdownPoint {
 - Tooltip に合算額 + 前月比差額を表示
 - Chart.js（`chart.js/auto`）で実装（Recharts ではない）
 
+### DeductionDonutChart のクレジット項目処理
+
+`DeductionDonutChart.tsx` は全12控除フィールドを表示対象とする。負値（クレジット）と正値（控除）を分けて扱う。
+
+```typescript
+// 正値項目 → ドーナツスライス + 凡例（通常色）
+// 負値項目（taxRefund, expenseReimbursement, healthInsuranceBenefit など）→ 凡例のみ（緑色）
+
+const positiveItems = allNamed.filter((s) => s.value > 0)
+const creditItems = allNamed.filter((s) => s.value < 0)
+
+// 正値のグロス合計（% 計算の分母）
+const grossPositiveTotal = deductions.total - creditTotal  // creditTotal は負値
+```
+
+- `%` 計算の分母は `grossPositiveTotal`（ネット total ではなく）→ 100% 超えを防ぐ
+- 凡例の並び順: 正値項目 → クレジット項目 → 合計行
+- 合計行は `deductions.total`（ネット額）を表示
+
 ### IncomeDonutChart / DeductionDonutChart / NetPayBreakdownChart の共通仕様
 
 モバイルは縦積み、PC は横並びのレイアウト:
@@ -887,7 +939,7 @@ export interface IncomeBreakdownPoint {
 | ページ間隔 | `space-y-3`（大）/ `space-y-2`（StatCards内） |
 | グループ間隔 | `space-y-4` |
 | カード padding | `p-3` |
-| セクション見出し mb | `mb-2` |
+| セクション見出し mb | `mb-2.5`（カード内タイトル標準） |
 | グリッド gap | `gap-2`〜`gap-3` |
 | カード間隔（リスト） | `space-y-2` |
 
@@ -1144,18 +1196,38 @@ function handleFilterChange(newFilter: ...) {
 
 - フィルター変更後に前の選択が残ると「見えないアイテムが選択中」になる誤操作を防ぐ
 
-### PayslipDetailView / AnnualDetailView のセクションヘッダー
+### カードタイトルの標準スタイル（全ページ共通）
 
-セクションヘッダー（支給明細・控除明細など）に左側アクセントバーを付与し視認性を高める。
+アプリ全体のカード・セクションタイトルは以下のスタイルに統一されている。
 
 ```tsx
-<div className="flex items-center gap-2 mb-3">
-  <div className="w-1 h-5 rounded-full bg-brand-600" />  {/* アクセントバー */}
-  <h3 className="font-semibold text-brand-800 text-sm">{title}</h3>
-</div>
+{/* 標準（gray） */}
+<p className="text-sm font-bold text-gray-600 mb-2.5 flex items-center gap-2">
+  <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
+  セクション名
+</p>
+
+{/* みなし残業効率（amber） */}
+<p className="text-sm font-bold text-amber-600 mb-2.5 flex items-center gap-2">
+  <span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>
+  みなし残業 効率
+</p>
+
+{/* flex justify-between の子（mb なし、親 div で制御） */}
+<p className="text-sm font-bold text-gray-600 flex items-center gap-2">
+  <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
+  タイトル
+</p>
 ```
 
-- 合計行（支給合計・控除合計）には `bg-gray-50` の背景色を追加して通常行と区別する
+- `text-gray-700 font-semibold`（旧）や `text-gray-900 font-semibold`（旧）は使わない
+- 左アクセントバーは `w-1 h-4 rounded-full` で統一（旧: `h-3.5` や `h-5` も統一済み）
+- `gap-1.5`（旧）ではなく `gap-2` に統一
+
+### PayslipDetailView / AnnualDetailView のセクションヘッダー
+
+カードタイトルは上記「カードタイトルの標準スタイル」を使用。
+`PayslipReviewForm.tsx` 内の支給/控除セクションタイトルは別スタイル（`text-xs font-semibold uppercase tracking-wider`）を維持。
 
 ### AnnualSummaryPage の CSV エクスポートパターン
 
@@ -1215,21 +1287,35 @@ const hasBonus = slips.some(p => p.payslipType === 'bonus')
 - グラフ高さ: `hasBonus ? 200 : 180`
 - `slips.length > 0` のときのみ表示（データなし年はグラフ非表示）
 
-### PayslipDetailPage の前月比サマリー
+### PayslipDetailPage の同種別ナビゲーション・前月比パターン
 
-前後ナビゲーションバー直下に手取り・総支給・控除合計の前月比カード（`!editing && prev` のときのみ表示）。
+給与↔給与、賞与↔賞与で比較するため `previousSameTypePayslip` / `nextSameTypePayslip` を使用。
+ナビゲーションボタンと前月比カードは同じ `prevSameType` / `nextSameType` を参照する。
 
 ```typescript
-const items = [
-  { label: '手取り', delta: payslip.summary.netPay - prev.summary.netPay },
-  { label: '総支給', delta: payslip.income.total - prev.income.total },
-  { label: '控除合計', delta: payslip.deductions.total - prev.deductions.total, invert: true },
-]
-// invert: true の項目は増加→赤（控除が増えると手取り減少）
-style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}
+const prevSameType = payslip ? previousSameTypePayslip(payslips, payslip) : null
+const nextSameType = payslip ? nextSameTypePayslip(payslips, payslip) : null
+
+// ナビゲーションボタン: prevSameType / nextSameType で前後移動
+// 前月比カード: prevSameType との差分を 3カラム×2行（6項目）で表示
+// 収支内訳チャート: prevDeductions={prevSameType?.deductions} など
 ```
 
-- **`invert` フラグ**: 控除合計など「増加が不利」な指標に使う。`deltaPositive={delta <= 0}` の StatCard パターンと同義
+前月比カードの 6 項目:
+```typescript
+[
+  { label: '手取り',   delta: netPay差分,             invert: false },
+  { label: '総支給',   delta: income.total差分,        invert: false },
+  { label: '控除',     delta: deductions.total差分,     invert: true  },
+  { label: '出勤日数', delta: workDays差分,            fmt: (d) => `${d>0?'+':''}${d}日` },
+  { label: '残業時間', delta: overtimeHours差分,       invert: true, fmt: (d) => `...h` },
+  { label: '有給残',   delta: paidLeaveRemaining差分,  fmt: (d) => `${d>0?'+':''}${d}日` },
+]
+```
+
+- **`invert` フラグ**: 控除合計・残業時間など「増加が不利」な指標。増加→赤、減少→緑
+- 値フォントは `text-sm font-semibold`（みなし残業/勤怠と統一）
+- カードタイトルも標準スタイル（左アクセントバー + `text-sm font-bold text-gray-600`）
 
 ### localStorage のデータをリセットしたいとき（開発中）
 
