@@ -65,7 +65,10 @@ npm run agent-team -- --model=claude-haiku-4-5-20251001  # 使用モデルを指
 | Vite | 6.3.5 | ビルドツール |
 | TypeScript | 5.8.3 | 型チェック |
 | Tailwind CSS | **3.4.19（固定）** | スタイリング |
-| Recharts | 2.15.3 | チャート描画 |
+| Recharts | 2.15.3 | チャート描画（折れ線・棒グラフ）|
+| Chart.js | 4.5.1 | ドーナツ・ステップ折れ線チャート |
+| react-chartjs-2 | 5.3.1 | Chart.js の React ラッパー |
+| chartjs-plugin-annotation | 3.1.0 | Chart.js 参照線プラグイン |
 | Zustand | 5.0.3 | 状態管理 |
 | React Router | 6.28.0 | ルーティング |
 | pdfjs-dist | 5.2.133 | PDF解析（現在ほぼ未使用） |
@@ -73,6 +76,10 @@ npm run agent-team -- --model=claude-haiku-4-5-20251001  # 使用モデルを指
 | tsx | 4.19+ | TypeScript スクリプト実行（devDep） |
 
 > **注意**: Tailwind は `3.4.19` に固定。`npm install tailwindcss` で最新版（v4）に上がると設定が壊れる。
+>
+> **チャートライブラリの使い分け**:
+> - **Recharts**: `TrendSummaryChart`・`OvertimeHoursChart`・`GainTrendChart`・`MonthlyNetPayBarChart`・`PaidLeaveTrendChart`（未使用）
+> - **Chart.js**: `IncomeDonutChart`・`DeductionDonutChart`・`NetPayBreakdownChart`（ドーナツ）、`IncomeBreakdownTrendChart`（ステップ折れ線）、`AnnualTotalsBarChart`（折れ線）
 
 ---
 
@@ -89,35 +96,35 @@ src/
 ├── lib/
 │   ├── storage.ts          # localStorage CRUD + OvertimeSettings
 │   ├── mhtParser.ts        # MHTファイル解析（メイン）
-│   ├── pdfParser.ts        # PDF解析（旧・ほぼ未使用）
 │   ├── formatters.ts       # 円表示・和暦・時間フォーマット
 │   ├── aggregations.ts     # 月次集計・年次集計・みなし残業計算・社会保険料集計・前後明細ナビゲーション
-│   └── furusatoCalc.ts     # ふるさと納税上限額計算（TaxDeductionInputs, FurusatoResult, calcFurusato）
+│   ├── furusatoCalc.ts     # ふるさと納税上限額計算（TaxDeductionInputs, FurusatoResult, calcFurusato）
+│   └── exporters.ts        # JSON バックアップ・CSV エクスポート（exportJSON, exportCSV）
 ├── store/
 │   └── useStore.ts         # Zustand store（localStorage と同期）
 ├── components/
 │   ├── layout/             # Sidebar（PC）、BottomNav（スマホ）、Layout
 │   ├── ui/                 # StatCard
 │   ├── charts/
-│   │   ├── TrendSummaryChart.tsx          # 支給・手取りの推移（折れ線）★メイン
-│   │   ├── PaidLeaveTrendChart.tsx        # 有給残日数の推移（棒グラフ）
-│   │   ├── DeductionDonutChart.tsx        # 控除内訳ドーナツチャート
-│   │   ├── IncomeDonutChart.tsx           # 支給内訳ドーナツチャート
-│   │   ├── NetPayBreakdownChart.tsx       # 総支給→手取りの内訳チャート（概要タブ）
-│   │   ├── IncomeBreakdownTrendChart.tsx  # 支給合算推移（基本給+みなし+WLB+ライフプラン）
-│   │   ├── OvertimeHoursChart.tsx         # 残業時間推移（棒グラフ・45h参照線・80h過労ライン付き）
-│   │   ├── GainTrendChart.tsx             # みなし残業差額推移（折れ線）
-│   │   ├── SocialInsuranceTrendChart.tsx  # 4保険合計の月次推移（折れ線）
-│   │   ├── MonthlyNetPayBarChart.tsx      # 年間集計の月次手取り棒グラフ（給与/賞与スタック）
-│   │   ├── AnnualTotalsBarChart.tsx       # 年間集計ページの年別推移棒グラフ
-│   │   ├── NetPayTrendChart.tsx           # 旧・未使用
-│   │   └── IncomeDeductionChart.tsx       # 旧・未使用
+│   │   ├── TrendSummaryChart.tsx          # 支給・手取りの推移（Recharts 折れ線）★メイン
+│   │   ├── DeductionDonutChart.tsx        # 控除内訳ドーナツチャート（Chart.js）
+│   │   ├── IncomeDonutChart.tsx           # 支給内訳ドーナツチャート（Chart.js）
+│   │   ├── NetPayBreakdownChart.tsx       # 総支給→手取りの内訳チャート・概要タブ（Chart.js）
+│   │   ├── IncomeBreakdownTrendChart.tsx  # 支給合算推移・ステップ折れ線（Chart.js）
+│   │   ├── OvertimeHoursChart.tsx         # 残業時間推移（Recharts 棒グラフ・45h/80h参照線付き）
+│   │   ├── GainTrendChart.tsx             # みなし残業差額推移（Recharts 折れ線）
+│   │   ├── MonthlyNetPayBarChart.tsx      # 年間集計の月次手取り棒グラフ・給与/賞与スタック（Recharts）
+│   │   ├── AnnualTotalsBarChart.tsx       # 年間集計ページの年別推移折れ線グラフ（Chart.js）
+│   │   └── PaidLeaveTrendChart.tsx        # 旧・未使用（有給残日数の推移）
 │   ├── payslip/
 │   │   ├── PayslipCard.tsx            # 明細一覧のカード（monthly かつ overtimeHours > 0 のとき残業時間を表示）
 │   │   ├── PayslipDetailView.tsx      # 1件の明細詳細
 │   │   └── AnnualDetailView.tsx       # 年間集計詳細（PayslipDetailView スタイル）
+│   ├── forms/
+│   │   ├── PayslipReviewForm.tsx      # 給与明細の手入力修正フォーム（アップロード時・編集時の両方で使用）
+│   │   └── WithholdingReviewForm.tsx  # 源泉徴収票の手入力修正フォーム
 │   ├── withholding/        # WithholdingCard
-│   └── upload/             # DropZone、PayslipReviewForm（重複検出付き）、WithholdingReviewForm
+│   └── upload/             # DropZone のみ（フォームは forms/ へ移動済み）
 └── pages/
     ├── DashboardPage.tsx   # ダッシュボード（StatCards・収支内訳タブ・みなし残業効率・今年の累計・チャート群）
     ├── PayslipsPage.tsx    # 給与明細一覧（ソート切り替え・年別グループトグル・月フィルター・フリーテキスト検索・アクティブフィルターチップス・一括削除）
@@ -200,7 +207,7 @@ interface Payslip {
 |---|---|
 | `payslip_tracker_v1` | `StorageState { version, payslips[], withholdingCerts[] }` |
 | `payslip_tracker_settings` | `OvertimeSettings { deemedLabel, actualLabels[] }` |
-| `payslip_tracker_tax_inputs` | `TaxDeductionInputs { ideco, lifeInsurancePremium, earthquakeInsurancePremium, dependents }` |
+| `payslip_tracker_tax_inputs` | `TaxDeductionInputs { ideco, lifeInsurancePremium, careInsurancePremium, earthquakeInsurancePremium, dependents }` |
 
 - バージョンが変わったらデータを空リセット
 - 初回アクセスは空状態スタート（サンプルデータなし）
@@ -689,7 +696,7 @@ git push --force-with-lease origin <branch>
 1. `src/lib/mhtParser.ts` の `INCOME_LABELS` または `DEDUCTION_LABELS` にラベル→フィールド名のマッピングを追加
 2. `src/types/payslip.ts` の `PayslipIncome` / `PayslipDeductions` にフィールドを追加
 3. `emptyIncome()` / `emptyDeductions()` の初期値に `0` を追加
-4. `PayslipReviewForm.tsx` の入力欄に `<NumInput>` を追加（控除の場合はクレジット項目になるか確認）
+4. `src/components/forms/PayslipReviewForm.tsx` の入力欄に `<NumInput>` を追加（控除の場合はクレジット項目になるか確認）
 5. `PayslipDetailView.tsx` の表示行に追加（勤怠の `alwaysShow` パターン参照）
 6. `DeductionDonutChart.tsx` の `SLICES` に追加（負値になる項目は自動的にクレジット扱いになる）
 
@@ -772,6 +779,8 @@ const INCOME_LABELS: Record<string, string> = {
 5. **支給合算の推移** — `IncomeBreakdownTrendChart`（期間フィルター付き・2件以上のときのみ）
 6. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
 7. **最近の給与明細** — 直近3件のカードリスト（「全件を見る」リンク付き）
+
+> **注**: `socialInsuranceTrend` / `latestSocialInsurance` は `aggregations.ts` に実装済みだが、現在ダッシュボードでは未使用（対応チャートコンポーネントも存在しない）。将来実装時に利用可能。
 
 ### 収支内訳カード（月選択 + 3タブ）
 
@@ -1124,20 +1133,33 @@ const simDeductionAdjustment = simImpliedDeductions - simShownDeductions  // 負
 
 #### ふるさと納税計算（furusatoCalc.ts）
 
+令和7年度税制改正対応済み（給与所得控除最低保障額 55万→65万、基礎控除を給与所得連動で段階的に変化）。
+
 ```typescript
 // src/lib/furusatoCalc.ts
 interface TaxDeductionInputs {
-  ideco: number                     // iDeCo年額
-  lifeInsurancePremium: number      // 生命保険料年額
+  ideco: number                      // iDeCo年額
+  lifeInsurancePremium: number       // 新生命保険料（一般）年額
+  careInsurancePremium: number       // 介護医療保険料年額
   earthquakeInsurancePremium: number // 地震保険料年額
-  dependents: number                // 扶養人数
+  dependents: number                 // 扶養人数（一般扶養）
 }
 
 interface FurusatoResult {
   employmentIncomeDeduction: number  // 給与所得控除
   employmentIncome: number           // 給与所得
+  // 所得税側
+  lifeInsuranceDeduction: number     // 生命保険料控除（所得税）
+  earthquakeDeduction: number        // 地震保険料控除（所得税）
+  dependentDeduction: number         // 扶養控除（所得税）
+  basicDeduction: number             // 基礎控除（所得税、給与所得連動で変化）
   taxableIncome: number              // 課税所得（所得税）
   incomeTaxRate: number              // 所得税率
+  incomeTaxAmount: number            // 正確な年税額（速算表×復興特別税1.021）
+  // 住民税側
+  lifeInsuranceDeductionRT: number   // 生命保険料控除（住民税）
+  earthquakeDeductionRT: number      // 地震保険料控除（住民税）
+  dependentDeductionRT: number       // 扶養控除（住民税）
   taxableIncomeResident: number      // 課税所得（住民税）
   residentTaxDividend: number        // 住民税所得割（10%）
   furusatoLimit: number              // 推定上限額（自己負担2,000円含む）
@@ -1149,18 +1171,32 @@ furusatoLimit = floor(residentTaxDividend * 0.2 / (1 - incomeTaxRate * 1.021 - 0
 
 - `calcFurusato(annualIncome, socialInsurance, inputs)` → `FurusatoResult`
 - localStorage `payslip_tracker_tax_inputs` に入力値を永続化（データ削除しても保持）
+- 生命保険料控除は `lifeInsurancePremium`（一般）と `careInsurancePremium`（介護医療）を別枠で計算し合算（所得税上限 12万、住民税上限 7万）
+- `incomeTaxAmount` は年末調整の還付金試算にも使用（年末調整カード）
 
-#### シミュレーターカードのUI構成
+#### シミュレーターの2カード構成
 
-1. **年収試算セクション**（`simMonthlyCount > 0` のときのみ表示）
+`AnnualSummaryPage.tsx` は年間集計ページ先頭に2枚のカードを配置する。
+
+**Card 1: 年収試算・年末調整還付金**（`simMonthlyCount > 0` のときのみ表示）
+
+1. **年収試算セクション**
    - 3列グリッド: 総支給 / 手取り / 控除合計
    - 「内訳」トグル（`showIncomeDetail` state）→ 総支給・控除・手取りの詳細行
    - 内訳の各行: `実績（Nヶ月）` + `月平均×残りMヶ月` + 賞与実績 + 合計
-2. 区切り線
-3. **ふるさと納税シミュレーター**ラベル
-4. 2列グリッド: 給与収入（自動）/ 社会保険料（自動）
-5. 2列グリッド: iDeCo / 生命保険料 / 地震保険料 / 扶養人数（手動入力）
-6. 上限額表示カード + 「計算内訳」トグル（`showSimDetail` state）
+2. **年末調整 推定還付金セクション**（`simResult` があり `!customMode` のとき表示）
+   - `refund = projectedIT - simResult.incomeTaxAmount`（毎月天引き合計 − 正確な年税額）
+   - 還付 → `#5fad9b`、追加納税 → `#d06868`
+   - 「計算内訳」トグル（`showRefundDetail` state）
+
+**Card 2: ふるさと納税シミュレーター**
+
+1. カスタムモード切替ボタン（`customMode` state）
+   - OFF（自動）: Card 1 の試算値（`simIncome` / `simSocialInsurance`）を引き継ぎ
+   - ON: `customIncome` / `customSocialInsurance` を手動入力
+2. 2列グリッド: 給与収入 / 社会保険料（自動値またはカスタム入力）
+3. 4項目入力: iDeCo / 新生命保険料 / 介護医療保険料 / 地震保険料 / 扶養人数
+4. 上限額表示カード + 「計算内訳」トグル（`showSimDetail` state）
 
 ### AnnualSummaryPage の年カード前年比表示
 
@@ -1228,6 +1264,24 @@ function handleFilterChange(newFilter: ...) {
 
 カードタイトルは上記「カードタイトルの標準スタイル」を使用。
 `PayslipReviewForm.tsx` 内の支給/控除セクションタイトルは別スタイル（`text-xs font-semibold uppercase tracking-wider`）を維持。
+
+### AnnualTotalsBarChart の仕様
+
+`AnnualSummaryPage.tsx` の全年集計グラフ（最下部）。名前に "Bar" とあるが **Chart.js の折れ線グラフ（type: 'line'）** で実装されている（#98 で棒グラフから変更済み）。
+
+```typescript
+interface AnnualTotalsPoint {
+  label: string       // 年ラベル（"2025"など）
+  totalIncome: number
+  totalNetPay: number
+}
+```
+
+- 総支給: 青系（`#5b8fa8`）破線、差引支給: 緑系（`#5fad9b`）実線
+- Chart.js で実装（Recharts ではない）
+- 高さ: 220px固定
+
+---
 
 ### AnnualSummaryPage の CSV エクスポートパターン
 
@@ -1359,3 +1413,64 @@ npm run agent-team -- --no-push             # プッシュを省略
 - タスク単位で `try/catch` し、1件失敗しても次タスクへ継続
 - `spawnSync` / `execSync` の呼び出しには `shell: true` を付与（Windows でも動作）
 - プッシュ失敗時は指数バックオフで最大4回リトライ（2s → 4s → 8s → 16s）
+
+---
+
+## 開発効率化メモ（Claude Code 向け気付き集）
+
+### CLAUDE.md の更新タイミング
+
+新しいコンポーネント・パターン・型変更を実装した直後に CLAUDE.md を更新すること。
+特に以下の変更は忘れやすい:
+- チャートコンポーネントの追加・削除・ライブラリ変更
+- `furusatoCalc.ts` の型変更（税制改正で頻繁に変わる）
+- `TaxDeductionInputs` に項目追加 → localStorage スキーマも更新
+- 新しい state（`useState`）や計算パターンの追加
+
+### チャートライブラリ選択の指針
+
+| ユースケース | ライブラリ |
+|---|---|
+| 折れ線・棒グラフ（Tooltip・参照線あり） | **Recharts** |
+| ドーナツ・ステップ折れ線・高カスタム | **Chart.js** (`chart.js/auto` + `useRef<HTMLCanvasElement>`) |
+
+Chart.js を使う場合は `useEffect` 内で `Chart.getChart(canvas)?.destroy()` → `new Chart(...)` パターン必須（HMR でインスタンスが残るバグを防ぐ）。
+
+### TypeScript strict モードの注意点
+
+`tsc -b` は strict モードで実行される。以下のパターンで型エラーになりやすい:
+
+```typescript
+// NG: 配列末尾の要素は T | undefined
+const last = arr[arr.length - 1]   // T | undefined
+
+// OK: 非nullアサーションか optional chaining を使う
+const last = arr[arr.length - 1]!  // T（存在を確認してから使う）
+const val = arr.at(-1)?.field      // undefined | field 型
+```
+
+- `as [number, number]` などのタプルアサーションは `split().map(Number)` の結果に必要
+- Recharts の `dot` prop は `(props: { cx?: number; cy?: number }) => ReactElement` のカスタム関数が最も安全
+
+### 税制改正対応の手順
+
+令和の改正は毎年発生する。`furusatoCalc.ts` を変更する際は:
+1. `calcEmploymentIncomeDeduction()` — 給与所得控除（最低保障額・区分）
+2. `calcBasicDeductionIT()` — 基礎控除（給与所得連動の段階別）
+3. `calcLifeInsuranceDeductionIT/RT()` — 生命保険料控除（上限）
+4. `calcIncomeTaxAmount()` — 速算表（税率・控除額）
+
+令和7・8年分: 基礎控除は `empIncome <= 1,320,000 → 95万、3,360,000 → 88万、4,890,000 → 68万、6,550,000 → 63万、23,500,000 → 58万`。令和9年以降は 132万超の区分が 58万に統一予定。
+
+### 未使用コード・コンポーネントの扱い
+
+現在未使用だが削除していないもの:
+- `PaidLeaveTrendChart.tsx` — 有給推移グラフ（実装済み・ページ未組込み）
+- `socialInsuranceTrend()` / `latestSocialInsurance()` — 社会保険料集計（aggregations.ts）
+- `income.overtime` / `income.lifePlanSupport` — 旧フィールド（`detailIncome` に移行中）
+
+削除より「旧・未使用」として残しておく方針（後から必要になる可能性あり）。
+
+### ページ追加時の前後ナビゲーション設計
+
+新しいページで「前後の明細に移動」を実装する場合は、**同種別ナビゲーション**を基本とする（`previousSameTypePayslip` / `nextSameTypePayslip`）。給与と賞与を混在させると比較が無意味になるため。
