@@ -7,10 +7,11 @@ import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import IncomeDonutChart from '../components/charts/IncomeDonutChart'
 import NetPayBreakdownChart from '../components/charts/NetPayBreakdownChart'
 import { previousSameTypePayslip, nextSameTypePayslip } from '../lib/aggregations'
-import { formatYen } from '../lib/formatters'
+import { usePrivacy } from '../hooks/usePrivacy'
 import type { Payslip } from '../types/payslip'
 
 export default function PayslipDetailPage() {
+  const { fmt } = usePrivacy()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const payslips = useStore((s) => s.payslips)
@@ -126,17 +127,17 @@ export default function PayslipDetailPage() {
                   { label: '手取り', delta: payslip.summary.netPay - prevSameType.summary.netPay, invert: false },
                   { label: '総支給', delta: payslip.income.total - prevSameType.income.total, invert: false },
                   { label: '控除', delta: payslip.deductions.total - prevSameType.deductions.total, invert: true },
-                  { label: '出勤日数', delta: payslip.attendance.workDays - prevSameType.attendance.workDays, invert: false, fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
-                  { label: '残業時間', delta: payslip.attendance.overtimeHours - prevSameType.attendance.overtimeHours, invert: true, fmt: (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}h` },
-                  { label: '有給残', delta: payslip.attendance.paidLeaveRemaining - prevSameType.attendance.paidLeaveRemaining, invert: false, fmt: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
-                ].map(({ label, delta, invert, fmt }) => (
+                  { label: '出勤日数', delta: payslip.attendance.workDays - prevSameType.attendance.workDays, invert: false, fmtFn: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
+                  { label: '残業時間', delta: payslip.attendance.overtimeHours - prevSameType.attendance.overtimeHours, invert: true, fmtFn: (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}h` },
+                  { label: '有給残', delta: payslip.attendance.paidLeaveRemaining - prevSameType.attendance.paidLeaveRemaining, invert: false, fmtFn: (d: number) => `${d > 0 ? '+' : ''}${d}日` },
+                ].map(({ label, delta, invert, fmtFn }) => (
                   <div key={label}>
                     <p className="text-[10px] text-gray-400 leading-tight">{label}</p>
                     <p className="text-sm font-semibold tabular-nums mt-0.5"
                       style={{ color: (invert ? delta <= 0 : delta >= 0) ? '#5fad9b' : '#d06868' }}>
-                      {fmt
-                        ? fmt(delta)
-                        : `${delta >= 0 ? '+' : '-'}${formatYen(Math.abs(delta))}`}
+                      {fmtFn
+                        ? fmtFn(delta)
+                        : `${delta >= 0 ? '+' : '-'}${fmt(Math.abs(delta))}`}
                     </p>
                   </div>
                 ))}

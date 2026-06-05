@@ -4,9 +4,10 @@ import { DEFAULT_OVERTIME_SETTINGS } from '../lib/storage'
 import { exportJSON, exportCSV } from '../lib/exporters'
 import type { StorageState } from '../lib/storage'
 import { getIncomeValueByLabel, latestPayslip } from '../lib/aggregations'
-import { formatYen } from '../lib/formatters'
+import { usePrivacy } from '../hooks/usePrivacy'
 
 export default function SettingsPage() {
+  const { fmt } = usePrivacy()
   const settings = useStore((s) => s.overtimeSettings)
   const setOvertimeSettings = useStore((s) => s.setOvertimeSettings)
   const payslips = useStore((s) => s.payslips)
@@ -208,7 +209,7 @@ export default function SettingsPage() {
                 className="font-mono"
                 style={{ color: (previewDeemed ?? 0) === 0 ? '#9ca3af' : undefined }}
               >
-                {(previewDeemed ?? 0) === 0 ? '¥0 (未検出)' : formatYen(previewDeemed ?? 0)}
+                {(previewDeemed ?? 0) === 0 ? '¥0 (未検出)' : fmt(previewDeemed ?? 0)}
               </span>
             </div>
             {previewActualBreakdown.map((row, i) => (
@@ -218,7 +219,7 @@ export default function SettingsPage() {
                   className="font-mono"
                   style={{ color: row.value === 0 ? '#9ca3af' : undefined }}
                 >
-                  {row.value === 0 ? '¥0 (未検出)' : formatYen(row.value)}
+                  {row.value === 0 ? '¥0 (未検出)' : fmt(row.value)}
                 </span>
               </div>
             ))}
@@ -229,7 +230,7 @@ export default function SettingsPage() {
                 style={{ color: (previewGain ?? 0) >= 0 ? '#5fad9b' : '#d06868' }}
               >
                 {previewGain !== null
-                  ? `${previewGain >= 0 ? '+' : ''}${formatYen(previewGain)}`
+                  ? `${previewGain >= 0 ? '+' : ''}${fmt(previewGain)}`
                   : '—'}
               </span>
             </div>

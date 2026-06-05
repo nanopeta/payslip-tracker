@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Payslip } from '../../types/payslip'
-import { formatYen, formatYearMonth } from '../../lib/formatters'
+import { formatYearMonth } from '../../lib/formatters'
+import { usePrivacy } from '../../hooks/usePrivacy'
 
 interface Props {
   payslip: Payslip
@@ -30,9 +31,10 @@ function matchesAmountDigits(amount: number, query: string): boolean {
 }
 
 export default function PayslipCard({ payslip, prevNetPay, searchQuery = '' }: Props) {
+  const { privacyMode, fmt } = usePrivacy()
   const delta = prevNetPay !== undefined ? payslip.summary.netPay - prevNetPay : undefined
-  const netPayMatch = matchesAmountDigits(payslip.summary.netPay, searchQuery)
-  const incomeTotalMatch = matchesAmountDigits(payslip.income.total, searchQuery)
+  const netPayMatch = !privacyMode && matchesAmountDigits(payslip.summary.netPay, searchQuery)
+  const incomeTotalMatch = !privacyMode && matchesAmountDigits(payslip.income.total, searchQuery)
 
   return (
     <Link
@@ -53,10 +55,10 @@ export default function PayslipCard({ payslip, prevNetPay, searchQuery = '' }: P
         <p className="text-2xl font-bold tabular-nums text-gray-900">
           {netPayMatch ? (
             <mark className="bg-brand-100 text-brand-700 rounded-sm px-0.5 not-italic font-bold">
-              {formatYen(payslip.summary.netPay)}
+              {fmt(payslip.summary.netPay)}
             </mark>
           ) : (
-            formatYen(payslip.summary.netPay)
+            fmt(payslip.summary.netPay)
           )}
         </p>
         <p className="text-xs text-gray-400 mt-0.5">差引支給額</p>
@@ -66,20 +68,20 @@ export default function PayslipCard({ payslip, prevNetPay, searchQuery = '' }: P
           総支給{' '}
           {incomeTotalMatch ? (
             <mark className="bg-brand-100 text-brand-700 rounded-sm px-0.5 not-italic tabular-nums font-medium">
-              {formatYen(payslip.income.total)}
+              {fmt(payslip.income.total)}
             </mark>
           ) : (
-            <span className="tabular-nums text-gray-700 font-medium">{formatYen(payslip.income.total)}</span>
+            <span className="tabular-nums text-gray-700 font-medium">{fmt(payslip.income.total)}</span>
           )}
         </span>
         <span className="text-gray-300">·</span>
-        <span>控除 <span className="tabular-nums font-medium" style={{ color: '#d06868' }}>{formatYen(payslip.deductions.total)}</span></span>
+        <span>控除 <span className="tabular-nums font-medium" style={{ color: '#d06868' }}>{fmt(payslip.deductions.total)}</span></span>
         {delta !== undefined && (
           <>
             <span className="text-gray-300">·</span>
             <span>
               前月比 <span className="tabular-nums font-medium" style={{ color: delta >= 0 ? '#5fad9b' : '#d06868' }}>
-                {delta >= 0 ? '+' : '-'}¥{Math.abs(delta).toLocaleString('ja-JP')}
+                {privacyMode ? '¥ ─ ─ ─' : `${delta >= 0 ? '+' : '-'}¥${Math.abs(delta).toLocaleString('ja-JP')}`}
               </span>
             </span>
           </>

@@ -7,6 +7,7 @@ interface AppStore {
   payslips: Payslip[]
   withholdingCerts: WithholdingTaxCertificate[]
   overtimeSettings: OvertimeSettings
+  privacyMode: boolean
   addPayslip: (p: Payslip) => void
   updatePayslip: (id: string, updates: Partial<Payslip>) => void
   deletePayslip: (id: string) => void
@@ -16,6 +17,7 @@ interface AppStore {
   deleteWithholdingCert: (id: string) => void
   setOvertimeSettings: (s: OvertimeSettings) => void
   restoreState: (state: { payslips: Payslip[]; withholdingCerts: WithholdingTaxCertificate[] }) => void
+  togglePrivacyMode: () => void
 }
 
 const useStore = create<AppStore>((set, get) => {
@@ -24,6 +26,7 @@ const useStore = create<AppStore>((set, get) => {
     payslips: initial.payslips,
     withholdingCerts: initial.withholdingCerts,
     overtimeSettings: loadSettings(),
+    privacyMode: localStorage.getItem('payslip_tracker_privacy') === 'true',
 
     addPayslip: (p) => {
       const payslips = [...get().payslips, p]
@@ -73,6 +76,12 @@ const useStore = create<AppStore>((set, get) => {
     restoreState: ({ payslips, withholdingCerts }) => {
       set({ payslips, withholdingCerts })
       save({ version: 1, payslips, withholdingCerts })
+    },
+
+    togglePrivacyMode: () => {
+      const next = !get().privacyMode
+      set({ privacyMode: next })
+      localStorage.setItem('payslip_tracker_privacy', String(next))
     },
   }
 })

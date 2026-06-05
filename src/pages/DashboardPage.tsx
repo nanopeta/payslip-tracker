@@ -11,7 +11,7 @@ import OvertimeHoursChart from '../components/charts/OvertimeHoursChart'
 import IncomeBreakdownTrendChart from '../components/charts/IncomeBreakdownTrendChart'
 import PayslipCard from '../components/payslip/PayslipCard'
 import { netPayTrend, latestMonthStats, prevMonthStats, calcOvertimeGain, latestPayslip, latestPaidLeave, getIncomeValueByLabel, annualTotals, ytdOvertimeHoursStats } from '../lib/aggregations'
-import { formatYen } from '../lib/formatters'
+import { usePrivacy } from '../hooks/usePrivacy'
 
 type PeriodFilter = 'all' | 'year' | '6m' | '12m'
 const PERIOD_FILTERS: { key: PeriodFilter; label: string }[] = [
@@ -34,6 +34,7 @@ function applyPeriodFilter<T extends { label: string }>(rows: T[], filter: Perio
 }
 
 export default function DashboardPage() {
+  const { fmt } = usePrivacy()
   const payslips = useStore((s) => s.payslips)
   const settings = useStore((s) => s.overtimeSettings)
   const sorted = [...payslips].sort((a, b) => b.year * 100 + b.month - (a.year * 100 + a.month))
@@ -195,19 +196,19 @@ export default function DashboardPage() {
       <div className="space-y-2">
         <StatCard
           title={latestMonth ? `差引支給額（${latestMonth.year}年${latestMonth.month}月）` : '差引支給額'}
-          value={latestMonth ? formatYen(latestMonth.netPay) : '—'}
+          value={latestMonth ? fmt(latestMonth.netPay) : '—'}
           delta={latestMonth && prevMonth ? latestMonth.netPay - prevMonth.netPay : undefined}
           highlight
         />
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             title="総支給金額"
-            value={latestMonth ? formatYen(latestMonth.totalIncome) : '—'}
+            value={latestMonth ? fmt(latestMonth.totalIncome) : '—'}
             delta={latestMonth && prevMonth ? latestMonth.totalIncome - prevMonth.totalIncome : undefined}
           />
           <StatCard
             title="控除合計"
-            value={latestMonth ? formatYen(latestMonth.totalDeductions) : '—'}
+            value={latestMonth ? fmt(latestMonth.totalDeductions) : '—'}
             delta={latestMonth && prevMonth ? latestMonth.totalDeductions - prevMonth.totalDeductions : undefined}
           />
           {takeHomeRate !== null && (
@@ -282,8 +283,8 @@ export default function DashboardPage() {
           </div>
           <p className="text-xs text-gray-400 mb-2">
             {donutTab === 'deduction'
-              ? `控除合計 ${formatYen(selectedDonutMonthly?.deductions.total ?? 0)}`
-              : `総支給 ${formatYen(selectedDonutMonthly?.income.total ?? 0)}`}
+              ? `控除合計 ${fmt(selectedDonutMonthly?.deductions.total ?? 0)}`
+              : `総支給 ${fmt(selectedDonutMonthly?.income.total ?? 0)}`}
           </p>
           {selectedDonutMonthly && (
             donutTab === 'overview'
@@ -322,7 +323,7 @@ export default function DashboardPage() {
 
           <div className="flex items-baseline gap-2 mb-2">
             <span className="text-2xl font-bold tabular-nums" style={{ color: (latestGain ?? 0) >= 0 ? '#5fad9b' : '#d06868' }}>
-              {(latestGain ?? 0) >= 0 ? '+' : ''}{formatYen(latestGain ?? 0)}
+              {(latestGain ?? 0) >= 0 ? '+' : ''}{fmt(latestGain ?? 0)}
             </span>
             <span className="text-xs text-gray-400">差額</span>
           </div>
@@ -330,11 +331,11 @@ export default function DashboardPage() {
           <div className="grid grid-cols-4 gap-x-3 gap-y-2 mb-2">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">みなし（{DEEMED_HOURS}h）</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(deemedAmtLatest)}</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(deemedAmtLatest)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-0.5">実残業代</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(actualAmtLatest)}</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(actualAmtLatest)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-0.5">残業時間</p>
@@ -352,12 +353,12 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-0.5">残業時給</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(overtimeHourlyRate)}/h</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(overtimeHourlyRate)}/h</p>
             </div>
             {basicHourlyRate > 0 && (
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">基本時給</p>
-                <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(basicHourlyRate)}/h</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(basicHourlyRate)}/h</p>
               </div>
             )}
           </div>
@@ -410,11 +411,11 @@ export default function DashboardPage() {
               <div className="grid grid-cols-4 gap-x-4 gap-y-3 mb-3">
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">みなし（{ytdDeemedHours}h）</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdDeemedTotal)}</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdDeemedTotal)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">実残業代合計</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdActualTotal)}</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdActualTotal)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">残業時間合計</p>
@@ -435,7 +436,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">年間差額</p>
                   <p className="text-sm font-semibold tabular-nums" style={{ color: ytdGainTotal >= 0 ? '#5fad9b' : '#d06868' }}>
-                    {ytdGainTotal >= 0 ? '+' : ''}{formatYen(ytdGainTotal)}
+                    {ytdGainTotal >= 0 ? '+' : ''}{fmt(ytdGainTotal)}
                   </p>
                 </div>
                 <div>
@@ -446,12 +447,12 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">残業時給平均</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdOvertimeHourlyRate)}/h</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdOvertimeHourlyRate)}/h</p>
                 </div>
                 {ytdBasicHourlyRate > 0 && (
                   <div>
                     <p className="text-xs text-gray-400 mb-0.5">基本時給平均</p>
-                    <p className="text-sm font-semibold tabular-nums text-gray-900">{formatYen(ytdBasicHourlyRate)}/h</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdBasicHourlyRate)}/h</p>
                   </div>
                 )}
               </div>
@@ -479,9 +480,9 @@ export default function DashboardPage() {
           {currentYearMonthlySlips.length > 0 && (
             <div className="grid grid-cols-4 gap-x-2 items-center py-1 border-b border-gray-100">
               <p className="text-xs text-gray-500">給与</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{formatYen(currentYearMonthlyIncome)}</p>
-              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#5fad9b' }}>{formatYen(currentYearMonthlyNetPay)}</p>
-              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#d06868' }}>-{formatYen(currentYearMonthlyIncome - currentYearMonthlyNetPay)}</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{fmt(currentYearMonthlyIncome)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#5fad9b' }}>{fmt(currentYearMonthlyNetPay)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#d06868' }}>-{fmt(currentYearMonthlyIncome - currentYearMonthlyNetPay)}</p>
             </div>
           )}
           {currentYearBonusSlips.length > 0 && (
@@ -490,20 +491,20 @@ export default function DashboardPage() {
                 賞与
                 {bonusDelta !== null && (
                   <span className="ml-1 text-[10px]" style={{ color: bonusDelta >= 0 ? '#5fad9b' : '#d06868' }}>
-                    {bonusDelta >= 0 ? '+' : ''}{formatYen(bonusDelta)}
+                    {bonusDelta >= 0 ? '+' : ''}{fmt(bonusDelta)}
                   </span>
                 )}
               </p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{formatYen(currentYearBonusIncome)}</p>
-              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#f59e0b' }}>{formatYen(currentYearBonusTotal)}</p>
-              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#d06868' }}>-{formatYen(currentYearBonusIncome - currentYearBonusTotal)}</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900 text-right">{fmt(currentYearBonusIncome)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#f59e0b' }}>{fmt(currentYearBonusTotal)}</p>
+              <p className="text-sm font-semibold tabular-nums text-right" style={{ color: '#d06868' }}>-{fmt(currentYearBonusIncome - currentYearBonusTotal)}</p>
             </div>
           )}
           <div className="grid grid-cols-4 gap-x-2 items-center pt-1.5">
             <p className="text-xs font-medium text-gray-700">合計</p>
-            <p className="text-sm font-bold tabular-nums text-gray-900 text-right">{formatYen(ytd.totalIncome)}</p>
-            <p className="text-sm font-bold tabular-nums text-right" style={{ color: '#5fad9b' }}>{formatYen(ytd.totalNetPay)}</p>
-            <p className="text-sm font-bold tabular-nums text-right" style={{ color: '#d06868' }}>-{formatYen(ytd.totalDeductions)}</p>
+            <p className="text-sm font-bold tabular-nums text-gray-900 text-right">{fmt(ytd.totalIncome)}</p>
+            <p className="text-sm font-bold tabular-nums text-right" style={{ color: '#5fad9b' }}>{fmt(ytd.totalNetPay)}</p>
+            <p className="text-sm font-bold tabular-nums text-right" style={{ color: '#d06868' }}>-{fmt(ytd.totalDeductions)}</p>
           </div>
 
           {currentYearMonthlySlips.length > 0 && (
@@ -512,16 +513,16 @@ export default function DashboardPage() {
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <p className="text-xs text-gray-400">平均月手取</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{formatYen(ytd.avgMonthlyNetPay)}</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900 mt-0.5">{fmt(ytd.avgMonthlyNetPay)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">最高月</p>
-                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{formatYen(ytd.maxMonthNetPay)}</p>
+                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#5fad9b' }}>{fmt(ytd.maxMonthNetPay)}</p>
                   <p className="text-xs text-gray-400">{ytd.maxMonthLabel}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">最低月</p>
-                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{formatYen(ytd.minMonthNetPay)}</p>
+                  <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: '#d06868' }}>{fmt(ytd.minMonthNetPay)}</p>
                   <p className="text-xs text-gray-400">{ytd.minMonthLabel}</p>
                 </div>
               </div>

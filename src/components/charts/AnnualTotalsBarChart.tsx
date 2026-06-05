@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import Chart from 'chart.js/auto'
 import { formatYen } from '../../lib/formatters'
+import useStore from '../../store/useStore'
 
 
 interface AnnualTotalsPoint {
@@ -16,6 +17,8 @@ interface Props {
 export default function AnnualTotalsBarChart({ data }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
+  const privacyMode = useStore((s) => s.privacyMode)
+  const fmt = (n: number) => (privacyMode ? '¥ ─ ─ ─' : formatYen(n))
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -58,7 +61,7 @@ export default function AnnualTotalsBarChart({ data }: Props) {
           legend: { labels: { font: { size: 12 }, boxWidth: 12 } },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${ctx.dataset.label}: ${formatYen(ctx.raw as number)}`,
+              label: (ctx) => ` ${ctx.dataset.label}: ${fmt(ctx.raw as number)}`,
             },
             bodyFont: { size: 12 },
             cornerRadius: 8,
@@ -88,7 +91,7 @@ export default function AnnualTotalsBarChart({ data }: Props) {
     })
 
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(data)])
+  }, [JSON.stringify(data), privacyMode])
 
   return (
     <div style={{ height: 220 }}>
