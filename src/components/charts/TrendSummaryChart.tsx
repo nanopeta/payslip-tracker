@@ -1,19 +1,17 @@
 import { useRef, useEffect } from 'react'
 import Chart from 'chart.js/auto'
 import type { TrendPoint } from '../../lib/aggregations'
+import useStore from '../../store/useStore'
 
 interface Props {
   data: TrendPoint[]
   showMonthlyLine: boolean
 }
 
-function yLabel(v: number) {
-  return `¥${(v / 10000).toFixed(1)}万`
-}
-
 export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
+  const privacyMode = useStore((s) => s.privacyMode)
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -79,7 +77,9 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
           legend: { labels: { font: { size: 12 }, boxWidth: 12 } },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${ctx.dataset.label}: ${(ctx.raw as number).toLocaleString('ja-JP')}円`,
+              label: (ctx) => privacyMode
+                ? ` ${ctx.dataset.label}: ¥ ─ ─ ─`
+                : ` ${ctx.dataset.label}: ${(ctx.raw as number).toLocaleString('ja-JP')}円`,
             },
             bodyFont: { size: 12 },
             cornerRadius: 8,
@@ -99,7 +99,7 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
             ticks: {
               font: { size: 11 },
               color: '#6b7280',
-              callback: (v) => yLabel(v as number),
+              callback: (v) => privacyMode ? '─ ─ ─' : `¥${((v as number) / 10000).toFixed(1)}万`,
             },
             grid: { color: '#f0f0f0' },
           },
@@ -109,7 +109,7 @@ export default function TrendSummaryChart({ data, showMonthlyLine }: Props) {
     })
 
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [JSON.stringify(data), showMonthlyLine])
+  }, [JSON.stringify(data), showMonthlyLine, privacyMode])
 
   if (data.length === 0) {
     return (

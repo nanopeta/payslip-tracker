@@ -84,6 +84,7 @@ export default function GainTrendChart({ data }: Props) {
               font: { size: 11 },
               color: '#6b7280',
               callback: (v) => {
+                if (privacyMode) return '─ ─ ─'
                 const n = v as number
                 return `${n >= 0 ? '+' : '-'}¥${(Math.abs(n) / 10000).toFixed(1)}万`
               },
