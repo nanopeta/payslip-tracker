@@ -110,12 +110,23 @@ export default function SettingsPage() {
     const today = new Date().toISOString().slice(0, 10)
     const currentYear = new Date().getFullYear()
     const monthlySlips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
-    const sortedMonthly = [...monthlySlips].sort(
-      (a, b) => a.year * 100 + a.month - (b.year * 100 + b.month),
+    // 全明細を時系列順・同月内は給与→賞与でソート
+    const sortedAll = [...payslips].sort((a, b) => {
+      const d = a.year * 100 + a.month - (b.year * 100 + b.month)
+      if (d !== 0) return d
+      return ((a.payslipType ?? 'monthly') === 'monthly' ? 0 : 1) -
+        ((b.payslipType ?? 'monthly') === 'monthly' ? 0 : 1)
+    })
+    // 期間フィルター: ユニーク月キーの末尾N件に絞る
+    const uniqueKeys = [...new Set(sortedAll.map((p) => p.year * 100 + p.month))]
+    const filteredKeys = new Set(
+      aiPeriod === 'all' ? uniqueKeys : uniqueKeys.slice(aiPeriod === '6m' ? -6 : -12),
     )
-    const filteredMonthly =
-      aiPeriod === 'all' ? sortedMonthly : sortedMonthly.slice(aiPeriod === '6m' ? -6 : -12)
-    const latest = filteredMonthly[filteredMonthly.length - 1] ?? null
+    const filteredAll = sortedAll.filter((p) => filteredKeys.has(p.year * 100 + p.month))
+    // サマリー・内訳用: 最新給与明細（期間フィルター適用前）
+    const latest = [...monthlySlips].sort(
+      (a, b) => b.year * 100 + b.month - (a.year * 100 + a.month),
+    )[0] ?? null
     const years = uniqueYears(payslips)
     const lines: string[] = []
 
@@ -227,40 +238,26 @@ export default function SettingsPage() {
       lines.push('')
     }
 
-    const bonusSlips = [...payslips]
-      .filter((p) => p.payslipType === 'bonus')
-      .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
-
-    if (bonusSlips.length > 0) {
-      lines.push('## 賞与明細（全期間）')
-      lines.push('')
-      lines.push('| 年月 | 種別 | 総支給 | 控除 | 手取り |')
-      lines.push('|---|---|---|---|---|')
-      for (const p of bonusSlips) {
-        const label = p.payslipLabel ?? '賞与'
-        lines.push(
-          `| ${p.year}/${String(p.month).padStart(2, '0')} | ${label} | ${formatYen(p.income.total)} | ${formatYen(p.deductions.total)} | ${formatYen(p.summary.netPay)} |`,
-        )
-      }
-      lines.push('')
-      lines.push('---')
-      lines.push('')
-    }
-
-    if (filteredMonthly.length > 0) {
+    if (filteredAll.length > 0) {
       const periodLabel =
         aiPeriod === '6m' ? '直近6ヶ月' : aiPeriod === '12m' ? '直近12ヶ月' : '全期間'
-      lines.push(`## 月次推移（${periodLabel}）`)
+      lines.push(`## 月次・賞与推移（${periodLabel}）`)
       lines.push('')
-      lines.push('| 月 | 総支給 | 手取り | 手取り率 | 残業時間 | みなし残業差額 |')
-      lines.push('|---|---|---|---|---|---|')
-      for (const p of filteredMonthly) {
-        const gain = calcOvertimeGain(p, settings)
-        const gainStr = `${gain >= 0 ? '+' : ''}${formatYen(gain)}`
+      lines.push('| 月 | 種別 | 総支給 | 手取り | 手取り率 | 残業時間 | みなし残業差額 |')
+      lines.push('|---|---|---|---|---|---|---|')
+      for (const p of filteredAll) {
+        const isBonus = p.payslipType === 'bonus'
+        const typeLabel = isBonus ? (p.payslipLabel ?? '賞与') : '給与'
         const rate =
           p.income.total > 0 ? ((p.summary.netPay / p.income.total) * 100).toFixed(1) : '0.0'
+        const overtimeStr = isBonus ? '—' : `${p.attendance.overtimeHours.toFixed(1)}h`
+        const gainStr = (() => {
+          if (isBonus) return '—'
+          const gain = calcOvertimeGain(p, settings)
+          return `${gain >= 0 ? '+' : ''}${formatYen(gain)}`
+        })()
         lines.push(
-          `| ${p.year}/${String(p.month).padStart(2, '0')} | ${formatYen(p.income.total)} | ${formatYen(p.summary.netPay)} | ${rate}% | ${p.attendance.overtimeHours.toFixed(1)}h | ${gainStr} |`,
+          `| ${p.year}/${String(p.month).padStart(2, '0')} | ${typeLabel} | ${formatYen(p.income.total)} | ${formatYen(p.summary.netPay)} | ${rate}% | ${overtimeStr} | ${gainStr} |`,
         )
       }
       lines.push('')
