@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 import useStore from '../store/useStore'
-import { DEFAULT_OVERTIME_SETTINGS } from '../lib/storage'
+import { DEFAULT_OVERTIME_SETTINGS, loadAiMemo, saveAiMemo } from '../lib/storage'
 import { exportJSON, exportCSV } from '../lib/exporters'
 import type { StorageState } from '../lib/storage'
-import { getIncomeValueByLabel, latestPayslip } from '../lib/aggregations'
+import { getIncomeValueByLabel, latestPayslip, annualTotals, calcOvertimeGain, uniqueYears } from '../lib/aggregations'
+import { formatYen } from '../lib/formatters'
 import { usePrivacy } from '../hooks/usePrivacy'
 
 export default function SettingsPage() {
@@ -18,6 +19,9 @@ export default function SettingsPage() {
   const [actualLabels, setActualLabels] = useState<string[]>(settings.actualLabels)
   const [saved, setSaved] = useState(false)
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [aiMemo, setAiMemo] = useState(() => loadAiMemo())
+  const [savedMemo, setSavedMemo] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -93,6 +97,134 @@ export default function SettingsPage() {
     }
     setImportStatus('idle')
     processJSONFile(file)
+  }
+
+  function handleSaveAiMemo() {
+    saveAiMemo(aiMemo)
+    setSavedMemo(true)
+    setTimeout(() => setSavedMemo(false), 2000)
+  }
+
+  function generateReport(): string {
+    const today = new Date().toISOString().slice(0, 10)
+    const currentYear = new Date().getFullYear()
+    const monthlySlips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
+    const latest = latestPayslip(monthlySlips)
+    const years = uniqueYears(payslips)
+    const lines: string[] = []
+
+    lines.push(`# 給与明細レポート — ${today}`)
+    lines.push('')
+
+    if (aiMemo.trim()) {
+      lines.push('## 分析メモ')
+      lines.push('')
+      lines.push(aiMemo.trim())
+      lines.push('')
+      lines.push('---')
+      lines.push('')
+    }
+
+    if (latest) {
+      const netPayRate =
+        latest.income.total > 0
+          ? ((latest.summary.netPay / latest.income.total) * 100).toFixed(1)
+          : '0.0'
+      const gain = calcOvertimeGain(latest, settings)
+      const gainStr = `${gain >= 0 ? '+' : ''}${formatYen(gain)}`
+
+      lines.push(`## 直近サマリー（${latest.year}年${latest.month}月）`)
+      lines.push('')
+      lines.push('| 項目 | 金額 |')
+      lines.push('|---|---|')
+      lines.push(`| 差引支給額（手取り） | ${formatYen(latest.summary.netPay)} |`)
+      lines.push(`| 総支給額 | ${formatYen(latest.income.total)} |`)
+      lines.push(`| 控除合計 | ${formatYen(latest.deductions.total)} |`)
+      lines.push(`| 手取り率 | ${netPayRate}% |`)
+      if (latest.attendance.overtimeHours > 0) {
+        lines.push(`| 残業時間 | ${latest.attendance.overtimeHours.toFixed(1)}h / 45h みなし |`)
+      }
+      lines.push(`| みなし残業差額 | ${gainStr} |`)
+      lines.push('')
+
+      const d = latest.deductions
+      const deductionRows = [
+        ['健康保険料', d.healthInsurance],
+        ['介護保険料', d.longTermCareInsurance],
+        ['厚生年金保険', d.pensionInsurance],
+        ['雇用保険料', d.employmentInsurance],
+        ['所得税', d.incomeTax],
+        ['住民税', d.residentTax],
+      ].filter(([, v]) => (v as number) > 0)
+
+      if (deductionRows.length > 0) {
+        lines.push('## 控除内訳（直近月）')
+        lines.push('')
+        lines.push('| 項目 | 金額 |')
+        lines.push('|---|---|')
+        for (const [label, value] of deductionRows) {
+          lines.push(`| ${label} | ${formatYen(value as number)} |`)
+        }
+        lines.push('')
+      }
+
+      lines.push('---')
+      lines.push('')
+    }
+
+    if (years.length > 0) {
+      lines.push('## 年間集計')
+      lines.push('')
+      lines.push('| 年 | 総支給 | 手取り | 控除 | 賞与手取り | 給与月数 |')
+      lines.push('|---|---|---|---|---|---|')
+      for (const year of years) {
+        const totals = annualTotals(payslips, year)
+        const bonusNetPay = payslips
+          .filter((p) => p.year === year && p.payslipType === 'bonus')
+          .reduce((s, p) => s + p.summary.netPay, 0)
+        const label =
+          year === currentYear && totals.monthlyMonthCount < 12
+            ? `${year}（YTD ${totals.monthlyMonthCount}ヶ月）`
+            : `${year}`
+        lines.push(
+          `| ${label} | ${formatYen(totals.totalIncome)} | ${formatYen(totals.totalNetPay)} | ${formatYen(totals.totalDeductions)} | ${bonusNetPay > 0 ? formatYen(bonusNetPay) : '—'} | ${totals.monthlyMonthCount} |`,
+        )
+      }
+      lines.push('')
+      lines.push('---')
+      lines.push('')
+    }
+
+    const recentMonthly = [...monthlySlips]
+      .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
+      .slice(-6)
+
+    if (recentMonthly.length > 0) {
+      lines.push('## 残業・みなし残業差額推移（直近最大6ヶ月）')
+      lines.push('')
+      lines.push('| 月 | 残業時間 | みなし残業差額 |')
+      lines.push('|---|---|---|')
+      for (const p of recentMonthly) {
+        const gain = calcOvertimeGain(p, settings)
+        const gainStr = `${gain >= 0 ? '+' : ''}${formatYen(gain)}`
+        lines.push(
+          `| ${p.year}/${String(p.month).padStart(2, '0')} | ${p.attendance.overtimeHours.toFixed(1)}h | ${gainStr} |`,
+        )
+      }
+      lines.push('')
+    }
+
+    return lines.join('\n')
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(generateReport())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // fallback: select a textarea
+    }
   }
 
   function handleReset() {
@@ -255,6 +387,58 @@ export default function SettingsPage() {
             {saved ? '保存しました ✓' : '保存する'}
           </button>
         </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+        <div>
+          <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
+            <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
+            AI分析メモ
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            状況・目標・前提条件などを自由に記載します。AI出力テキストの先頭に含まれます。
+          </p>
+        </div>
+        <textarea
+          value={aiMemo}
+          onChange={(e) => { setAiMemo(e.target.value); setSavedMemo(false) }}
+          placeholder={`例:\n40代独身。みなし残業の消化率を改善したい。\niDeCo月2.3万拠出中。ふるさと納税の上限を毎年確認したい。`}
+          rows={5}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={handleSaveAiMemo}
+            className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors"
+          >
+            {savedMemo ? '保存しました ✓' : '保存する'}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+        <div>
+          <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
+            <span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>
+            AI用テキスト出力
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            給与データをMarkdown形式でクリップボードにコピーします。Claude・ChatGPT等に貼り付けて分析できます。氏名・会社名は含まれません。
+          </p>
+        </div>
+        {payslips.length === 0 ? (
+          <p className="text-xs text-gray-400 px-1">明細データがありません。MHTファイルをアップロードすると出力できます。</p>
+        ) : (
+          <button
+            onClick={handleCopy}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-brand-200 text-sm text-brand-700 hover:bg-brand-50 transition-colors"
+          >
+            <span className="font-medium">{copied ? 'コピーしました ✓' : 'テキストをコピー'}</span>
+            <span className="text-xs text-gray-400">
+              {payslips.length}件 / {uniqueYears(payslips).length}年分
+            </span>
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4">
