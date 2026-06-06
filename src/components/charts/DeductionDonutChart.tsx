@@ -126,7 +126,7 @@ export default function DeductionDonutChart({ deductions, prevDeductions }: Prop
             const isCredit = item.value < 0
             const delta = item.prevValue !== undefined ? item.value - item.prevValue : undefined
             return (
-              <div key={item.name} className={`flex items-center justify-between py-[5px] ${indent ? 'pl-4' : ''}`}>
+              <div key={item.name} className={`flex items-center justify-between ${indent ? 'py-[5px] pl-4' : 'py-[7px]'}`}>
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
                   <span className={`text-[#243447] truncate ${indent ? 'text-xs' : 'text-sm'}`}>{item.name}</span>
