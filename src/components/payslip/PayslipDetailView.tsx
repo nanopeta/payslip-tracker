@@ -66,6 +66,9 @@ export default function PayslipDetailView({ payslip }: Props) {
             const usagePercent = (attendance.overtimeHours / DEEMED_HOURS) * 100
             const overtimeHourlyRate = deemedAmt > 0 ? Math.round(deemedAmt / DEEMED_HOURS) : 0
             const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
+            const effectiveBase = income.basicSalary + income.deemedOvertime + income.wlbAllowance + income.lifePlanAllowance
+            const effectiveHours = attendance.workHours + attendance.overtimeHours * 0.25
+            const effectiveHourlyRate = effectiveHours > 0 ? Math.round(effectiveBase / effectiveHours) : 0
             return (
               <>
                 <div className="grid grid-cols-4 gap-3 mb-3">
@@ -110,6 +113,12 @@ export default function PayslipDetailView({ payslip }: Props) {
                     <p className="text-[10px] text-gray-400 leading-tight">基本時給</p>
                     <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{basicHourlyRate > 0 ? `${fmt(basicHourlyRate)}/h` : '—'}</p>
                   </div>
+                  {effectiveHourlyRate > 0 && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 leading-tight">実質時給</p>
+                      <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(effectiveHourlyRate)}/h</p>
+                    </div>
+                  )}
                 </div>
               </>
             )
