@@ -42,7 +42,7 @@ export default function DashboardPage() {
   const [trendFilter, setTrendFilter] = useState<PeriodFilter>('all')
   const [selectedGainYM, setSelectedGainYM] = useState<string>('')
   const [donutTab, setDonutTab] = useState<'overview' | 'income' | 'deduction'>('overview')
-  const [selectedDonutYM, setSelectedDonutYM] = useState<string>('')
+  const [selectedDonutId, setSelectedDonutId] = useState<string>('')
   const [incomeBreakdownFilter, setIncomeBreakdownFilter] = useState<PeriodFilter>('all')
 
   const trend = netPayTrend(payslips)
@@ -169,14 +169,10 @@ export default function DashboardPage() {
     ? incomeBreakdownTrend[incomeBreakdownTrend.length - 1]!.label : ''
   const filteredIncomeBreakdown = applyPeriodFilter(incomeBreakdownTrend, incomeBreakdownFilter, latestIncomeBreakdownYM)
 
-  // 収支内訳 月選択
-  const latestDonutYM = latestMonthly
-    ? `${latestMonthly.year}/${String(latestMonthly.month).padStart(2, '0')}`
-    : ''
-  const effectiveDonutYM = selectedDonutYM || latestDonutYM
-  const selectedDonutMonthly = monthlyPayslips.find(
-    (p) => `${p.year}/${String(p.month).padStart(2, '0')}` === effectiveDonutYM
-  ) ?? latestMonthly
+  // 収支内訳 月選択（給与・賞与を含む全明細）
+  const latestDonutId = latestMonthly?.id ?? sorted[0]?.id ?? ''
+  const effectiveDonutId = selectedDonutId || latestDonutId
+  const selectedDonutPayslip = payslips.find((p) => p.id === effectiveDonutId) ?? latestMonthly ?? sorted[0] ?? null
 
   const recent = sorted.slice(0, 3)
 
@@ -253,28 +249,37 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 収支内訳ドーナツ（最新月） */}
-      {latestMonthly && (latestMonthly.income.total > 0 || latestMonthly.deductions.total > 0) && (
+      {/* 収支内訳ドーナツ */}
+      {selectedDonutPayslip && (selectedDonutPayslip.income.total > 0 || selectedDonutPayslip.deductions.total > 0) && (
         <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-1">
             <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>収支内訳</p>
             <div className="flex items-center gap-2">
-              {monthlyPayslips.length > 1 ? (
+              <Link
+                to={`/payslips/${selectedDonutPayslip.id}`}
+                className="text-xs text-brand-600 border border-brand-200 rounded-md px-1.5 py-0.5 hover:bg-brand-50 flex-shrink-0"
+              >
+                明細 →
+              </Link>
+              {payslips.length > 1 ? (
                 <select
-                  value={effectiveDonutYM}
-                  onChange={(e) => setSelectedDonutYM(e.target.value)}
+                  value={effectiveDonutId}
+                  onChange={(e) => setSelectedDonutId(e.target.value)}
                   className="text-xs text-gray-500 border border-gray-200 rounded-md px-1.5 py-0.5 bg-white"
                 >
-                  {[...monthlyPayslips]
+                  {[...payslips]
                     .sort((a, b) => (b.year * 100 + b.month) - (a.year * 100 + a.month))
                     .map((p) => {
-                      const ym = `${p.year}/${String(p.month).padStart(2, '0')}`
-                      return <option key={ym} value={ym}>{p.year}年{p.month}月</option>
+                      const label = p.payslipType === 'bonus'
+                        ? `${p.year}年${p.month}月（${p.payslipLabel ?? '賞与'}）`
+                        : `${p.year}年${p.month}月`
+                      return <option key={p.id} value={p.id}>{label}</option>
                     })}
                 </select>
               ) : (
                 <span className="text-xs text-gray-400">
-                  {selectedDonutMonthly?.year}年{selectedDonutMonthly?.month}月
+                  {selectedDonutPayslip.year}年{selectedDonutPayslip.month}月
+                  {selectedDonutPayslip.payslipType === 'bonus' && `（${selectedDonutPayslip.payslipLabel ?? '賞与'}）`}
                 </span>
               )}
               <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
@@ -296,15 +301,15 @@ export default function DashboardPage() {
           </div>
           <p className="text-xs text-gray-400 mb-2">
             {donutTab === 'deduction'
-              ? `控除合計 ${fmt(selectedDonutMonthly?.deductions.total ?? 0)}`
-              : `総支給 ${fmt(selectedDonutMonthly?.income.total ?? 0)}`}
+              ? `控除合計 ${fmt(selectedDonutPayslip?.deductions.total ?? 0)}`
+              : `総支給 ${fmt(selectedDonutPayslip?.income.total ?? 0)}`}
           </p>
-          {selectedDonutMonthly && (
+          {selectedDonutPayslip && (
             donutTab === 'overview'
-              ? <NetPayBreakdownChart income={selectedDonutMonthly.income} deductions={selectedDonutMonthly.deductions} summary={selectedDonutMonthly.summary} />
+              ? <NetPayBreakdownChart income={selectedDonutPayslip.income} deductions={selectedDonutPayslip.deductions} summary={selectedDonutPayslip.summary} />
               : donutTab === 'income'
-                ? <IncomeDonutChart income={selectedDonutMonthly.income} />
-                : <DeductionDonutChart deductions={selectedDonutMonthly.deductions} />
+                ? <IncomeDonutChart income={selectedDonutPayslip.income} />
+                : <DeductionDonutChart deductions={selectedDonutPayslip.deductions} />
           )}
         </div>
       )}
@@ -315,6 +320,14 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-bold text-amber-600 flex items-center gap-2"><span className="w-1 h-4 bg-amber-400 rounded-full inline-block"></span>みなし残業 効率</p>
             <div className="flex items-center gap-2">
+              {selectedMonthly && (
+                <Link
+                  to={`/payslips/${selectedMonthly.id}`}
+                  className="text-xs text-brand-600 border border-brand-200 rounded-md px-1.5 py-0.5 hover:bg-brand-50 flex-shrink-0"
+                >
+                  明細 →
+                </Link>
+              )}
               {gainRows.length > 1 ? (
                 <select
                   value={effectiveGainYM}
@@ -366,6 +379,20 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="grid grid-cols-4 gap-x-3 gap-y-2 pt-3 border-t border-gray-100 mb-2">
+            {effectiveHourlyRateLatest > 0 && (
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">実質時給</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(effectiveHourlyRateLatest)}/h</p>
+                <p className="text-[9px] text-gray-400 leading-tight mt-0.5">固定給÷通常出勤h</p>
+              </div>
+            )}
+            {basicHourlyRate > 0 && (
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">基本時給</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(basicHourlyRate)}/h</p>
+                <p className="text-[9px] text-gray-400 leading-tight mt-0.5">残業時給÷1.25</p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-gray-400 mb-0.5">残業時給</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(overtimeHourlyRate)}/h</p>
@@ -376,20 +403,6 @@ export default function DashboardPage() {
                 <p className="text-xs text-gray-400 mb-0.5">実質残業時給</p>
                 <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(actualOvertimeHourlyRateLatest)}/h</p>
                 <p className="text-[9px] text-gray-400 leading-tight mt-0.5">実質時給×1.25</p>
-              </div>
-            )}
-            {basicHourlyRate > 0 && (
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">基本時給</p>
-                <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(basicHourlyRate)}/h</p>
-                <p className="text-[9px] text-gray-400 leading-tight mt-0.5">÷1.25逆算</p>
-              </div>
-            )}
-            {effectiveHourlyRateLatest > 0 && (
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">実質時給</p>
-                <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(effectiveHourlyRateLatest)}/h</p>
-                <p className="text-[9px] text-gray-400 leading-tight mt-0.5">固定給÷通常出勤h</p>
               </div>
             )}
           </div>
@@ -478,6 +491,20 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-x-4 gap-y-3 pt-3 border-t border-gray-100">
+                {ytdEffectiveHourlyRate > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">実質時給平均</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdEffectiveHourlyRate)}/h</p>
+                    <p className="text-[9px] text-gray-400 leading-tight mt-0.5">固定給÷通常出勤h</p>
+                  </div>
+                )}
+                {ytdBasicHourlyRate > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">基本時給平均</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdBasicHourlyRate)}/h</p>
+                    <p className="text-[9px] text-gray-400 leading-tight mt-0.5">残業時給÷1.25</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">残業時給平均</p>
                   <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdOvertimeHourlyRate)}/h</p>
@@ -488,20 +515,6 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-400 mb-0.5">実質残業時給平均</p>
                     <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdActualOvertimeHourlyRate)}/h</p>
                     <p className="text-[9px] text-gray-400 leading-tight mt-0.5">実質時給×1.25</p>
-                  </div>
-                )}
-                {ytdBasicHourlyRate > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-400 mb-0.5">基本時給平均</p>
-                    <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdBasicHourlyRate)}/h</p>
-                    <p className="text-[9px] text-gray-400 leading-tight mt-0.5">÷1.25逆算</p>
-                  </div>
-                )}
-                {ytdEffectiveHourlyRate > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-400 mb-0.5">実質時給平均</p>
-                    <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdEffectiveHourlyRate)}/h</p>
-                    <p className="text-[9px] text-gray-400 leading-tight mt-0.5">固定給÷通常出勤h</p>
                   </div>
                 )}
               </div>
