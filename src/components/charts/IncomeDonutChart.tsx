@@ -122,7 +122,7 @@ export default function IncomeDonutChart({ income, prevIncome }: Props) {
             return (
               <div key={item.name} className={`flex items-center justify-between ${indent ? 'py-[5px] pl-4' : 'py-[7px]'}`}>
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className={`inline-block rounded-full flex-shrink-0 ${indent ? 'w-2 h-2' : 'w-2.5 h-2.5'}`} style={{ backgroundColor: item.color }} />
                   <span className={`text-[#243447] truncate ${indent ? 'text-xs' : 'text-sm'}`}>{item.name}</span>
                 </div>
                 <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
