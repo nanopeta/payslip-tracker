@@ -219,18 +219,19 @@ export default function SettingsPage() {
     }
 
     if (years.length > 0) {
-      lines.push('## 年間集計（給与のみ）')
+      lines.push('## 年間集計')
       lines.push('')
-      lines.push('| 年 | 総支給 | 手取り | 控除 | 給与月数 |')
-      lines.push('|---|---|---|---|---|')
+      lines.push('| 年 | 総支給 | 手取り | 控除 | 給与月数 | 賞与回数 |')
+      lines.push('|---|---|---|---|---|---|')
       for (const year of years) {
-        const totals = annualTotals(monthlySlips, year)
+        const totals = annualTotals(payslips, year)
+        const bonusCount = payslips.filter((p) => p.year === year && p.payslipType === 'bonus').length
         const label =
           year === currentYear && totals.monthlyMonthCount < 12
             ? `${year}（YTD ${totals.monthlyMonthCount}ヶ月）`
             : `${year}`
         lines.push(
-          `| ${label} | ${formatYen(totals.totalIncome)} | ${formatYen(totals.totalNetPay)} | ${formatYen(totals.totalDeductions)} | ${totals.monthlyMonthCount} |`,
+          `| ${label} | ${formatYen(totals.totalIncome)} | ${formatYen(totals.totalNetPay)} | ${formatYen(totals.totalDeductions)} | ${totals.monthlyMonthCount} | ${bonusCount} |`,
         )
       }
       lines.push('')
