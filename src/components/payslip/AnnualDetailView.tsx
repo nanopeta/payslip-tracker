@@ -122,13 +122,6 @@ export default function AnnualDetailView({ payslips }: Props) {
               </p>
               <p className="text-[9px] text-gray-400 leading-tight mt-0.5">残業時給÷1.25</p>
             </div>
-            <div>
-              <p className="text-[10px] text-gray-400 leading-tight">残業時給平均</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
-                {ytdOvertimeHourlyRate > 0 ? `${fmt(ytdOvertimeHourlyRate)}/h` : '—'}
-              </p>
-              <p className="text-[9px] text-gray-400 leading-tight mt-0.5">みなし÷45h</p>
-            </div>
             {ytdActualOvertimeHourlyRate > 0 && (
               <div>
                 <p className="text-[10px] text-gray-400 leading-tight">実質残業時給平均</p>
@@ -136,6 +129,13 @@ export default function AnnualDetailView({ payslips }: Props) {
                 <p className="text-[9px] text-gray-400 leading-tight mt-0.5">実質時給×1.25</p>
               </div>
             )}
+            <div>
+              <p className="text-[10px] text-gray-400 leading-tight">残業時給平均</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
+                {ytdOvertimeHourlyRate > 0 ? `${fmt(ytdOvertimeHourlyRate)}/h` : '—'}
+              </p>
+              <p className="text-[9px] text-gray-400 leading-tight mt-0.5">みなし÷45h</p>
+            </div>
           </div>
         </div>
       )}
