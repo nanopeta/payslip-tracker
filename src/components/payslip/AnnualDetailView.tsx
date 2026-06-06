@@ -108,6 +108,20 @@ export default function AnnualDetailView({ payslips }: Props) {
             </div>
           </div>
           <div className="grid grid-cols-4 gap-3 pt-3 border-t border-gray-100">
+            {ytdEffectiveHourlyRate > 0 && (
+              <div>
+                <p className="text-[10px] text-gray-400 leading-tight">実質時給平均</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(ytdEffectiveHourlyRate)}/h</p>
+                <p className="text-[9px] text-gray-400 leading-tight mt-0.5">固定給÷通常出勤h</p>
+              </div>
+            )}
+            <div>
+              <p className="text-[10px] text-gray-400 leading-tight">基本時給平均</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
+                {ytdBasicHourlyRate > 0 ? `${fmt(ytdBasicHourlyRate)}/h` : '—'}
+              </p>
+              <p className="text-[9px] text-gray-400 leading-tight mt-0.5">残業時給÷1.25</p>
+            </div>
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">残業時給平均</p>
               <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
@@ -120,20 +134,6 @@ export default function AnnualDetailView({ payslips }: Props) {
                 <p className="text-[10px] text-gray-400 leading-tight">実質残業時給平均</p>
                 <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(ytdActualOvertimeHourlyRate)}/h</p>
                 <p className="text-[9px] text-gray-400 leading-tight mt-0.5">実質時給×1.25</p>
-              </div>
-            )}
-            <div>
-              <p className="text-[10px] text-gray-400 leading-tight">基本時給平均</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
-                {ytdBasicHourlyRate > 0 ? `${fmt(ytdBasicHourlyRate)}/h` : '—'}
-              </p>
-              <p className="text-[9px] text-gray-400 leading-tight mt-0.5">÷1.25逆算</p>
-            </div>
-            {ytdEffectiveHourlyRate > 0 && (
-              <div>
-                <p className="text-[10px] text-gray-400 leading-tight">実質時給平均</p>
-                <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(ytdEffectiveHourlyRate)}/h</p>
-                <p className="text-[9px] text-gray-400 leading-tight mt-0.5">固定給÷通常出勤h</p>
               </div>
             )}
           </div>
