@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [aiMemo, setAiMemo] = useState(() => loadAiMemo())
   const [savedMemo, setSavedMemo] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [aiPeriod, setAiPeriod] = useState<'6m' | '12m' | 'all'>('12m')
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -109,7 +110,12 @@ export default function SettingsPage() {
     const today = new Date().toISOString().slice(0, 10)
     const currentYear = new Date().getFullYear()
     const monthlySlips = payslips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
-    const latest = latestPayslip(monthlySlips)
+    const sortedMonthly = [...monthlySlips].sort(
+      (a, b) => a.year * 100 + a.month - (b.year * 100 + b.month),
+    )
+    const filteredMonthly =
+      aiPeriod === 'all' ? sortedMonthly : sortedMonthly.slice(aiPeriod === '6m' ? -6 : -12)
+    const latest = filteredMonthly[filteredMonthly.length - 1] ?? null
     const years = uniqueYears(payslips)
     const lines: string[] = []
 
@@ -147,15 +153,44 @@ export default function SettingsPage() {
       lines.push(`| みなし残業差額 | ${gainStr} |`)
       lines.push('')
 
+      // 支給内訳（直近月）
+      const inc = latest.income
+      const otherIncomeTotal = Object.values(inc.otherIncome ?? {}).reduce((s, v) => s + v, 0)
+      const incomeRows = (
+        [
+          ['基本給', inc.basicSalary],
+          ['みなし残業', inc.deemedOvertime],
+          ['WLB手当', inc.wlbAllowance],
+          ['ライフプラン手当', inc.lifePlanAllowance],
+          ['調整給', inc.adjustmentSalary],
+          ['通勤手当', inc.commuteAllowance],
+          ['その他手当', otherIncomeTotal],
+        ] as Array<[string, number]>
+      ).filter(([, v]) => v > 0)
+
+      if (incomeRows.length > 0) {
+        lines.push('## 支給内訳（直近月）')
+        lines.push('')
+        lines.push('| 項目 | 金額 |')
+        lines.push('|---|---|')
+        for (const [label, value] of incomeRows) {
+          lines.push(`| ${label} | ${formatYen(value)} |`)
+        }
+        lines.push('')
+      }
+
+      // 控除内訳（直近月）
       const d = latest.deductions
-      const deductionRows = [
-        ['健康保険料', d.healthInsurance],
-        ['介護保険料', d.longTermCareInsurance],
-        ['厚生年金保険', d.pensionInsurance],
-        ['雇用保険料', d.employmentInsurance],
-        ['所得税', d.incomeTax],
-        ['住民税', d.residentTax],
-      ].filter(([, v]) => (v as number) > 0)
+      const deductionRows = (
+        [
+          ['健康保険料', d.healthInsurance],
+          ['介護保険料', d.longTermCareInsurance],
+          ['厚生年金保険', d.pensionInsurance],
+          ['雇用保険料', d.employmentInsurance],
+          ['所得税', d.incomeTax],
+          ['住民税', d.residentTax],
+        ] as Array<[string, number]>
+      ).filter(([, v]) => v > 0)
 
       if (deductionRows.length > 0) {
         lines.push('## 控除内訳（直近月）')
@@ -163,7 +198,7 @@ export default function SettingsPage() {
         lines.push('| 項目 | 金額 |')
         lines.push('|---|---|')
         for (const [label, value] of deductionRows) {
-          lines.push(`| ${label} | ${formatYen(value as number)} |`)
+          lines.push(`| ${label} | ${formatYen(value)} |`)
         }
         lines.push('')
       }
@@ -195,20 +230,20 @@ export default function SettingsPage() {
       lines.push('')
     }
 
-    const recentMonthly = [...monthlySlips]
-      .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
-      .slice(-6)
-
-    if (recentMonthly.length > 0) {
-      lines.push('## 残業・みなし残業差額推移（直近最大6ヶ月）')
+    if (filteredMonthly.length > 0) {
+      const periodLabel =
+        aiPeriod === '6m' ? '直近6ヶ月' : aiPeriod === '12m' ? '直近12ヶ月' : '全期間'
+      lines.push(`## 月次推移（${periodLabel}）`)
       lines.push('')
-      lines.push('| 月 | 残業時間 | みなし残業差額 |')
-      lines.push('|---|---|---|')
-      for (const p of recentMonthly) {
+      lines.push('| 月 | 総支給 | 手取り | 手取り率 | 残業時間 | みなし残業差額 |')
+      lines.push('|---|---|---|---|---|---|')
+      for (const p of filteredMonthly) {
         const gain = calcOvertimeGain(p, settings)
         const gainStr = `${gain >= 0 ? '+' : ''}${formatYen(gain)}`
+        const rate =
+          p.income.total > 0 ? ((p.summary.netPay / p.income.total) * 100).toFixed(1) : '0.0'
         lines.push(
-          `| ${p.year}/${String(p.month).padStart(2, '0')} | ${p.attendance.overtimeHours.toFixed(1)}h | ${gainStr} |`,
+          `| ${p.year}/${String(p.month).padStart(2, '0')} | ${formatYen(p.income.total)} | ${formatYen(p.summary.netPay)} | ${rate}% | ${p.attendance.overtimeHours.toFixed(1)}h | ${gainStr} |`,
         )
       }
       lines.push('')
@@ -429,15 +464,35 @@ export default function SettingsPage() {
         {payslips.length === 0 ? (
           <p className="text-xs text-gray-400 px-1">明細データがありません。MHTファイルをアップロードすると出力できます。</p>
         ) : (
-          <button
-            onClick={handleCopy}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-brand-200 text-sm text-brand-700 hover:bg-brand-50 transition-colors"
-          >
-            <span className="font-medium">{copied ? 'コピーしました ✓' : 'テキストをコピー'}</span>
-            <span className="text-xs text-gray-400">
-              {payslips.length}件 / {uniqueYears(payslips).length}年分
-            </span>
-          </button>
+          <>
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">月次推移の期間</p>
+              <div className="flex gap-1.5">
+                {(['6m', '12m', 'all'] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setAiPeriod(p)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      aiPeriod === p
+                        ? 'bg-brand-600 text-white'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {p === '6m' ? '直近6ヶ月' : p === '12m' ? '直近12ヶ月' : '全期間'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={handleCopy}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-brand-200 text-sm text-brand-700 hover:bg-brand-50 transition-colors"
+            >
+              <span className="font-medium">{copied ? 'コピーしました ✓' : 'テキストをコピー'}</span>
+              <span className="text-xs text-gray-400">
+                {payslips.length}件 / {uniqueYears(payslips).length}年分
+              </span>
+            </button>
+          </>
         )}
       </div>
 
