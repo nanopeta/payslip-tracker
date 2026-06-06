@@ -33,7 +33,6 @@
 
 - **本番URL**: https://nanopeta.github.io/payslip-tracker/
 - **対象システム**: OBC 給与システム（hromssp.obc.jp）の MHT 保存ファイル
-- **対応会社**: GMOリサーチ&AI株式会社
 
 ---
 

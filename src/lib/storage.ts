@@ -62,3 +62,13 @@ export function load(): StorageState {
 export function save(state: StorageState): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
 }
+
+const AI_MEMO_KEY = 'payslip_tracker_ai_memo'
+
+export function loadAiMemo(): string {
+  return localStorage.getItem(AI_MEMO_KEY) ?? ''
+}
+
+export function saveAiMemo(memo: string): void {
+  localStorage.setItem(AI_MEMO_KEY, memo)
+}
