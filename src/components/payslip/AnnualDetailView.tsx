@@ -47,6 +47,10 @@ export default function AnnualDetailView({ payslips }: Props) {
   const ytdUsagePercent = ytdDeemedHours > 0 ? (ytdActualHours / ytdDeemedHours) * 100 : 0
   const ytdOvertimeHourlyRate = ytdDeemedHours > 0 ? Math.round(ytdDeemedTotal / ytdDeemedHours) : 0
   const ytdBasicHourlyRate = ytdOvertimeHourlyRate > 0 ? Math.round(ytdOvertimeHourlyRate / 1.25) : 0
+  const ytdEffectiveBase = monthlyPayslips.reduce(
+    (s, p) => s + p.income.basicSalary + p.income.deemedOvertime + p.income.wlbAllowance + p.income.lifePlanAllowance, 0)
+  const ytdEffectiveHours = workHours + overtimeHours * 0.25
+  const ytdEffectiveHourlyRate = ytdEffectiveHours > 0 ? Math.round(ytdEffectiveBase / ytdEffectiveHours) : 0
 
   const showGain = ytdDeemedTotal > 0 || ytdActualTotal > 0
   const showAttendance = workDays > 0 || workHours > 0
@@ -113,6 +117,12 @@ export default function AnnualDetailView({ payslips }: Props) {
                 {ytdBasicHourlyRate > 0 ? `${fmt(ytdBasicHourlyRate)}/h` : '—'}
               </p>
             </div>
+            {ytdEffectiveHourlyRate > 0 && (
+              <div>
+                <p className="text-[10px] text-gray-400 leading-tight">実質時給平均</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(ytdEffectiveHourlyRate)}/h</p>
+              </div>
+            )}
           </div>
         </div>
       )}
