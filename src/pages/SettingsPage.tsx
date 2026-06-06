@@ -208,21 +208,38 @@ export default function SettingsPage() {
     }
 
     if (years.length > 0) {
-      lines.push('## 年間集計')
+      lines.push('## 年間集計（給与のみ）')
       lines.push('')
-      lines.push('| 年 | 総支給 | 手取り | 控除 | 賞与手取り | 給与月数 |')
-      lines.push('|---|---|---|---|---|---|')
+      lines.push('| 年 | 総支給 | 手取り | 控除 | 給与月数 |')
+      lines.push('|---|---|---|---|---|')
       for (const year of years) {
-        const totals = annualTotals(payslips, year)
-        const bonusNetPay = payslips
-          .filter((p) => p.year === year && p.payslipType === 'bonus')
-          .reduce((s, p) => s + p.summary.netPay, 0)
+        const totals = annualTotals(monthlySlips, year)
         const label =
           year === currentYear && totals.monthlyMonthCount < 12
             ? `${year}（YTD ${totals.monthlyMonthCount}ヶ月）`
             : `${year}`
         lines.push(
-          `| ${label} | ${formatYen(totals.totalIncome)} | ${formatYen(totals.totalNetPay)} | ${formatYen(totals.totalDeductions)} | ${bonusNetPay > 0 ? formatYen(bonusNetPay) : '—'} | ${totals.monthlyMonthCount} |`,
+          `| ${label} | ${formatYen(totals.totalIncome)} | ${formatYen(totals.totalNetPay)} | ${formatYen(totals.totalDeductions)} | ${totals.monthlyMonthCount} |`,
+        )
+      }
+      lines.push('')
+      lines.push('---')
+      lines.push('')
+    }
+
+    const bonusSlips = [...payslips]
+      .filter((p) => p.payslipType === 'bonus')
+      .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
+
+    if (bonusSlips.length > 0) {
+      lines.push('## 賞与明細（全期間）')
+      lines.push('')
+      lines.push('| 年月 | 種別 | 総支給 | 控除 | 手取り |')
+      lines.push('|---|---|---|---|---|')
+      for (const p of bonusSlips) {
+        const label = p.payslipLabel ?? '賞与'
+        lines.push(
+          `| ${p.year}/${String(p.month).padStart(2, '0')} | ${label} | ${formatYen(p.income.total)} | ${formatYen(p.deductions.total)} | ${formatYen(p.summary.netPay)} |`,
         )
       }
       lines.push('')
