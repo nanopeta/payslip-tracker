@@ -47,6 +47,7 @@ export default function AnnualDetailView({ payslips }: Props) {
   const ytdUsagePercent = ytdDeemedHours > 0 ? (ytdActualHours / ytdDeemedHours) * 100 : 0
   const ytdOvertimeHourlyRate = ytdDeemedHours > 0 ? Math.round(ytdDeemedTotal / ytdDeemedHours) : 0
   const ytdBasicHourlyRate = ytdOvertimeHourlyRate > 0 ? Math.round(ytdOvertimeHourlyRate / 1.25) : 0
+  const ytdActualOvertimeHourlyRate = ytdActualHours > 0 ? Math.round(ytdActualTotal / ytdActualHours) : 0
   const ytdEffectiveBase = monthlyPayslips.reduce(
     (s, p) => s + p.income.basicSalary + p.income.deemedOvertime + p.income.wlbAllowance + p.income.lifePlanAllowance, 0)
   const ytdEffectiveHours = workHours + overtimeHours * 0.25
@@ -92,7 +93,7 @@ export default function AnnualDetailView({ payslips }: Props) {
               )}
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-3 pt-3 border-t border-gray-100">
+          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100 mb-3">
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">年間差額</p>
               <p className="text-sm font-semibold tabular-nums mt-0.5" style={{ color: ytdGainTotal >= 0 ? '#5fad9b' : '#d06868' }}>
@@ -105,22 +106,34 @@ export default function AnnualDetailView({ payslips }: Props) {
                 {fmtHidden(`${ytdGainHours >= 0 ? '+' : '-'}${Math.abs(ytdGainHours).toFixed(1)}h`)}
               </p>
             </div>
+          </div>
+          <div className="grid grid-cols-4 gap-3 pt-3 border-t border-gray-100">
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">残業時給平均</p>
               <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
                 {ytdOvertimeHourlyRate > 0 ? `${fmt(ytdOvertimeHourlyRate)}/h` : '—'}
               </p>
+              <p className="text-[9px] text-gray-300 leading-tight mt-0.5">みなし÷45h</p>
             </div>
+            {ytdActualOvertimeHourlyRate > 0 && (
+              <div>
+                <p className="text-[10px] text-gray-400 leading-tight">実質残業時給平均</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(ytdActualOvertimeHourlyRate)}/h</p>
+                <p className="text-[9px] text-gray-300 leading-tight mt-0.5">実残業代÷残業h</p>
+              </div>
+            )}
             <div>
               <p className="text-[10px] text-gray-400 leading-tight">基本時給平均</p>
               <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">
                 {ytdBasicHourlyRate > 0 ? `${fmt(ytdBasicHourlyRate)}/h` : '—'}
               </p>
+              <p className="text-[9px] text-gray-300 leading-tight mt-0.5">÷1.25逆算</p>
             </div>
             {ytdEffectiveHourlyRate > 0 && (
               <div>
                 <p className="text-[10px] text-gray-400 leading-tight">実質時給平均</p>
                 <p className="text-sm font-semibold tabular-nums text-gray-800 mt-0.5">{fmt(ytdEffectiveHourlyRate)}/h</p>
+                <p className="text-[9px] text-gray-300 leading-tight mt-0.5">固定給÷出勤h</p>
               </div>
             )}
           </div>
