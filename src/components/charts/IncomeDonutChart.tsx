@@ -16,6 +16,8 @@ const NAMED_SLICES: { key: keyof PayslipIncome; label: string; color: string }[]
   { key: 'taxableCommuteAllowance', label: '課税通勤費',       color: '#b0d5e0' },
 ]
 
+const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'WLB手当', 'ライフプラン手当'])
+
 const EXTRA_COLORS = ['#e8a87c', '#d4a574', '#c89b6e', '#e0b894', '#f0c8a0']
 
 interface Props {
@@ -106,27 +108,64 @@ export default function IncomeDonutChart({ income, prevIncome }: Props) {
         <canvas ref={canvasRef} />
       </div>
       <div className="w-full min-w-0 divide-y divide-gray-100 sm:flex-1 sm:self-center">
-        {data.map((item) => {
-          const delta = item.prevValue !== undefined ? item.value - item.prevValue : undefined
+        {(() => {
+          const fixedItems = data.filter((d) => FIXED_SALARY_LABELS.has(d.name))
+          const nonFixedItems = data.filter((d) => !FIXED_SALARY_LABELS.has(d.name))
+          const fixedTotal = fixedItems.reduce((s, d) => s + d.value, 0)
+          const fixedPrevTotal = prevIncome
+            ? fixedItems.reduce((s, d) => s + (d.prevValue ?? 0), 0)
+            : undefined
+          const fixedDelta = fixedPrevTotal !== undefined ? fixedTotal - fixedPrevTotal : undefined
+
+          const renderItem = (item: typeof data[number], indent: boolean) => {
+            const delta = item.prevValue !== undefined ? item.value - item.prevValue : undefined
+            return (
+              <div key={item.name} className={`flex items-center justify-between py-[5px] ${indent ? 'pl-4' : ''}`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className={`text-[#243447] truncate ${indent ? 'text-xs' : 'text-sm'}`}>{item.name}</span>
+                </div>
+                <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
+                  <span className={`text-[#243447] ${indent ? 'text-xs' : 'text-sm font-medium'}`}>{fmt(item.value)}</span>
+                  {prevIncome && (
+                    <span className="text-xs w-14 text-right"
+                      style={{ color: delta !== undefined && delta !== 0 ? (delta >= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
+                      {delta !== undefined && delta !== 0 ? `${delta > 0 ? '+' : ''}${fmt(delta)}` : '0'}
+                    </span>
+                  )}
+                  <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / income.total) * 100).toFixed(1)}%</span>
+                </div>
+              </div>
+            )
+          }
+
           return (
-            <div key={item.name} className="flex items-center justify-between py-[7px] text-sm">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="text-[#243447] truncate">{item.name}</span>
-              </div>
-              <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
-                <span className="text-[#243447] font-medium">{fmt(item.value)}</span>
-                {prevIncome && (
-                  <span className="text-xs w-14 text-right"
-                    style={{ color: delta !== undefined && delta !== 0 ? (delta >= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
-                    {delta !== undefined && delta !== 0 ? `${delta > 0 ? '+' : ''}${fmt(delta)}` : '0'}
-                  </span>
-                )}
-                <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / income.total) * 100).toFixed(1)}%</span>
-              </div>
-            </div>
+            <>
+              {fixedTotal > 0 && (
+                <>
+                  <div className="flex items-center justify-between py-[7px] text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-300" />
+                      <span className="text-[#243447] font-semibold">固定給</span>
+                    </div>
+                    <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
+                      <span className="text-[#243447] font-semibold">{fmt(fixedTotal)}</span>
+                      {prevIncome && (
+                        <span className="text-xs w-14 text-right"
+                          style={{ color: fixedDelta !== undefined && fixedDelta !== 0 ? (fixedDelta >= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
+                          {fixedDelta !== undefined && fixedDelta !== 0 ? `${fixedDelta > 0 ? '+' : ''}${fmt(fixedDelta)}` : '0'}
+                        </span>
+                      )}
+                      <span className="text-[#7a94a6] w-11 text-right text-xs">{((fixedTotal / income.total) * 100).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  {fixedItems.map((item) => renderItem(item, true))}
+                </>
+              )}
+              {nonFixedItems.map((item) => renderItem(item, false))}
+            </>
           )
-        })}
+        })()}
         <div className="flex items-center justify-between py-[7px]">
           <span className="text-sm text-[#7a94a6] font-medium">合計</span>
           <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
