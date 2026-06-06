@@ -227,8 +227,8 @@ export default function SettingsPage() {
         const totals = annualTotals(payslips, year)
         const bonusCount = payslips.filter((p) => p.year === year && p.payslipType === 'bonus').length
         const label =
-          year === currentYear && totals.monthlyMonthCount < 12
-            ? `${year}（YTD ${totals.monthlyMonthCount}ヶ月）`
+          totals.monthlyMonthCount < 12
+            ? `${year}（${year === currentYear ? 'YTD ' : ''}${totals.monthlyMonthCount}ヶ月）`
             : `${year}`
         lines.push(
           `| ${label} | ${formatYen(totals.totalIncome)} | ${formatYen(totals.totalNetPay)} | ${formatYen(totals.totalDeductions)} | ${totals.monthlyMonthCount} | ${bonusCount} |`,
