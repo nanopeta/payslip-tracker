@@ -100,6 +100,7 @@ export default function DashboardPage() {
   const usagePercent = (overtimeHoursLatest / DEEMED_HOURS) * 100
   const overtimeHourlyRate = deemedAmtLatest > 0 ? Math.round(deemedAmtLatest / DEEMED_HOURS) : 0
   const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
+  const actualOvertimeHourlyRateLatest = overtimeHoursLatest > 0 ? Math.round(actualAmtLatest / overtimeHoursLatest) : 0
   const effectiveBaseLatest = selectedMonthly
     ? selectedMonthly.income.basicSalary + selectedMonthly.income.deemedOvertime +
       selectedMonthly.income.wlbAllowance + selectedMonthly.income.lifePlanAllowance
@@ -123,6 +124,7 @@ export default function DashboardPage() {
   const ytdUsagePercent = ytdDeemedHours > 0 ? (ytdActualHours / ytdDeemedHours) * 100 : 0
   const ytdOvertimeHourlyRate = ytdDeemedHours > 0 ? Math.round(ytdDeemedTotal / ytdDeemedHours) : 0
   const ytdBasicHourlyRate = ytdOvertimeHourlyRate > 0 ? Math.round(ytdOvertimeHourlyRate / 1.25) : 0
+  const ytdActualOvertimeHourlyRate = ytdActualHours > 0 ? Math.round(ytdActualTotal / ytdActualHours) : 0
   const ytdEffectiveBase = currentYearGainSlips.reduce(
     (s, p) => s + p.income.basicSalary + p.income.deemedOvertime + p.income.wlbAllowance + p.income.lifePlanAllowance, 0)
   const ytdWorkHours = currentYearGainSlips.reduce((s, p) => s + p.attendance.workHours, 0)
@@ -339,7 +341,7 @@ export default function DashboardPage() {
             <span className="text-xs text-gray-400">差額</span>
           </div>
 
-          <div className="grid grid-cols-4 gap-x-3 gap-y-2 mb-2">
+          <div className="grid grid-cols-4 gap-x-3 gap-y-2 mb-3">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">みなし（{DEEMED_HOURS}h）</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(deemedAmtLatest)}</p>
@@ -362,20 +364,32 @@ export default function DashboardPage() {
                 }} />
               </div>
             </div>
+          </div>
+          <div className="grid grid-cols-4 gap-x-3 gap-y-2 pt-3 border-t border-gray-100 mb-2">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">残業時給</p>
               <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(overtimeHourlyRate)}/h</p>
+              <p className="text-[9px] text-gray-300 leading-tight mt-0.5">みなし÷45h</p>
             </div>
+            {actualOvertimeHourlyRateLatest > 0 && (
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">実質残業時給</p>
+                <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(actualOvertimeHourlyRateLatest)}/h</p>
+                <p className="text-[9px] text-gray-300 leading-tight mt-0.5">実残業代÷残業h</p>
+              </div>
+            )}
             {basicHourlyRate > 0 && (
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">基本時給</p>
                 <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(basicHourlyRate)}/h</p>
+                <p className="text-[9px] text-gray-300 leading-tight mt-0.5">÷1.25逆算</p>
               </div>
             )}
             {effectiveHourlyRateLatest > 0 && (
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">実質時給</p>
                 <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(effectiveHourlyRateLatest)}/h</p>
+                <p className="text-[9px] text-gray-300 leading-tight mt-0.5">固定給÷出勤h</p>
               </div>
             )}
           </div>
@@ -449,7 +463,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-x-4 gap-y-3">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-3">
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">年間差額</p>
                   <p className="text-sm font-semibold tabular-nums" style={{ color: ytdGainTotal >= 0 ? '#5fad9b' : '#d06868' }}>
@@ -462,20 +476,32 @@ export default function DashboardPage() {
                     {fmtHidden(`${ytdGainHours >= 0 ? '+' : ''}${ytdGainHours.toFixed(1)}h`)}
                   </p>
                 </div>
+              </div>
+              <div className="grid grid-cols-4 gap-x-4 gap-y-3 pt-3 border-t border-gray-100">
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">残業時給平均</p>
                   <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdOvertimeHourlyRate)}/h</p>
+                  <p className="text-[9px] text-gray-300 leading-tight mt-0.5">みなし÷45h</p>
                 </div>
+                {ytdActualOvertimeHourlyRate > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">実質残業時給平均</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdActualOvertimeHourlyRate)}/h</p>
+                    <p className="text-[9px] text-gray-300 leading-tight mt-0.5">実残業代÷残業h</p>
+                  </div>
+                )}
                 {ytdBasicHourlyRate > 0 && (
                   <div>
                     <p className="text-xs text-gray-400 mb-0.5">基本時給平均</p>
                     <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdBasicHourlyRate)}/h</p>
+                    <p className="text-[9px] text-gray-300 leading-tight mt-0.5">÷1.25逆算</p>
                   </div>
                 )}
                 {ytdEffectiveHourlyRate > 0 && (
                   <div>
                     <p className="text-xs text-gray-400 mb-0.5">実質時給平均</p>
                     <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdEffectiveHourlyRate)}/h</p>
+                    <p className="text-[9px] text-gray-300 leading-tight mt-0.5">固定給÷出勤h</p>
                   </div>
                 )}
               </div>
