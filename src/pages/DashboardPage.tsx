@@ -617,7 +617,7 @@ export default function DashboardPage() {
           <div className="bg-white rounded-[14px] border border-[#d8e7ef] p-3" style={{ boxShadow: '0 2px 10px rgba(91,143,168,.09), 0 1px 3px rgba(0,0,0,.04)' }}>
             <div className="mb-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>支給合算の推移</p>
+                <p className="text-sm font-bold text-gray-600 flex items-center gap-2"><span className="w-1 h-4 bg-gray-400 rounded-full inline-block"></span>固定給の推移</p>
                 <div className="flex gap-1">
                   {PERIOD_FILTERS.map((f) => (
                     <button
