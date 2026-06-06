@@ -421,11 +421,26 @@ DEEMED_HOURS = 45  // みなし残業時間（固定値）
 残業時給          = みなし残業金額 ÷ DEEMED_HOURS  （円/h、端数切捨て）
 基本時給          = 残業時給 ÷ 1.25               （割増率 1.25 の逆算）
 使用率            = 実残業時間 ÷ DEEMED_HOURS × 100 （%）
+
+// 実質時給・実質残業時給（workHours に残業時間が含まれる前提）
+通常出勤時間      = workHours - overtimeHours
+固定給計          = basicSalary + deemedOvertime + wlbAllowance + lifePlanAllowance
+実質時給          = 固定給計 ÷ 通常出勤時間      （円/h、端数切捨て）
+実質残業時給      = 実質時給 × 1.25             （割増率 1.25 を乗算）
 ```
+
+時給4種の表示順（`PayslipDetailView` / `AnnualDetailView` / `DashboardPage` 共通）:
+1. **実質時給** — 固定給÷通常出勤h（出勤h-残業h）
+2. **基本時給** — 残業時給÷1.25
+3. **実質残業時給** — 実質時給×1.25
+4. **残業時給** — みなし÷45h
+
+サブラベル色は `text-[9px] text-gray-400`（`text-gray-300` は使わない）。
 
 - `gain > 0`: みなし残業が余っている（お得）→ `#5fad9b`
 - `gain < 0`: みなし残業を超過している（損）→ `#d06868`
 - 基本時給は `overtimeHourlyRate > 0` のときのみ表示
+- 実質時給は `effectiveHours > 0` のときのみ表示（通常出勤時間が0の場合は非表示）
 
 ---
 
@@ -679,6 +694,12 @@ git push --force-with-lease origin <branch>
    └── 概要/支給/控除 タブ
 ```
 
+ページ遷移時のスクロールリセット:
+```typescript
+// PayslipDetailPage.tsx — id が変わるたびに最上部へスクロール
+useEffect(() => { window.scrollTo(0, 0) }, [id])
+```
+
 ### PayslipDetailView 勤怠カードの alwaysShow パターン
 
 有休取得は0でも常に表示する（その月に有休を取っていなくてもカードに出す）。
@@ -775,8 +796,8 @@ const INCOME_LABELS: Record<string, string> = {
 
 上から順に:
 1. **StatCards** — 差引支給額（動的年月タイトル・`highlight`）・総支給・控除合計・手取り率・有給残日数・累計残業時間（6ヶ月以上のときのみ）
-2. **収支内訳カード** — `selectedDonutYM` 月選択ドロップダウン + 3タブ（概要/支給/控除）→ `NetPayBreakdownChart` / `IncomeDonutChart` / `DeductionDonutChart`
-3. **みなし残業効率カード** — `selectedGainYM` 月選択ドロップダウン + 差額・4カラムグリッド（みなし/実残業代/残業時間/使用率）・残業時給・基本時給 + 残業時間推移（`OvertimeHoursChart`）+ 月次差額推移（`GainTrendChart`）+ **年間合算セクション**（選択月の年の合計）
+2. **収支内訳カード** — `selectedDonutId`（payslip ID）月選択ドロップダウン（給与・賞与を含む全明細）+ 「明細」ジャンプボタン + 3タブ（概要/支給/控除）→ `NetPayBreakdownChart` / `IncomeDonutChart` / `DeductionDonutChart`
+3. **みなし残業効率カード** — `selectedGainYM` 月選択ドロップダウン + 「明細」ジャンプボタン + 差額・4カラムグリッド（みなし/実残業代/残業時間/使用率）・時給4種 + 残業時間推移（`OvertimeHoursChart`）+ 月次差額推移（`GainTrendChart`）+ **年間合算セクション**（選択月の年の合計）
 4. **今年の累計カード** — 給与/賞与/合計の4カラム表テーブル（総支給・手取り・差額）+ 月次手取統計（平均/最高/最低）。「今年の賞与」StatCard は廃止・統合済み
 5. **支給合算の推移** — `IncomeBreakdownTrendChart`（期間フィルター付き・2件以上のときのみ）
 6. **支給・手取りの推移** — `TrendSummaryChart`（期間フィルター付き）
@@ -790,7 +811,11 @@ const INCOME_LABELS: Record<string, string> = {
 
 ```typescript
 const [donutTab, setDonutTab] = useState<'overview' | 'income' | 'deduction'>('overview')
-const [selectedDonutYM, setSelectedDonutYM] = useState<string>('')  // ダッシュボードのみ
+// ダッシュボードのみ: payslip ID を value として使用（給与・賞与を含む全明細）
+const [selectedDonutId, setSelectedDonutId] = useState<string>('')
+const latestDonutId = latestMonthly?.id ?? sorted[0]?.id ?? ''
+const effectiveDonutId = selectedDonutId || latestDonutId
+const selectedDonutPayslip = payslips.find(p => p.id === effectiveDonutId) ?? latestMonthly ?? sorted[0]
 
 // タブ切り替え UI
 {(['overview', 'income', 'deduction'] as const).map(({ key, label }) => (
@@ -806,7 +831,9 @@ donutTab === 'deduction'→ <DeductionDonutChart />
 ```
 
 - デフォルトタブは `'overview'`
-- ダッシュボードは月選択ドロップダウン付き、明細詳細ページは固定月（当該明細）
+- ダッシュボードは月選択ドロップダウン付き（全payslipをID基準で選択）、「明細」ジャンプボタン付き
+- 明細詳細ページは固定月（当該明細）
+- 賞与の選択肢は `YYYY年MM月（賞与）` 形式でラベル表示
 
 ### みなし残業 年間合算セクション
 
@@ -828,7 +855,8 @@ const ytdBasicHourlyRate = ytdOvertimeHourlyRate > 0 ? Math.round(ytdOvertimeHou
 
 表示レイアウト（4カラムグリッド×2行）:
 - 行1: みなし（〇〇h）| 実残業代合計 | 残業時間合計 | 年間使用率（プログレスバー付き）
-- 行2: 年間差額 | 得した時間 | 残業時給平均 | 基本時給平均
+- 行2: 年間差額 | 得した時間
+- 行3（border-t）: 実質時給平均 | 基本時給平均 | 実質残業時給平均 | 残業時給平均
 
 ラベル「みなし（〇〇h）」の `〇〇h` は `ytdDeemedHours`（月数×45）を動的表示。1行に収まるよう「みなし合計（〇〇h）」ではなく「みなし（〇〇h）」とする。
 
