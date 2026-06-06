@@ -100,13 +100,13 @@ export default function DashboardPage() {
   const usagePercent = (overtimeHoursLatest / DEEMED_HOURS) * 100
   const overtimeHourlyRate = deemedAmtLatest > 0 ? Math.round(deemedAmtLatest / DEEMED_HOURS) : 0
   const basicHourlyRate = overtimeHourlyRate > 0 ? Math.round(overtimeHourlyRate / 1.25) : 0
-  const actualOvertimeHourlyRateLatest = overtimeHoursLatest > 0 ? Math.round(actualAmtLatest / overtimeHoursLatest) : 0
   const effectiveBaseLatest = selectedMonthly
     ? selectedMonthly.income.basicSalary + selectedMonthly.income.deemedOvertime +
       selectedMonthly.income.wlbAllowance + selectedMonthly.income.lifePlanAllowance
     : 0
   const effectiveHoursLatest = (selectedMonthly?.attendance.workHours ?? 0) + overtimeHoursLatest * 0.25
   const effectiveHourlyRateLatest = effectiveHoursLatest > 0 ? Math.round(effectiveBaseLatest / effectiveHoursLatest) : 0
+  const actualOvertimeHourlyRateLatest = effectiveHourlyRateLatest > 0 ? Math.round(effectiveHourlyRateLatest * 1.25) : 0
 
   const currentYear = new Date().getFullYear()
   const gainSelectedYear = effectiveGainYM ? parseInt(effectiveGainYM.split('/')[0]) : currentYear
@@ -124,12 +124,12 @@ export default function DashboardPage() {
   const ytdUsagePercent = ytdDeemedHours > 0 ? (ytdActualHours / ytdDeemedHours) * 100 : 0
   const ytdOvertimeHourlyRate = ytdDeemedHours > 0 ? Math.round(ytdDeemedTotal / ytdDeemedHours) : 0
   const ytdBasicHourlyRate = ytdOvertimeHourlyRate > 0 ? Math.round(ytdOvertimeHourlyRate / 1.25) : 0
-  const ytdActualOvertimeHourlyRate = ytdActualHours > 0 ? Math.round(ytdActualTotal / ytdActualHours) : 0
   const ytdEffectiveBase = currentYearGainSlips.reduce(
     (s, p) => s + p.income.basicSalary + p.income.deemedOvertime + p.income.wlbAllowance + p.income.lifePlanAllowance, 0)
   const ytdWorkHours = currentYearGainSlips.reduce((s, p) => s + p.attendance.workHours, 0)
   const ytdEffectiveHours = ytdWorkHours + ytdActualHours * 0.25
   const ytdEffectiveHourlyRate = ytdEffectiveHours > 0 ? Math.round(ytdEffectiveBase / ytdEffectiveHours) : 0
+  const ytdActualOvertimeHourlyRate = ytdEffectiveHourlyRate > 0 ? Math.round(ytdEffectiveHourlyRate * 1.25) : 0
   const ytd = annualTotals(payslips, currentYear)
   const hasYtdData = ytd.monthCount > 0
   const currentYearMonthlySlips = payslips.filter(
@@ -375,7 +375,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">実質残業時給</p>
                 <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(actualOvertimeHourlyRateLatest)}/h</p>
-                <p className="text-[9px] text-gray-300 leading-tight mt-0.5">実残業代÷残業h</p>
+                <p className="text-[9px] text-gray-300 leading-tight mt-0.5">実質時給×1.25</p>
               </div>
             )}
             {basicHourlyRate > 0 && (
@@ -487,7 +487,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-xs text-gray-400 mb-0.5">実質残業時給平均</p>
                     <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdActualOvertimeHourlyRate)}/h</p>
-                    <p className="text-[9px] text-gray-300 leading-tight mt-0.5">実残業代÷残業h</p>
+                    <p className="text-[9px] text-gray-300 leading-tight mt-0.5">実質時給×1.25</p>
                   </div>
                 )}
                 {ytdBasicHourlyRate > 0 && (
