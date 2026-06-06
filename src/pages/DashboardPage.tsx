@@ -259,7 +259,7 @@ export default function DashboardPage() {
                 to={`/payslips/${selectedDonutPayslip.id}`}
                 className="text-xs text-brand-600 border border-brand-200 rounded-md px-1.5 py-0.5 hover:bg-brand-50 flex-shrink-0"
               >
-                明細 →
+                明細
               </Link>
               {payslips.length > 1 ? (
                 <select
@@ -325,7 +325,7 @@ export default function DashboardPage() {
                   to={`/payslips/${selectedMonthly.id}`}
                   className="text-xs text-brand-600 border border-brand-200 rounded-md px-1.5 py-0.5 hover:bg-brand-50 flex-shrink-0"
                 >
-                  明細 →
+                  明細
                 </Link>
               )}
               {gainRows.length > 1 ? (
@@ -343,7 +343,7 @@ export default function DashboardPage() {
               ) : (
                 <span className="text-xs text-gray-400">{selectedMonthly?.year}年{selectedMonthly?.month}月</span>
               )}
-              <Link to="/settings" className="text-xs text-brand-500 hover:text-brand-700">設定 →</Link>
+              <Link to="/settings" className="text-xs text-brand-500 hover:text-brand-700">設定</Link>
             </div>
           </div>
 
@@ -393,11 +393,6 @@ export default function DashboardPage() {
                 <p className="text-[9px] text-gray-400 leading-tight mt-0.5">残業時給÷1.25</p>
               </div>
             )}
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">残業時給</p>
-              <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(overtimeHourlyRate)}/h</p>
-              <p className="text-[9px] text-gray-400 leading-tight mt-0.5">みなし÷45h</p>
-            </div>
             {actualOvertimeHourlyRateLatest > 0 && (
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">実質残業時給</p>
@@ -405,6 +400,11 @@ export default function DashboardPage() {
                 <p className="text-[9px] text-gray-400 leading-tight mt-0.5">実質時給×1.25</p>
               </div>
             )}
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">残業時給</p>
+              <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(overtimeHourlyRate)}/h</p>
+              <p className="text-[9px] text-gray-400 leading-tight mt-0.5">みなし÷45h</p>
+            </div>
           </div>
 
           {showOvertimeChart && (
@@ -505,11 +505,6 @@ export default function DashboardPage() {
                     <p className="text-[9px] text-gray-400 leading-tight mt-0.5">残業時給÷1.25</p>
                   </div>
                 )}
-                <div>
-                  <p className="text-xs text-gray-400 mb-0.5">残業時給平均</p>
-                  <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdOvertimeHourlyRate)}/h</p>
-                  <p className="text-[9px] text-gray-400 leading-tight mt-0.5">みなし÷45h</p>
-                </div>
                 {ytdActualOvertimeHourlyRate > 0 && (
                   <div>
                     <p className="text-xs text-gray-400 mb-0.5">実質残業時給平均</p>
@@ -517,6 +512,11 @@ export default function DashboardPage() {
                     <p className="text-[9px] text-gray-400 leading-tight mt-0.5">実質時給×1.25</p>
                   </div>
                 )}
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">残業時給平均</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900">{fmt(ytdOvertimeHourlyRate)}/h</p>
+                  <p className="text-[9px] text-gray-400 leading-tight mt-0.5">みなし÷45h</p>
+                </div>
               </div>
             </div>
           )}

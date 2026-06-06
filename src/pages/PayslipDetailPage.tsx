@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import PayslipDetailView from '../components/payslip/PayslipDetailView'
@@ -18,6 +18,7 @@ export default function PayslipDetailPage() {
   const deletePayslip = useStore((s) => s.deletePayslip)
   const updatePayslip = useStore((s) => s.updatePayslip)
   const payslip = payslips.find((p) => p.id === id)
+  useEffect(() => { window.scrollTo(0, 0) }, [id])
   const [editing, setEditing] = useState(false)
   const [donutTab, setDonutTab] = useState<'overview' | 'income' | 'deduction'>('overview')
 
