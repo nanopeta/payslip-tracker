@@ -128,11 +128,11 @@ export default function DeductionDonutChart({ deductions, prevDeductions }: Prop
             return (
               <div key={item.name} className={`flex items-center justify-between ${indent ? 'py-[5px] pl-4' : 'py-[7px]'}`}>
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className={`inline-block rounded-full flex-shrink-0 ${indent ? 'w-2 h-2' : 'w-2.5 h-2.5'}`} style={{ backgroundColor: item.color }} />
                   <span className={`text-[#243447] truncate ${indent ? 'text-xs' : 'text-sm'}`}>{item.name}</span>
                 </div>
                 <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
-                  <span className={indent ? 'text-xs' : 'font-medium'} style={{ color: isCredit ? '#5fad9b' : '#243447' }}>{fmt(item.value)}</span>
+                  <span className={indent ? 'text-xs' : 'text-sm font-medium'} style={{ color: isCredit ? '#5fad9b' : '#243447' }}>{fmt(item.value)}</span>
                   {prevDeductions && (
                     <span className="text-xs w-14 text-right"
                       style={{ color: delta !== undefined && delta !== 0 ? (delta <= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>

@@ -3,6 +3,8 @@ import Chart from 'chart.js/auto'
 import type { PayslipIncome, PayslipDeductions, PayslipSummary } from '../../types/payslip'
 import { usePrivacy } from '../../hooks/usePrivacy'
 
+const SOCIAL_INSURANCE_LABELS = new Set(['健康保険', '介護保険', '厚生年金', '雇用保険'])
+
 const DEDUCTION_SLICES: { key: keyof PayslipDeductions; label: string; color: string }[] = [
   { key: 'healthInsurance',       label: '健康保険',  color: '#5b8fa8' },
   { key: 'longTermCareInsurance', label: '介護保険',  color: '#7aafc5' },
@@ -113,31 +115,66 @@ export default function NetPayBreakdownChart({ income, deductions, summary, prev
         <canvas ref={canvasRef} />
       </div>
       <div className="w-full min-w-0 divide-y divide-gray-100 sm:flex-1 sm:self-center">
-        {data.map((item) => {
-          const delta = item.prevValue !== undefined ? item.value - item.prevValue : undefined
-          const hasDelta = delta !== undefined && delta !== 0
-          const deltaColor = hasDelta
-            ? (item.deltaInvert ? delta! <= 0 : delta! >= 0) ? '#5fad9b' : '#d06868'
-            : 'transparent'
+        {(() => {
           const hasPrev = prevDeductions !== undefined || prevSummary !== undefined
+          const siItems = data.filter((d) => SOCIAL_INSURANCE_LABELS.has(d.name))
+          const nonSiItems = data.filter((d) => !SOCIAL_INSURANCE_LABELS.has(d.name))
+          const siTotal = siItems.reduce((s, d) => s + d.value, 0)
+          const siPrevTotal = hasPrev ? siItems.reduce((s, d) => s + (d.prevValue ?? 0), 0) : undefined
+          const siDelta = siPrevTotal !== undefined ? siTotal - siPrevTotal : undefined
+
+          const renderItem = (item: typeof data[number], indent: boolean) => {
+            const delta = item.prevValue !== undefined ? item.value - item.prevValue : undefined
+            const hasDelta = delta !== undefined && delta !== 0
+            const deltaColor = hasDelta
+              ? (item.deltaInvert ? delta! <= 0 : delta! >= 0) ? '#5fad9b' : '#d06868'
+              : 'transparent'
+            return (
+              <div key={item.name} className={`flex items-center justify-between ${indent ? 'py-[5px] pl-4' : 'py-[7px]'}`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`inline-block rounded-full flex-shrink-0 ${indent ? 'w-2 h-2' : 'w-2.5 h-2.5'}`} style={{ backgroundColor: item.color }} />
+                  <span className={`text-[#243447] truncate ${indent ? 'text-xs' : 'text-sm'}`}>{item.name}</span>
+                </div>
+                <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
+                  <span className={`text-[#243447] ${indent ? 'text-xs' : 'text-sm font-medium'}`}>{fmt(item.value)}</span>
+                  {hasPrev && (
+                    <span className="text-xs w-14 text-right" style={{ color: deltaColor }}>
+                      {hasDelta ? `${delta! > 0 ? '+' : ''}${fmt(delta!)}` : '0'}
+                    </span>
+                  )}
+                  <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / total) * 100).toFixed(1)}%</span>
+                </div>
+              </div>
+            )
+          }
+
           return (
-            <div key={item.name} className="flex items-center justify-between py-[7px] text-sm">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="text-[#243447] truncate">{item.name}</span>
-              </div>
-              <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
-                <span className="text-[#243447] font-medium">{fmt(item.value)}</span>
-                {hasPrev && (
-                  <span className="text-xs w-14 text-right" style={{ color: deltaColor }}>
-                    {hasDelta ? `${delta! > 0 ? '+' : ''}${fmt(delta!)}` : '0'}
-                  </span>
-                )}
-                <span className="text-[#7a94a6] w-11 text-right text-xs">{((item.value / total) * 100).toFixed(1)}%</span>
-              </div>
-            </div>
+            <>
+              {siTotal > 0 && (
+                <>
+                  <div className="flex items-center justify-between py-[7px] text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-300" />
+                      <span className="text-[#243447] font-semibold">社会保険料</span>
+                    </div>
+                    <div className="flex items-center gap-2 tabular-nums flex-shrink-0 ml-2">
+                      <span className="text-[#243447] font-semibold">{fmt(siTotal)}</span>
+                      {hasPrev && (
+                        <span className="text-xs w-14 text-right"
+                          style={{ color: siDelta !== undefined && siDelta !== 0 ? (siDelta <= 0 ? '#5fad9b' : '#d06868') : 'transparent' }}>
+                          {siDelta !== undefined && siDelta !== 0 ? `${siDelta > 0 ? '+' : ''}${fmt(siDelta)}` : '0'}
+                        </span>
+                      )}
+                      <span className="text-[#7a94a6] w-11 text-right text-xs">{((siTotal / total) * 100).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  {siItems.map((item) => renderItem(item, true))}
+                </>
+              )}
+              {nonSiItems.map((item) => renderItem(item, false))}
+            </>
           )
-        })}
+        })()}
         <div className="flex items-center justify-between py-[7px]">
           <span className="text-sm text-[#7a94a6] font-medium">総支給</span>
           <span className="text-sm text-[#243447] font-semibold tabular-nums">{fmt(total)}</span>
