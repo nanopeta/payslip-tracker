@@ -15,7 +15,7 @@ export default function Layout() {
 
       {/* Mobile header */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-3 py-2.5 bg-white border-b border-brand-100">
-        <h1 className="text-brand-700 font-bold text-sm">給与明細ダッシュボード</h1>
+        <h1 className="text-brand-700 font-bold text-base">給与明細ダッシュボード</h1>
         <div className="flex items-center gap-1.5">
           <a
             href="https://nanopeta.github.io/asset-formation/"
