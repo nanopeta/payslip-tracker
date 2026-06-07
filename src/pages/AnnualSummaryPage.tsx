@@ -435,34 +435,37 @@ export default function AnnualSummaryPage() {
 
             {simResult && !customMode && (() => {
               const thisYearResidentTax = simProjectedMonthlyResidentTax + simBonusResidentTaxSum
-              const nextYearResidentTax = simResult.residentTaxDividend
-              const delta = nextYearResidentTax - thisYearResidentTax
-              // 住民税は特別徴収で年額を12等分して毎月天引きされる（6月～翌5月）。月額は概算として年額÷12（端数四捨五入）で比較する
-              const thisYearMonthly = simMonthlyResidentTaxAvg
-              const nextYearMonthly = Math.round(nextYearResidentTax / 12)
-              const monthlyDelta = nextYearMonthly - thisYearMonthly
+              const nextYearResidentTaxBefore = simResult.residentTaxDividend
               // ふるさと納税ありバージョン: 推定上限額を寄付した場合、自己負担2,000円を除いた額のうち
               // 所得税から控除される分を差し引いた残りが住民税から控除される（基本分+特例分）
               const donationAmount = simResult.furusatoLimit
               const netDonation = Math.max(0, donationAmount - 2_000)
               const residentTaxReduction = Math.floor(netDonation * (1 - simResult.incomeTaxRate * 1.021))
-              const nextYearResidentTaxWithDonation = Math.max(0, nextYearResidentTax - residentTaxReduction)
+              const nextYearResidentTaxAfter = Math.max(0, nextYearResidentTaxBefore - residentTaxReduction)
+              const hasDonation = donationAmount > 0
+              // ふるさと納税は基本的に行う前提のため、ふるさと納税後の額をメインの試算値として表示する
+              const mainResidentTax = hasDonation ? nextYearResidentTaxAfter : nextYearResidentTaxBefore
+              const delta = mainResidentTax - thisYearResidentTax
+              // 住民税は特別徴収で年額を12等分して毎月天引きされる（6月～翌5月）。月額は概算として年額÷12（端数四捨五入）で比較する
+              const thisYearMonthly = simMonthlyResidentTaxAvg
+              const nextYearMonthly = Math.round(mainResidentTax / 12)
+              const monthlyDelta = nextYearMonthly - thisYearMonthly
               return (
                 <>
-                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">来年の住民税試算（年額・ふるさと納税なし）</p>
-                    <p className="text-xl font-bold tabular-nums text-gray-900">{fmt(nextYearResidentTax)}</p>
+                  <div className="bg-brand-50 border border-brand-200 rounded-xl p-3 text-center">
+                    <p className="text-xs text-brand-600 mb-1">
+                      来年の住民税試算（年額{hasDonation ? '・ふるさと納税後' : ''}）
+                    </p>
+                    <p className="text-xl font-bold tabular-nums text-brand-700">{fmt(mainResidentTax)}</p>
                     <p className="text-xs mt-1" style={{ color: delta === 0 ? '#9ca3af' : (delta > 0 ? '#d06868' : '#5fad9b') }}>
                       今年比 {delta > 0 ? '+' : ''}{fmt(delta)}
                     </p>
+                    {hasDonation && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        ふるさと納税前は {fmt(nextYearResidentTaxBefore)}（推定上限額 {fmt(donationAmount)} 寄付想定で {fmt(residentTaxReduction)} 控除）
+                      </p>
+                    )}
                   </div>
-                  {donationAmount > 0 && (
-                    <div className="bg-brand-50 border border-brand-200 rounded-xl p-3 text-center">
-                      <p className="text-xs text-brand-600 mb-1">ふるさと納税ありの場合（推定上限額 {fmt(donationAmount)} 寄付時）</p>
-                      <p className="text-xl font-bold tabular-nums text-brand-700">{fmt(nextYearResidentTaxWithDonation)}</p>
-                      <p className="text-xs text-gray-400 mt-1">住民税からの控除額 {fmt(residentTaxReduction)} を差し引いた概算（自己負担2,000円除く）</p>
-                    </div>
-                  )}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-gray-50 rounded-lg p-2 text-center">
                       <p className="text-[10px] text-gray-400 mb-0.5">今年の月額（平均）</p>
@@ -513,7 +516,7 @@ export default function AnnualSummaryPage() {
                         </div>
                       </div>
                       <div>
-                        <p className="text-gray-500 font-medium mb-1">② 来年の住民税試算（今年の所得を基に計算）</p>
+                        <p className="text-gray-500 font-medium mb-1">② 来年の住民税所得割（今年の所得を基に計算）</p>
                         <div className="space-y-1 pl-2">
                           <div className="flex justify-between">
                             <span className="text-gray-400">課税所得（住民税）</span>
@@ -525,38 +528,13 @@ export default function AnnualSummaryPage() {
                           </div>
                           <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
                             <span className="text-gray-600">= 住民税所得割（年額）</span>
-                            <span className="tabular-nums text-gray-700">{fmt(nextYearResidentTax)}</span>
+                            <span className="tabular-nums text-gray-700">{fmt(nextYearResidentTaxBefore)}</span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex justify-between font-semibold border-t border-gray-200 pt-2">
-                        <span className="text-gray-600">今年との増減（② − ①、年額）</span>
-                        <span className="tabular-nums" style={{ color: delta === 0 ? '#9ca3af' : (delta > 0 ? '#d06868' : '#5fad9b') }}>
-                          {delta > 0 ? '+' : ''}{fmt(delta)}
-                        </span>
-                      </div>
-                      <div className="border-t border-gray-200 pt-2">
-                        <p className="text-gray-500 font-medium mb-1">③ 月ごとの増減（特別徴収は年額を12ヶ月に分割して天引き）</p>
-                        <div className="space-y-1 pl-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">今年の月額（① ÷ 実績月平均）</span>
-                            <span className="tabular-nums text-gray-700">{fmt(thisYearMonthly)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">来年の月額（② ÷ 12、四捨五入）</span>
-                            <span className="tabular-nums text-gray-700">{fmt(nextYearMonthly)}</span>
-                          </div>
-                          <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
-                            <span className="text-gray-600">月あたりの増減</span>
-                            <span className="tabular-nums" style={{ color: monthlyDelta === 0 ? '#9ca3af' : (monthlyDelta > 0 ? '#d06868' : '#5fad9b') }}>
-                              {monthlyDelta > 0 ? '+' : ''}{fmt(monthlyDelta)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      {donationAmount > 0 && (
-                        <div className="border-t border-gray-200 pt-2">
-                          <p className="text-gray-500 font-medium mb-1">④ ふるさと納税ありの場合（推定上限額を寄付）</p>
+                      {hasDonation && (
+                        <div>
+                          <p className="text-gray-500 font-medium mb-1">③ ふるさと納税による住民税控除（推定上限額を寄付した場合）</p>
                           <div className="space-y-1 pl-2">
                             <div className="flex justify-between">
                               <span className="text-gray-400">寄付額（推定上限額）</span>
@@ -574,16 +552,56 @@ export default function AnnualSummaryPage() {
                               <span className="text-gray-600">= 住民税からの控除額（基本分+特例分）</span>
                               <span className="tabular-nums text-gray-700">{fmt(residentTaxReduction)}</span>
                             </div>
-                            <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
-                              <span className="text-gray-600">住民税所得割 − 控除額</span>
-                              <span className="tabular-nums" style={{ color: '#5fad9b' }}>{fmt(nextYearResidentTaxWithDonation)}</span>
-                            </div>
                           </div>
                           <p className="text-[10px] text-gray-400 leading-relaxed mt-1.5">
                             ※ 寄付額のうち自己負担2,000円を除いた全額が、所得税の還付（寄附金控除）と翌年の住民税控除（基本分10%＋特例分）に分かれて還元されます。ここでは所得税側で還付される分を除いた残りを住民税からの控除額として概算しています。
                           </p>
                         </div>
                       )}
+                      <div>
+                        <p className="text-gray-500 font-medium mb-1">④ 来年の住民税試算（年額{hasDonation ? '・ふるさと納税後' : ''}）</p>
+                        <div className="space-y-1 pl-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">住民税所得割</span>
+                            <span className="tabular-nums text-gray-700">{fmt(nextYearResidentTaxBefore)}</span>
+                          </div>
+                          {hasDonation && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">− ふるさと納税控除額</span>
+                              <span className="tabular-nums text-gray-700">{fmt(residentTaxReduction)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                            <span className="text-gray-600">= 来年の住民税試算（年額）</span>
+                            <span className="tabular-nums" style={{ color: '#5fad9b' }}>{fmt(mainResidentTax)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-between font-semibold border-t border-gray-200 pt-2">
+                        <span className="text-gray-600">今年との増減（④ − ①、年額）</span>
+                        <span className="tabular-nums" style={{ color: delta === 0 ? '#9ca3af' : (delta > 0 ? '#d06868' : '#5fad9b') }}>
+                          {delta > 0 ? '+' : ''}{fmt(delta)}
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-200 pt-2">
+                        <p className="text-gray-500 font-medium mb-1">⑤ 月ごとの増減（特別徴収は年額を12ヶ月に分割して天引き）</p>
+                        <div className="space-y-1 pl-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">今年の月額（① ÷ 実績月平均）</span>
+                            <span className="tabular-nums text-gray-700">{fmt(thisYearMonthly)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">来年の月額（④ ÷ 12、四捨五入）</span>
+                            <span className="tabular-nums text-gray-700">{fmt(nextYearMonthly)}</span>
+                          </div>
+                          <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                            <span className="text-gray-600">月あたりの増減</span>
+                            <span className="tabular-nums" style={{ color: monthlyDelta === 0 ? '#9ca3af' : (monthlyDelta > 0 ? '#d06868' : '#5fad9b') }}>
+                              {monthlyDelta > 0 ? '+' : ''}{fmt(monthlyDelta)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                       <p className="text-[10px] text-gray-400 leading-relaxed pt-1 border-t border-gray-200">
                         ※ 住民税は前年の所得を基に翌年課税されるため、今年の所得から計算した額が「来年の住民税」の試算値になります。実際の税額は自治体の控除内容等により変動する場合があります。
                       </p>
