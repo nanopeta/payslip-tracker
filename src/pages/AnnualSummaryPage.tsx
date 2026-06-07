@@ -54,6 +54,7 @@ export default function AnnualSummaryPage() {
   const [showSimDetail, setShowSimDetail] = useState(false)
   const [showIncomeDetail, setShowIncomeDetail] = useState(false)
   const [showRefundDetail, setShowRefundDetail] = useState(false)
+  const [showNextYearResidentTaxDetail, setShowNextYearResidentTaxDetail] = useState(false)
   const [annualDonutTab, setAnnualDonutTab] = useState<Record<number, 'overview' | 'income' | 'deduction'>>({})
   const [customMode, setCustomMode] = useState(false)
   const [customIncome, setCustomIncome] = useState(0)
@@ -426,6 +427,123 @@ export default function AnnualSummaryPage() {
                           {refund >= 0 ? '+' : ''}{fmt(refund)}
                         </span>
                       </div>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
+
+            {simResult && !customMode && (() => {
+              const thisYearResidentTax = simProjectedMonthlyResidentTax + simBonusResidentTaxSum
+              const nextYearResidentTax = simResult.residentTaxDividend
+              const delta = nextYearResidentTax - thisYearResidentTax
+              // 住民税は特別徴収で年額を12等分して毎月天引きされる（6月～翌5月）。月額は概算として年額÷12（端数四捨五入）で比較する
+              const thisYearMonthly = simMonthlyResidentTaxAvg
+              const nextYearMonthly = Math.round(nextYearResidentTax / 12)
+              const monthlyDelta = nextYearMonthly - thisYearMonthly
+              return (
+                <>
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-500 mb-1">来年の住民税試算（年額）</p>
+                    <p className="text-xl font-bold tabular-nums text-gray-900">{fmt(nextYearResidentTax)}</p>
+                    <p className="text-xs mt-1" style={{ color: delta === 0 ? '#9ca3af' : (delta > 0 ? '#d06868' : '#5fad9b') }}>
+                      今年比 {delta > 0 ? '+' : ''}{fmt(delta)}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gray-50 rounded-lg p-2 text-center">
+                      <p className="text-[10px] text-gray-400 mb-0.5">今年の月額（平均）</p>
+                      <p className="text-sm font-semibold tabular-nums text-gray-700">{fmt(thisYearMonthly)}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-2 text-center">
+                      <p className="text-[10px] text-gray-400 mb-0.5">来年の月額（試算）</p>
+                      <p className="text-sm font-semibold tabular-nums text-gray-700">{fmt(nextYearMonthly)}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-center" style={{ color: monthlyDelta === 0 ? '#9ca3af' : (monthlyDelta > 0 ? '#d06868' : '#5fad9b') }}>
+                    月あたりの増減 {monthlyDelta > 0 ? '+' : ''}{fmt(monthlyDelta)}
+                  </p>
+                  <button
+                    onClick={() => setShowNextYearResidentTaxDetail((v) => !v)}
+                    className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
+                  >
+                    計算内訳
+                    <svg className={`w-3.5 h-3.5 transition-transform ${showNextYearResidentTaxDetail ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {showNextYearResidentTaxDetail && (
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2.5 text-xs">
+                      <div>
+                        <p className="text-gray-500 font-medium mb-1">① 今年の住民税（給与・賞与天引き実績ベース）</p>
+                        <div className="space-y-1 pl-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">給与天引き実績（{simMonthlyCount}ヶ月）</span>
+                            <span className="tabular-nums text-gray-700">{fmt(simMonthlyResidentTaxSum)}</span>
+                          </div>
+                          {simRemainingMonths > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">月平均×残り{simRemainingMonths}ヶ月</span>
+                              <span className="tabular-nums text-gray-700">{fmt(simMonthlyResidentTaxAvg * simRemainingMonths)}</span>
+                            </div>
+                          )}
+                          {simBonusResidentTaxSum > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">賞与天引き実績</span>
+                              <span className="tabular-nums text-gray-700">{fmt(simBonusResidentTaxSum)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                            <span className="text-gray-600">合計</span>
+                            <span className="tabular-nums text-gray-700">{fmt(thisYearResidentTax)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 font-medium mb-1">② 来年の住民税試算（今年の所得を基に計算）</p>
+                        <div className="space-y-1 pl-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">課税所得（住民税）</span>
+                            <span className="tabular-nums text-gray-700">{fmt(simResult.taxableIncomeResident)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">× 税率（所得割）</span>
+                            <span className="tabular-nums text-gray-700">10%</span>
+                          </div>
+                          <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                            <span className="text-gray-600">= 住民税所得割（年額）</span>
+                            <span className="tabular-nums text-gray-700">{fmt(nextYearResidentTax)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-between font-semibold border-t border-gray-200 pt-2">
+                        <span className="text-gray-600">今年との増減（② − ①、年額）</span>
+                        <span className="tabular-nums" style={{ color: delta === 0 ? '#9ca3af' : (delta > 0 ? '#d06868' : '#5fad9b') }}>
+                          {delta > 0 ? '+' : ''}{fmt(delta)}
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-200 pt-2">
+                        <p className="text-gray-500 font-medium mb-1">③ 月ごとの増減（特別徴収は年額を12ヶ月に分割して天引き）</p>
+                        <div className="space-y-1 pl-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">今年の月額（① ÷ 実績月平均）</span>
+                            <span className="tabular-nums text-gray-700">{fmt(thisYearMonthly)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">来年の月額（② ÷ 12、四捨五入）</span>
+                            <span className="tabular-nums text-gray-700">{fmt(nextYearMonthly)}</span>
+                          </div>
+                          <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                            <span className="text-gray-600">月あたりの増減</span>
+                            <span className="tabular-nums" style={{ color: monthlyDelta === 0 ? '#9ca3af' : (monthlyDelta > 0 ? '#d06868' : '#5fad9b') }}>
+                              {monthlyDelta > 0 ? '+' : ''}{fmt(monthlyDelta)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-gray-400 leading-relaxed pt-1 border-t border-gray-200">
+                        ※ 住民税は前年の所得を基に翌年課税されるため、今年の所得から計算した額が「来年の住民税」の試算値になります。実際の税額は自治体の控除内容等により変動する場合があります。
+                      </p>
                     </div>
                   )}
                 </>
