@@ -967,6 +967,62 @@ const grossPositiveTotal = deductions.total - creditTotal  // creditTotal は負
 - キャンバスサイズ: 160×160px
 - Chart.js（`chart.js/auto`）で実装
 
+### 収支内訳3チャートの凡例グループ化パターン
+
+3タブとも、関連項目を凡例リスト上でグループ化して合計表示する（ドーナツ本体のスライス構成は変更しない）。
+
+| タブ | コンポーネント | グループ化対象 |
+|---|---|---|
+| 支給 | `IncomeDonutChart` | 固定給4項目（基本給・みなし残業・WLB手当・ライフプラン手当） |
+| 控除 | `DeductionDonutChart` | 社会保険料4項目（健康保険・介護保険・厚生年金・雇用保険） |
+| 概要 | `NetPayBreakdownChart` | 社会保険料4項目（健康保険・介護保険・厚生年金・雇用保険） |
+
+```typescript
+const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'WLB手当', 'ライフプラン手当'])
+const SOCIAL_INSURANCE_LABELS = new Set(['健康保険', '介護保険', '厚生年金', '雇用保険'])
+```
+
+凡例レンダリングは IIFE で構築し、`renderItem(item, indent)` ヘルパーで通常項目とグループ内サブ項目を共通化する:
+
+```tsx
+const groupItems = data.filter((d) => GROUP_LABELS.has(d.name))
+const nonGroupItems = data.filter((d) => !GROUP_LABELS.has(d.name))
+const groupTotal = groupItems.reduce((s, d) => s + d.value, 0)
+const groupPrevTotal = prevData ? groupItems.reduce((s, d) => s + (d.prevValue ?? 0), 0) : undefined
+const groupDelta = groupPrevTotal !== undefined ? groupTotal - groupPrevTotal : undefined
+
+const renderItem = (item, indent: boolean) => (
+  <div className={`flex items-center justify-between ${indent ? 'py-[5px] pl-4' : 'py-[7px]'}`}>
+    {/* ドット・ラベル・金額・前月比・% */}
+  </div>
+)
+
+return (
+  <>
+    {groupTotal > 0 && (
+      <>
+        {/* グループヘッダー行（合計値・%・前月比） */}
+        {groupItems.map((item) => renderItem(item, true))}
+      </>
+    )}
+    {nonGroupItems.map((item) => renderItem(item, false))}
+  </>
+)
+```
+
+#### 行高・スタイルの基準（支給タブ準拠で統一）
+
+| 行種別 | padding | フォント | 左ドット |
+|---|---|---|---|
+| グループヘッダー | `py-[7px]` | `text-sm font-semibold` | `w-2.5 h-2.5 rounded-full bg-gray-300` |
+| 通常項目（非インデント） | `py-[7px]` | ラベル `text-sm` / 金額 `text-sm font-medium` | `w-2.5 h-2.5` |
+| サブ項目（インデント） | `py-[5px] pl-4` | ラベル・金額とも `text-xs` | `w-2 h-2` |
+
+- グループヘッダーの左ドットは色を付けず `bg-gray-300`（グレー）で表示
+- グループヘッダーのラベルは「固定給」「社会保険料」など補足なしのシンプルな名称
+- グループの合計が0のとき（該当項目が1件もない月）はグループヘッダーごと非表示
+- 各サブ項目の金額・%・前月比はグループ化後も個別に表示し続ける（省略しない）
+
 ### UI コンパクト化基準（最新）
 
 余白削減の標準値:
