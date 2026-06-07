@@ -571,10 +571,41 @@ interface SocialInsuranceStats {
 
 | 画面幅 | レイアウト |
 |---|---|
-| スマホ（`< md`） | BottomNav（4タブ） + コンテンツフル幅 |
+| スマホ（`< md`） | モバイルヘッダー（sticky）+ BottomNav（5タブ）+ コンテンツフル幅 |
 | PC（`md:` 以上） | Sidebar 左固定（`w-56`）+ `ml-56` でコンテンツをオフセット |
 
-BottomNav のタブラベル: ホーム・明細・アップロード・**年次**（旧: 源泉）。
+BottomNav のタブラベル: ホーム・給与明細・年間集計・追加・設定。
+
+### モバイルヘッダー（`md:hidden sticky top-0`）
+
+PC では Sidebar 上部にアプリタイトルが表示されるが、スマホには相当する表示がなかったため追加。
+左にアプリタイトル「給与明細ダッシュボード」（`text-base font-bold text-brand-700`）、右に以下2つのアイコンボタンを配置:
+
+1. 資産形成ダッシュボード（`https://nanopeta.github.io/asset-formation/`）への外部リンク（`target="_blank"`、外部リンクアイコン）
+2. プライバシートグル（旧: 右上の浮遊ボタン → ヘッダー内のアイコンボタンへ統合済み）
+
+```tsx
+<header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-3 py-2.5 bg-white border-b border-brand-100">
+  <h1 className="text-brand-700 font-bold text-base">給与明細ダッシュボード</h1>
+  <div className="flex items-center gap-1.5">
+    {/* 外部リンク・プライバシートグル（w-8 h-8 rounded-full のアイコンボタン） */}
+  </div>
+</header>
+```
+
+- PC（Sidebar）にも同じ外部リンクをナビ下部に配置済み（`Sidebar.tsx`）
+
+### ページ遷移時のスクロールリセット（Layout.tsx・全ページ共通）
+
+`useLocation().pathname` の変化を監視し、ルート変更のたびに最上部へスクロールする。
+
+```tsx
+// Layout.tsx
+const { pathname } = useLocation()
+useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+```
+
+- `PayslipDetailPage.tsx` の `id` 単位のスクロールリセット（後述）と重複するが、害はないためそのまま残している
 
 ---
 
@@ -694,11 +725,13 @@ git push --force-with-lease origin <branch>
    └── 概要/支給/控除 タブ
 ```
 
-ページ遷移時のスクロールリセット:
+ページ遷移時のスクロールリセット（id 単位）:
 ```typescript
 // PayslipDetailPage.tsx — id が変わるたびに最上部へスクロール
 useEffect(() => { window.scrollTo(0, 0) }, [id])
 ```
+
+> Layout.tsx 側で全ページ共通の pathname 単位のスクロールリセットも実装済み（「レスポンシブ対応」セクション参照）。
 
 ### PayslipDetailView 勤怠カードの alwaysShow パターン
 
