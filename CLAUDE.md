@@ -1280,6 +1280,23 @@ furusatoLimit = floor(residentTaxDividend * 0.2 / (1 - incomeTaxRate * 1.021 - 0
    - `projectedIT = simProjectedMonthlyIncomeTax + simBonusIncomeTaxSum`
    - 速算控除額はコンポーネント内でインライン計算（`taxableIncome` の区分に応じた定数）
    - 課税所得は `simResult.taxableIncome`（ふるさと納税シミュレーターと同じ値・同じ `calcFurusato()` 結果を共有）
+3. **来年の住民税試算セクション**（`simResult` があり `!customMode` のとき表示）
+   - 住民税は前年の所得を基に翌年課税されるため、`simResult.residentTaxDividend`（当年所得を基にした住民税所得割）が「来年の住民税」の試算値そのものになる
+   - **ふるさと納税は基本的に行う前提のため、寄付（推定上限額 `simResult.furusatoLimit`）後の住民税控除後の額をメイン表示とする**:
+     ```typescript
+     const nextYearResidentTaxBefore = simResult.residentTaxDividend
+     const donationAmount = simResult.furusatoLimit
+     const netDonation = Math.max(0, donationAmount - 2_000)
+     // 寄付額（自己負担2,000円を除く）のうち、所得税で還付される分を除いた残りが住民税の控除額になる
+     const residentTaxReduction = Math.floor(netDonation * (1 - simResult.incomeTaxRate * 1.021))
+     const nextYearResidentTaxAfter = Math.max(0, nextYearResidentTaxBefore - residentTaxReduction)
+     const hasDonation = donationAmount > 0
+     const mainResidentTax = hasDonation ? nextYearResidentTaxAfter : nextYearResidentTaxBefore
+     ```
+   - ハイライトボックス（`bg-brand-50`）に `mainResidentTax`・今年比デルタを表示。`hasDonation` のときは「ふるさと納税前は ¥XXX」を補足表示（金額と内訳括弧書きの間に `<br />` を入れて2行表示・折り返し対策）
+   - 今年の住民税 = `simProjectedMonthlyResidentTax + simBonusResidentTaxSum`（給与天引き実績＋月平均×残り月＋賞与天引き実績）
+   - 月額比較: 今年 = `simMonthlyResidentTaxAvg`、来年 = `Math.round(mainResidentTax / 12)`（特別徴収は年額を12等分のため概算で比較）
+   - 「計算内訳」トグル（`showNextYearResidentTaxDetail` state）で①今年の実績 → ②来年の住民税所得割（控除前）→ ③ふるさと納税控除額（`hasDonation` のときのみ）→ ④来年の試算（控除後・メイン）→ 今年との増減 → ⑤月ごとの増減、の順に展開表示
 
 **Card 2: ふるさと納税シミュレーター**
 
