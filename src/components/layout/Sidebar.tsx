@@ -82,6 +82,19 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+      <div className="px-2 pb-2">
+        <a
+          href="https://nanopeta.github.io/asset-formation/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-brand-50 hover:text-brand-700 transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h6m0 0v6m0-6L10 17m-4-13H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-4" />
+          </svg>
+          資産形成ダッシュボード
+        </a>
+      </div>
       <div className="px-4 py-3 border-t border-brand-100 space-y-2">
         <button
           onClick={togglePrivacyMode}
