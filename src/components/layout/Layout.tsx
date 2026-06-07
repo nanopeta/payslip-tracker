@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import useStore from '../../store/useStore'
@@ -6,6 +7,12 @@ import useStore from '../../store/useStore'
 export default function Layout() {
   const privacyMode = useStore((s) => s.privacyMode)
   const togglePrivacyMode = useStore((s) => s.togglePrivacyMode)
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
   return (
     <div className="min-h-screen">
       {/* Desktop sidebar */}
