@@ -461,8 +461,10 @@ export default function AnnualSummaryPage() {
                       今年比 {delta > 0 ? '+' : ''}{fmt(delta)}
                     </p>
                     {hasDonation && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        ふるさと納税前は {fmt(nextYearResidentTaxBefore)}（推定上限額 {fmt(donationAmount)} 寄付想定で {fmt(residentTaxReduction)} 控除）
+                      <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                        ふるさと納税前は {fmt(nextYearResidentTaxBefore)}
+                        <br />
+                        （推定上限額 {fmt(donationAmount)} 寄付想定で {fmt(residentTaxReduction)} 控除）
                       </p>
                     )}
                   </div>
