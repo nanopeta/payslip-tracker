@@ -209,6 +209,7 @@ interface Payslip {
 | `payslip_tracker_v1` | `StorageState { version, payslips[], withholdingCerts[] }` |
 | `payslip_tracker_settings` | `OvertimeSettings { deemedLabel, actualLabels[] }` |
 | `payslip_tracker_tax_inputs` | `TaxDeductionInputs { ideco, lifeInsurancePremium, careInsurancePremium, earthquakeInsurancePremium, dependents }` |
+| `payslip_tracker_resident_tax_actual` | `Record<number, number>`（所得年→住民税決定通知書の年税額。来年の住民税試算の答え合わせ用） |
 | `payslip_tracker_privacy` | `"true"` / `"false"`（プライバシーモードのON/OFF） |
 
 - バージョンが変わったらデータを空リセット
@@ -1330,6 +1331,10 @@ furusatoLimit = floor(residentTaxDividend * 0.2 / (1 - incomeTaxRate * 1.021 - 0
    - 今年の住民税 = `simProjectedMonthlyResidentTax + simBonusResidentTaxSum`（給与天引き実績＋月平均×残り月＋賞与天引き実績）
    - 月額比較: 今年 = `simMonthlyResidentTaxAvg`、来年 = `Math.round(mainResidentTax / 12)`（特別徴収は年額を12等分のため概算で比較）
    - 「計算内訳」トグル（`showNextYearResidentTaxDetail` state）で①今年の実績 → ②来年の住民税所得割（控除前）→ ③ふるさと納税控除額（`hasDonation` のときのみ）→ ④来年の試算（控除後・メイン）→ 今年との増減 → ⑤月ごとの増減、の順に展開表示
+   - **答え合わせ（決定通知書との照合）**: 「決定通知書の実額で答え合わせ」トグル（`showResidentTaxActualInput` state）。`effectiveSimYear`（所得年）の特別徴収税額決定通知書の年税額を入力すると、`residentTaxActuals: Record<number, number>`（localStorage `payslip_tracker_resident_tax_actual`、`updateResidentTaxActual()` で永続化）に保存
+     - 比較ベース: 試算 = `nextYearResidentTaxBefore`（所得割・ふるさと納税前）+ `PER_CAPITA_LEVY`（均等割4,000円+森林環境税1,000円=5,000円の概算）。実際 = 通知書の年税額
+     - 差（実際 − 試算）と乖離率（%）を表示。`actualDiff > 0`（実際が大）→ 赤、`< 0`（実際が小）→ 緑
+     - 通知書は所得年の翌年6月頃に届く（住民税は前年所得に課税）ため、答え合わせ対象は過去の完了年を選択する想定
 
 **Card 2: ふるさと納税シミュレーター**
 
