@@ -10,7 +10,7 @@ import DeductionDonutChart from '../components/charts/DeductionDonutChart'
 import NetPayBreakdownChart from '../components/charts/NetPayBreakdownChart'
 import { annualTotals, uniqueYears } from '../lib/aggregations'
 import { usePrivacy } from '../hooks/usePrivacy'
-import { calcFurusato, defaultTaxInputs, type TaxDeductionInputs } from '../lib/furusatoCalc'
+import { calcFurusato, defaultTaxInputs, type TaxDeductionInputs, type FurusatoResult } from '../lib/furusatoCalc'
 import type { Payslip } from '../types/payslip'
 import { emptyIncome, emptyDeductions } from '../types/payslip'
 
@@ -34,6 +34,33 @@ function exportCsv(year: number, slips: Payslip[]) {
   a.download = `payslip_${year}.csv`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+// ある年の総支給・社会保険料を「実績＋月平均×残り月」で12ヶ月分に投影する
+function projectYearTotals(payslips: Payslip[], year: number) {
+  const slips = payslips.filter((p) => p.year === year)
+  const monthly = slips.filter((p) => !p.payslipType || p.payslipType === 'monthly')
+  const bonus = slips.filter((p) => p.payslipType === 'bonus')
+  const count = monthly.length
+  const remaining = Math.max(0, 12 - count)
+  const si = (p: Payslip) =>
+    p.deductions.healthInsurance + p.deductions.longTermCareInsurance +
+    p.deductions.pensionInsurance + p.deductions.employmentInsurance
+  const incomeSum = monthly.reduce((s, p) => s + p.income.total, 0)
+  const incomeAvg = count > 0 ? Math.round(incomeSum / count) : 0
+  const income = incomeSum + incomeAvg * remaining + bonus.reduce((s, p) => s + p.income.total, 0)
+  const siSum = monthly.reduce((s, p) => s + si(p), 0)
+  const siAvg = count > 0 ? Math.round(siSum / count) : 0
+  const socialInsurance = siSum + siAvg * remaining + bonus.reduce((s, p) => s + si(p), 0)
+  return { income, socialInsurance, monthlyCount: count }
+}
+
+// ふるさと納税（推定上限額を寄付した場合）控除後の住民税所得割
+function residentTaxAfterFurusato(r: FurusatoResult): number {
+  if (r.furusatoLimit <= 0) return r.residentTaxDividend
+  const net = Math.max(0, r.furusatoLimit - 2_000)
+  const reduction = Math.floor(net * (1 - r.incomeTaxRate * 1.021))
+  return Math.max(0, r.residentTaxDividend - reduction)
 }
 
 export default function AnnualSummaryPage() {
@@ -151,6 +178,12 @@ export default function AnnualSummaryPage() {
   const effectiveIncome = customMode ? customIncome : simIncome
   const effectiveSocialInsurance = customMode ? customSocialInsurance : simSocialInsurance
   const simResult = effectiveIncome > 0 ? calcFurusato(effectiveIncome, effectiveSocialInsurance, taxInputs) : null
+  // 前年（所得）ベースの住民税試算。来年の住民税の「前年比」を試算同士で比較するために使う
+  const prevSimYear = effectiveSimYear - 1
+  const prevSimProj = years.includes(prevSimYear) ? projectYearTotals(payslips, prevSimYear) : null
+  const prevSimResult = prevSimProj && prevSimProj.income > 0
+    ? calcFurusato(prevSimProj.income, prevSimProj.socialInsurance, taxInputs)
+    : null
 
   function updateTaxInput(key: keyof TaxDeductionInputs, value: number) {
     const next = { ...taxInputs, [key]: value }
@@ -471,7 +504,6 @@ export default function AnnualSummaryPage() {
             })()}
 
             {simResult && !customMode && (() => {
-              const thisYearResidentTax = simProjectedMonthlyResidentTax + simBonusResidentTaxSum
               const nextYearResidentTaxBefore = simResult.residentTaxDividend
               // ふるさと納税ありバージョン: 推定上限額を寄付した場合、自己負担2,000円を除いた額のうち
               // 所得税から控除される分を差し引いた残りが住民税から控除される（基本分+特例分）
@@ -482,11 +514,16 @@ export default function AnnualSummaryPage() {
               const hasDonation = donationAmount > 0
               // ふるさと納税は基本的に行う前提のため、ふるさと納税後の額をメインの試算値として表示する
               const mainResidentTax = hasDonation ? nextYearResidentTaxAfter : nextYearResidentTaxBefore
-              const delta = mainResidentTax - thisYearResidentTax
+              // 「前年比」は試算同士で比較する: 前年（所得）ベースの住民税試算（ふるさと納税後）が比較基準。
+              // 住民税は前年所得に課税されるため、前年所得ベースの試算 = 今年6月から払い始めた通知書ぶんに相当する。
+              const prevYearResidentBefore = prevSimResult ? prevSimResult.residentTaxDividend : null
+              const prevYearResidentTax = prevSimResult ? residentTaxAfterFurusato(prevSimResult) : null
+              const hasPrev = prevYearResidentTax !== null
+              const delta = hasPrev ? mainResidentTax - prevYearResidentTax! : null
               // 住民税は特別徴収で年額を12等分して毎月天引きされる（6月～翌5月）。月額は概算として年額÷12（端数四捨五入）で比較する
-              const thisYearMonthly = simMonthlyResidentTaxAvg
+              const prevYearMonthly = hasPrev ? Math.round(prevYearResidentTax! / 12) : null
               const nextYearMonthly = Math.round(mainResidentTax / 12)
-              const monthlyDelta = nextYearMonthly - thisYearMonthly
+              const monthlyDelta = hasPrev ? nextYearMonthly - prevYearMonthly! : null
               return (
                 <>
                   <div className="bg-brand-50 border border-brand-200 rounded-xl p-3 text-center">
@@ -494,9 +531,13 @@ export default function AnnualSummaryPage() {
                       来年の住民税試算（年額{hasDonation ? '・ふるさと納税後' : ''}）
                     </p>
                     <p className="text-xl font-bold tabular-nums text-brand-700">{fmt(mainResidentTax)}</p>
-                    <p className="text-xs mt-1" style={{ color: delta === 0 ? '#9ca3af' : (delta > 0 ? '#d06868' : '#5fad9b') }}>
-                      今年比 {delta > 0 ? '+' : ''}{fmt(delta)}
-                    </p>
+                    {hasPrev ? (
+                      <p className="text-xs mt-1" style={{ color: delta === 0 ? '#9ca3af' : (delta! > 0 ? '#d06868' : '#5fad9b') }}>
+                        前年比 {delta! > 0 ? '+' : ''}{fmt(delta!)}
+                      </p>
+                    ) : (
+                      <p className="text-xs mt-1 text-gray-400">前年（{prevSimYear}年）のデータがないため比較なし</p>
+                    )}
                     {hasDonation && (
                       <p className="text-xs text-gray-400 mt-1 leading-relaxed">
                         ふるさと納税前は {fmt(nextYearResidentTaxBefore)}
@@ -505,19 +546,23 @@ export default function AnnualSummaryPage() {
                       </p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <p className="text-[10px] text-gray-400 mb-0.5">今年の月額（平均）</p>
-                      <p className="text-sm font-semibold tabular-nums text-gray-700">{fmt(thisYearMonthly)}</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <p className="text-[10px] text-gray-400 mb-0.5">来年の月額（試算）</p>
-                      <p className="text-sm font-semibold tabular-nums text-gray-700">{fmt(nextYearMonthly)}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-center" style={{ color: monthlyDelta === 0 ? '#9ca3af' : (monthlyDelta > 0 ? '#d06868' : '#5fad9b') }}>
-                    月あたりの増減 {monthlyDelta > 0 ? '+' : ''}{fmt(monthlyDelta)}
-                  </p>
+                  {hasPrev && (
+                    <>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-gray-50 rounded-lg p-2 text-center">
+                          <p className="text-[10px] text-gray-400 mb-0.5">前年の月額（{prevSimYear}年所得・試算）</p>
+                          <p className="text-sm font-semibold tabular-nums text-gray-700">{fmt(prevYearMonthly!)}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2 text-center">
+                          <p className="text-[10px] text-gray-400 mb-0.5">来年の月額（試算）</p>
+                          <p className="text-sm font-semibold tabular-nums text-gray-700">{fmt(nextYearMonthly)}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-center" style={{ color: monthlyDelta === 0 ? '#9ca3af' : (monthlyDelta! > 0 ? '#d06868' : '#5fad9b') }}>
+                        月あたりの増減 {monthlyDelta! > 0 ? '+' : ''}{fmt(monthlyDelta!)}
+                      </p>
+                    </>
+                  )}
 
                   {/* 答え合わせ: 決定通知書の実額と試算を比較 */}
                   {(() => {
@@ -619,31 +664,30 @@ export default function AnnualSummaryPage() {
                   </button>
                   {showNextYearResidentTaxDetail && (
                     <div className="bg-gray-50 rounded-lg p-3 space-y-2.5 text-xs">
-                      <div>
-                        <p className="text-gray-500 font-medium mb-1">① 今年の住民税（給与・賞与天引き実績ベース）</p>
-                        <div className="space-y-1 pl-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">給与天引き実績（{simMonthlyCount}ヶ月）</span>
-                            <span className="tabular-nums text-gray-700">{fmt(simMonthlyResidentTaxSum)}</span>
-                          </div>
-                          {simRemainingMonths > 0 && (
+                      {hasPrev && (
+                        <div>
+                          <p className="text-gray-500 font-medium mb-1">① 前年（{prevSimYear}年）所得ベースの住民税試算（年額{prevYearResidentBefore !== prevYearResidentTax ? '・ふるさと納税後' : ''}）</p>
+                          <div className="space-y-1 pl-2">
                             <div className="flex justify-between">
-                              <span className="text-gray-400">月平均×残り{simRemainingMonths}ヶ月</span>
-                              <span className="tabular-nums text-gray-700">{fmt(simMonthlyResidentTaxAvg * simRemainingMonths)}</span>
+                              <span className="text-gray-400">住民税所得割（{prevSimYear}年所得）</span>
+                              <span className="tabular-nums text-gray-700">{fmt(prevYearResidentBefore!)}</span>
                             </div>
-                          )}
-                          {simBonusResidentTaxSum > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">賞与天引き実績</span>
-                              <span className="tabular-nums text-gray-700">{fmt(simBonusResidentTaxSum)}</span>
+                            {prevYearResidentBefore! - prevYearResidentTax! > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">− ふるさと納税控除（推定）</span>
+                                <span className="tabular-nums text-gray-700">{fmt(prevYearResidentBefore! - prevYearResidentTax!)}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                              <span className="text-gray-600">= 前年所得ベースの試算（年額）</span>
+                              <span className="tabular-nums text-gray-700">{fmt(prevYearResidentTax!)}</span>
                             </div>
-                          )}
-                          <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
-                            <span className="text-gray-600">合計</span>
-                            <span className="tabular-nums text-gray-700">{fmt(thisYearResidentTax)}</span>
                           </div>
+                          <p className="text-[10px] text-gray-400 leading-relaxed mt-1">
+                            ※ 住民税は前年所得に課税されるため、{prevSimYear}年所得ベースの試算は今年6月から払い始めた決定通知書ぶんに相当します。比較は試算同士（暦年の天引き実績ではなく）で行います。
+                          </p>
                         </div>
-                      </div>
+                      )}
                       <div>
                         <p className="text-gray-500 font-medium mb-1">② 来年の住民税所得割（今年の所得を基に計算）</p>
                         <div className="space-y-1 pl-2">
@@ -706,33 +750,37 @@ export default function AnnualSummaryPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex justify-between font-semibold border-t border-gray-200 pt-2">
-                        <span className="text-gray-600">今年との増減（④ − ①、年額）</span>
-                        <span className="tabular-nums" style={{ color: delta === 0 ? '#9ca3af' : (delta > 0 ? '#d06868' : '#5fad9b') }}>
-                          {delta > 0 ? '+' : ''}{fmt(delta)}
-                        </span>
-                      </div>
-                      <div className="border-t border-gray-200 pt-2">
-                        <p className="text-gray-500 font-medium mb-1">⑤ 月ごとの増減（特別徴収は年額を12ヶ月に分割して天引き）</p>
-                        <div className="space-y-1 pl-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">今年の月額（① ÷ 実績月平均）</span>
-                            <span className="tabular-nums text-gray-700">{fmt(thisYearMonthly)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">来年の月額（④ ÷ 12、四捨五入）</span>
-                            <span className="tabular-nums text-gray-700">{fmt(nextYearMonthly)}</span>
-                          </div>
-                          <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
-                            <span className="text-gray-600">月あたりの増減</span>
-                            <span className="tabular-nums" style={{ color: monthlyDelta === 0 ? '#9ca3af' : (monthlyDelta > 0 ? '#d06868' : '#5fad9b') }}>
-                              {monthlyDelta > 0 ? '+' : ''}{fmt(monthlyDelta)}
-                            </span>
+                      {hasPrev && (
+                        <div className="flex justify-between font-semibold border-t border-gray-200 pt-2">
+                          <span className="text-gray-600">前年との増減（④ − ①、年額）</span>
+                          <span className="tabular-nums" style={{ color: delta === 0 ? '#9ca3af' : (delta! > 0 ? '#d06868' : '#5fad9b') }}>
+                            {delta! > 0 ? '+' : ''}{fmt(delta!)}
+                          </span>
+                        </div>
+                      )}
+                      {hasPrev && (
+                        <div className="border-t border-gray-200 pt-2">
+                          <p className="text-gray-500 font-medium mb-1">⑤ 月ごとの増減（特別徴収は年額を12ヶ月に分割して天引き）</p>
+                          <div className="space-y-1 pl-2">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">前年の月額（① ÷ 12、四捨五入）</span>
+                              <span className="tabular-nums text-gray-700">{fmt(prevYearMonthly!)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">来年の月額（④ ÷ 12、四捨五入）</span>
+                              <span className="tabular-nums text-gray-700">{fmt(nextYearMonthly)}</span>
+                            </div>
+                            <div className="flex justify-between font-medium border-t border-gray-200 pt-1 mt-1">
+                              <span className="text-gray-600">月あたりの増減</span>
+                              <span className="tabular-nums" style={{ color: monthlyDelta === 0 ? '#9ca3af' : (monthlyDelta! > 0 ? '#d06868' : '#5fad9b') }}>
+                                {monthlyDelta! > 0 ? '+' : ''}{fmt(monthlyDelta!)}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                       <p className="text-[10px] text-gray-400 leading-relaxed pt-1 border-t border-gray-200">
-                        ※ 住民税は前年の所得を基に翌年課税されるため、今年の所得から計算した額が「来年の住民税」の試算値になります。実際の税額は自治体の控除内容等により変動する場合があります。
+                        ※ 住民税は前年の所得を基に翌年課税されるため、今年の所得から計算した額が「来年の住民税」の試算値になります。「前年比」は暦年の天引き合計（年度をまたぐため複数年度が混在）ではなく、前年所得ベースの試算と比較しています。実際の税額は自治体の控除内容等により変動する場合があります。
                       </p>
                     </div>
                   )}
