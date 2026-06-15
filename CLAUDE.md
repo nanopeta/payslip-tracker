@@ -1328,10 +1328,14 @@ furusatoLimit = floor(residentTaxDividend * 0.2 / (1 - incomeTaxRate * 1.021 - 0
      const hasDonation = donationAmount > 0
      const mainResidentTax = hasDonation ? nextYearResidentTaxAfter : nextYearResidentTaxBefore
      ```
-   - ハイライトボックス（`bg-brand-50`）に `mainResidentTax`・今年比デルタを表示。`hasDonation` のときは「ふるさと納税前は ¥XXX」を補足表示（金額と内訳括弧書きの間に `<br />` を入れて2行表示・折り返し対策）
-   - 今年の住民税 = `simProjectedMonthlyResidentTax + simBonusResidentTaxSum`（給与天引き実績＋月平均×残り月＋賞与天引き実績）
-   - 月額比較: 今年 = `simMonthlyResidentTaxAvg`、来年 = `Math.round(mainResidentTax / 12)`（特別徴収は年額を12等分のため概算で比較）
-   - 「計算内訳」トグル（`showNextYearResidentTaxDetail` state）で①今年の実績 → ②来年の住民税所得割（控除前）→ ③ふるさと納税控除額（`hasDonation` のときのみ）→ ④来年の試算（控除後・メイン）→ 今年との増減 → ⑤月ごとの増減、の順に展開表示
+   - ハイライトボックス（`bg-brand-50`）に `mainResidentTax`・前年比デルタを表示。`hasDonation` のときは「ふるさと納税前は ¥XXX」を補足表示（金額と内訳括弧書きの間に `<br />` を入れて2行表示・折り返し対策）
+   - **「前年比」は試算同士で比較する**（暦年の天引き合計は年度をまたいで複数年度が混在するため使わない）:
+     - 比較基準 = 前年（`effectiveSimYear - 1`）所得ベースの住民税試算（ふるさと納税後）。`projectYearTotals(payslips, prevSimYear)` で前年の総支給・社保を投影 → `calcFurusato()` で `prevSimResult` を算出 → `residentTaxAfterFurusato(prevSimResult)` で `prevYearResidentTax` を得る
+     - 住民税は前年所得に課税されるため、前年所得ベースの試算 = 今年6月から払い始めた決定通知書ぶんに相当する
+     - 前年データが無い最古年（`prevSimResult === null`、`hasPrev === false`）は前年比・月額比較・①・前年との増減・⑤を非表示にして「前年（YYYY年）のデータがないため比較なし」とフォールバック
+   - `residentTaxAfterFurusato(r)` / `projectYearTotals()` はモジュールレベルのヘルパー関数（コンポーネント外）
+   - 月額比較: 前年 = `Math.round(prevYearResidentTax / 12)`、来年 = `Math.round(mainResidentTax / 12)`（特別徴収は年額を12等分のため概算で比較）
+   - 「計算内訳」トグル（`showNextYearResidentTaxDetail` state）で①前年所得ベースの試算 → ②来年の住民税所得割（控除前）→ ③ふるさと納税控除額（`hasDonation` のときのみ）→ ④来年の試算（控除後・メイン）→ 前年との増減 → ⑤月ごとの増減、の順に展開表示（①・前年との増減・⑤は `hasPrev` のときのみ）
    - **答え合わせ（決定通知書との照合）**: 「決定通知書の実額で答え合わせ」トグル（`showResidentTaxActualInput` state）。`effectiveSimYear`（所得年）の特別徴収税額決定通知書を月別（6月分・7月〜翌5月分）で入力する
      - 入力欄は2つ（`6月分` / `7月〜翌5月分`）。`residentTaxMonthly: Record<number, { june, other }>`（localStorage `payslip_tracker_resident_tax_monthly`、`updateResidentTaxMonthly()` で永続化）に保存し、`年税額 = june + other × 11` を自動合計して `residentTaxActuals`（`updateResidentTaxActual()`）にも反映する
      - 6月分は端数調整で他月と額が異なる（特別徴収の初月まとめ）。合計値は「年税額（合計）」行に表示
