@@ -59,6 +59,23 @@ export default function AnnualSummaryPage() {
   const [customMode, setCustomMode] = useState(false)
   const [customIncome, setCustomIncome] = useState(0)
   const [customSocialInsurance, setCustomSocialInsurance] = useState(0)
+  const [showResidentTaxActualInput, setShowResidentTaxActualInput] = useState(false)
+  // 住民税 決定通知書の実額（所得年をキーとする年税額）。答え合わせ用
+  const [residentTaxActuals, setResidentTaxActuals] = useState<Record<number, number>>(() => {
+    try {
+      const s = localStorage.getItem('payslip_tracker_resident_tax_actual')
+      if (s) return JSON.parse(s)
+    } catch { /* ignore */ }
+    return {}
+  })
+
+  function updateResidentTaxActual(year: number, value: number) {
+    const next = { ...residentTaxActuals }
+    if (value > 0) next[year] = value
+    else delete next[year]
+    setResidentTaxActuals(next)
+    localStorage.setItem('payslip_tracker_resident_tax_actual', JSON.stringify(next))
+  }
 
   const effectiveSimYear = selectedSimYear !== 0 && years.includes(selectedSimYear)
     ? selectedSimYear
@@ -481,6 +498,73 @@ export default function AnnualSummaryPage() {
                   <p className="text-xs text-center" style={{ color: monthlyDelta === 0 ? '#9ca3af' : (monthlyDelta > 0 ? '#d06868' : '#5fad9b') }}>
                     月あたりの増減 {monthlyDelta > 0 ? '+' : ''}{fmt(monthlyDelta)}
                   </p>
+
+                  {/* 答え合わせ: 決定通知書の実額と試算を比較 */}
+                  {(() => {
+                    const PER_CAPITA_LEVY = 5_000 // 均等割4,000円 + 森林環境税1,000円の概算
+                    const actualResidentTax = residentTaxActuals[effectiveSimYear] ?? 0
+                    const hasActual = actualResidentTax > 0
+                    // 試算の所得割（ふるさと納税前）+ 均等割・森林環境税 = 通知書の年税額に相当
+                    const estimatedTotal = nextYearResidentTaxBefore + PER_CAPITA_LEVY
+                    const actualDiff = actualResidentTax - estimatedTotal
+                    const actualDiffPct = estimatedTotal > 0 ? (actualDiff / estimatedTotal) * 100 : 0
+                    return (
+                      <div className="border-t border-gray-200 pt-2.5">
+                        <button
+                          onClick={() => setShowResidentTaxActualInput((v) => !v)}
+                          className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
+                        >
+                          {hasActual ? '決定通知書と答え合わせ' : '決定通知書の実額で答え合わせ'}
+                          <svg className={`w-3.5 h-3.5 transition-transform ${showResidentTaxActualInput ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {(showResidentTaxActualInput || hasActual) && (
+                          <div className="mt-2 bg-gray-50 rounded-lg p-3 space-y-2.5 text-xs">
+                            <div>
+                              <label className="text-gray-500 mb-0.5 block">
+                                {effectiveSimYear}年の所得に基づく住民税 決定通知書の年税額（実際・円）
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={actualResidentTax === 0 ? '' : actualResidentTax}
+                                onChange={(e) => updateResidentTaxActual(effectiveSimYear, Math.max(0, Number(e.target.value) || 0))}
+                                placeholder="例: 240000"
+                                className="w-full text-sm border border-brand-300 rounded-lg px-2.5 py-1.5 tabular-nums focus:outline-none focus:ring-1 focus:ring-brand-400"
+                              />
+                              <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">
+                                ※ 通知書（特別徴収税額の決定通知書）の年税額を入力。住民税は前年所得に課税されるため、{effectiveSimYear}年の所得ぶんの通知書は翌{effectiveSimYear + 1}年6月頃に届きます。
+                              </p>
+                            </div>
+                            {hasActual && (
+                              <div className="space-y-1 pl-2 border-t border-gray-200 pt-2">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">試算（所得割 + 均等割等 {fmt(PER_CAPITA_LEVY)}）</span>
+                                  <span className="tabular-nums text-gray-700">{fmt(estimatedTotal)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">実際（決定通知書）</span>
+                                  <span className="tabular-nums text-gray-700">{fmt(actualResidentTax)}</span>
+                                </div>
+                                <div className="flex justify-between font-semibold border-t border-gray-200 pt-1 mt-1">
+                                  <span className="text-gray-600">差（実際 − 試算）</span>
+                                  <span className="tabular-nums" style={{ color: actualDiff === 0 ? '#9ca3af' : (actualDiff > 0 ? '#d06868' : '#5fad9b') }}>
+                                    {actualDiff > 0 ? '+' : ''}{fmt(actualDiff)}
+                                    {estimatedTotal > 0 && <span className="text-[10px] ml-1">({actualDiff > 0 ? '+' : ''}{actualDiffPct.toFixed(1)}%)</span>}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-gray-400 leading-relaxed pt-1.5">
+                                  ※ 試算はふるさと納税前・各種控除を概算したものです。実際の方が小さい場合はふるさと納税や追加の控除が効いている可能性、大きい場合は試算に含めていない控除や自治体差が考えられます。
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+
                   <button
                     onClick={() => setShowNextYearResidentTaxDetail((v) => !v)}
                     className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
