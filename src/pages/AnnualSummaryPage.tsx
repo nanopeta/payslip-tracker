@@ -63,6 +63,21 @@ function residentTaxAfterFurusato(r: FurusatoResult): number {
   return Math.max(0, r.residentTaxDividend - reduction)
 }
 
+// 決定通知書の詳細項目（所得年をキーとする）。試算との詳細照合に使う
+interface ResidentTaxNoticeDetail {
+  incomeDivBeforeCredit: number    // 税額控除前所得割額（市＋県）
+  furusatoCredit: number           // 寄付金控除 住民税分（市＋県）
+  perCapitaLevy: number            // 均等割＋森林環境税
+  socialInsuranceDeduction: number // 社会保険料控除
+  idecoDeduction: number           // 小規模企業共済等掛金（iDeCo）
+  lifeInsuranceDeduction: number   // 生命保険料控除（住民税）
+  basicDeduction: number           // 基礎控除（住民税）
+}
+const emptyNoticeDetail: ResidentTaxNoticeDetail = {
+  incomeDivBeforeCredit: 0, furusatoCredit: 0, perCapitaLevy: 0,
+  socialInsuranceDeduction: 0, idecoDeduction: 0, lifeInsuranceDeduction: 0, basicDeduction: 0,
+}
+
 export default function AnnualSummaryPage() {
   const { fmt } = usePrivacy()
   const payslips = useStore((s) => s.payslips)
@@ -122,6 +137,24 @@ export default function AnnualSummaryPage() {
     localStorage.setItem('payslip_tracker_resident_tax_monthly', JSON.stringify(next))
     // 年税額 = 6月分 + 7月〜翌5月分×11 を合計して答え合わせ用に保存
     updateResidentTaxActual(year, entry.june + entry.other * 11)
+  }
+
+  // 決定通知書の詳細項目（所得割・寄付金控除・均等割・所得控除内訳）。詳細照合用
+  const [residentTaxNotice, setResidentTaxNotice] = useState<Record<number, ResidentTaxNoticeDetail>>(() => {
+    try {
+      const s = localStorage.getItem('payslip_tracker_resident_tax_notice')
+      if (s) return JSON.parse(s)
+    } catch { /* ignore */ }
+    return {}
+  })
+
+  function updateResidentTaxNotice(year: number, field: keyof ResidentTaxNoticeDetail, value: number) {
+    const cur = residentTaxNotice[year] ?? emptyNoticeDetail
+    const entry = { ...cur, [field]: value }
+    const next = { ...residentTaxNotice, [year]: entry }
+    if (Object.values(entry).every((v) => v === 0)) delete next[year]
+    setResidentTaxNotice(next)
+    localStorage.setItem('payslip_tracker_resident_tax_notice', JSON.stringify(next))
   }
 
   const effectiveSimYear = selectedSimYear !== 0 && years.includes(selectedSimYear)
@@ -566,10 +599,21 @@ export default function AnnualSummaryPage() {
 
                   {/* 答え合わせ: 決定通知書の実額と試算を比較 */}
                   {(() => {
-                    const PER_CAPITA_LEVY = 5_000 // 均等割4,000円 + 森林環境税1,000円の概算
+                    const detail = residentTaxNotice[effectiveSimYear] ?? emptyNoticeDetail
+                    // 均等割＋森林環境税は実額入力があればそれを、なければ概算5,000円を使う
+                    const PER_CAPITA_LEVY = detail.perCapitaLevy > 0 ? detail.perCapitaLevy : 5_000
                     const actualResidentTax = residentTaxActuals[effectiveSimYear] ?? 0
                     const monthly = residentTaxMonthly[effectiveSimYear] ?? { june: 0, other: 0 }
                     const hasActual = actualResidentTax > 0
+                    // 通知書の詳細項目 ↔ 試算 の照合（入力済みの項目のみ表示）
+                    const cmpItems = ([
+                      { key: 'incomeDivBeforeCredit', label: '所得割（税額控除前）', est: nextYearResidentTaxBefore, act: detail.incomeDivBeforeCredit },
+                      { key: 'furusatoCredit', label: 'ふるさと納税控除（住民税）', est: residentTaxReduction, act: detail.furusatoCredit },
+                      { key: 'socialInsuranceDeduction', label: '社会保険料控除', est: effectiveSocialInsurance, act: detail.socialInsuranceDeduction },
+                      { key: 'idecoDeduction', label: '小規模企業共済等(iDeCo)', est: taxInputs.ideco, act: detail.idecoDeduction },
+                      { key: 'lifeInsuranceDeduction', label: '生命保険料控除', est: simResult.lifeInsuranceDeductionRT, act: detail.lifeInsuranceDeduction },
+                      { key: 'basicDeduction', label: '基礎控除', est: 430_000, act: detail.basicDeduction },
+                    ] as const).filter((i) => i.act > 0)
                     // 試算の所得割（ふるさと納税前）+ 均等割・森林環境税 = 通知書の年税額に相当
                     const estimatedTotal = nextYearResidentTaxBefore + PER_CAPITA_LEVY
                     const actualDiff = actualResidentTax - estimatedTotal
@@ -647,6 +691,54 @@ export default function AnnualSummaryPage() {
                                 </p>
                               </div>
                             )}
+                            {/* 通知書の詳細項目で照合（任意） */}
+                            <div className="border-t border-gray-200 pt-2 space-y-2">
+                              <p className="text-gray-500 font-medium">通知書の詳細項目で照合（任意）</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {([
+                                  { key: 'incomeDivBeforeCredit', label: '税額控除前所得割額（市+県）', ph: '例: 117700' },
+                                  { key: 'furusatoCredit', label: '寄付金控除 住民税（市+県）', ph: '例: 27827' },
+                                  { key: 'perCapitaLevy', label: '均等割＋森林環境税', ph: '例: 5500' },
+                                  { key: 'socialInsuranceDeduction', label: '社会保険料控除', ph: '例: 555633' },
+                                  { key: 'idecoDeduction', label: '小規模企業共済等(iDeCo)', ph: '例: 276000' },
+                                  { key: 'lifeInsuranceDeduction', label: '生命保険料控除', ph: '例: 16845' },
+                                  { key: 'basicDeduction', label: '基礎控除', ph: '例: 430000' },
+                                ] as const).map(({ key, label, ph }) => (
+                                  <div key={key}>
+                                    <span className="text-[10px] text-gray-400 mb-0.5 block">{label}（円）</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={detail[key] === 0 ? '' : detail[key]}
+                                      onChange={(e) => updateResidentTaxNotice(effectiveSimYear, key, Math.max(0, Number(e.target.value) || 0))}
+                                      placeholder={ph}
+                                      className="w-full text-sm border border-brand-300 rounded-lg px-2.5 py-1.5 tabular-nums focus:outline-none focus:ring-1 focus:ring-brand-400"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                              {cmpItems.length > 0 && (
+                                <div className="space-y-1 border-t border-gray-200 pt-2">
+                                  {cmpItems.map((i) => {
+                                    const d = i.act - i.est
+                                    return (
+                                      <div key={i.key} className="flex justify-between items-baseline gap-2">
+                                        <span className="text-gray-500 flex-shrink-0">{i.label}</span>
+                                        <span className="tabular-nums text-right text-gray-600 text-[11px]">
+                                          試算 {fmt(i.est)} → 実際 {fmt(i.act)}
+                                          <span className="ml-1 font-medium" style={{ color: d === 0 ? '#9ca3af' : (d > 0 ? '#d06868' : '#5fad9b') }}>
+                                            ({d > 0 ? '+' : ''}{fmt(d)})
+                                          </span>
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                  <p className="text-[10px] text-gray-400 leading-relaxed pt-1">
+                                    ※「所得割（税額控除前）」は試算の所得割（ふるさと納税前）と同じ定義なので、近ければ収入・控除モデルは概ね正確です。「ふるさと納税控除」は推定上限まで寄付した場合との比較で、実際が小さいほど上限に余裕があった（追加で寄付できた）ことを意味します。
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

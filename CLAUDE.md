@@ -211,6 +211,7 @@ interface Payslip {
 | `payslip_tracker_tax_inputs` | `TaxDeductionInputs { ideco, lifeInsurancePremium, careInsurancePremium, earthquakeInsurancePremium, dependents }` |
 | `payslip_tracker_resident_tax_actual` | `Record<number, number>`（所得年→住民税決定通知書の年税額。来年の住民税試算の答え合わせ用） |
 | `payslip_tracker_resident_tax_monthly` | `Record<number, { june: number; other: number }>`（所得年→決定通知書の月別納付額。6月分＋7月〜翌5月分×11で年税額を自動合計する入力補助） |
+| `payslip_tracker_resident_tax_notice` | `Record<number, ResidentTaxNoticeDetail>`（所得年→決定通知書の詳細項目。税額控除前所得割額・寄付金控除・均等割＋森林環境税・所得控除内訳を試算と照合） |
 | `payslip_tracker_privacy` | `"true"` / `"false"`（プライバシーモードのON/OFF） |
 
 - バージョンが変わったらデータを空リセット
@@ -1339,9 +1340,13 @@ furusatoLimit = floor(residentTaxDividend * 0.2 / (1 - incomeTaxRate * 1.021 - 0
    - **答え合わせ（決定通知書との照合）**: 「決定通知書の実額で答え合わせ」トグル（`showResidentTaxActualInput` state）。`effectiveSimYear`（所得年）の特別徴収税額決定通知書を月別（6月分・7月〜翌5月分）で入力する
      - 入力欄は2つ（`6月分` / `7月〜翌5月分`）。`residentTaxMonthly: Record<number, { june, other }>`（localStorage `payslip_tracker_resident_tax_monthly`、`updateResidentTaxMonthly()` で永続化）に保存し、`年税額 = june + other × 11` を自動合計して `residentTaxActuals`（`updateResidentTaxActual()`）にも反映する
      - 6月分は端数調整で他月と額が異なる（特別徴収の初月まとめ）。合計値は「年税額（合計）」行に表示
-     - 比較ベース: 試算 = `nextYearResidentTaxBefore`（所得割・ふるさと納税前）+ `PER_CAPITA_LEVY`（均等割4,000円+森林環境税1,000円=5,000円の概算）。実際 = 通知書の年税額（月別合計）
+     - 比較ベース: 試算 = `nextYearResidentTaxBefore`（所得割・ふるさと納税前）+ `PER_CAPITA_LEVY`（均等割＋森林環境税。詳細入力 `detail.perCapitaLevy` があればその実額、なければ5,000円の概算）。実際 = 通知書の年税額（月別合計）
      - 差（実際 − 試算）と乖離率（%）を表示。`actualDiff > 0`（実際が大）→ 赤、`< 0`（実際が小）→ 緑
      - 通知書は所得年の翌年6月頃に届く（住民税は前年所得に課税）ため、答え合わせ対象は過去の完了年を選択する想定
+     - **通知書の詳細項目で照合（任意）**: `residentTaxNotice: Record<number, ResidentTaxNoticeDetail>`（localStorage `payslip_tracker_resident_tax_notice`、`updateResidentTaxNotice()` で永続化）。7項目（税額控除前所得割額・寄付金控除・均等割＋森林環境税・社会保険料控除・小規模企業共済等iDeCo・生命保険料控除・基礎控除）を入力すると `cmpItems` で試算値と照合し「試算 → 実際（差）」を表示
+       - 照合の試算側: 所得割→`nextYearResidentTaxBefore`、ふるさと納税控除→`residentTaxReduction`、社保→`effectiveSocialInsurance`、iDeCo→`taxInputs.ideco`、生命保険料→`simResult.lifeInsuranceDeductionRT`、基礎控除→430,000（住民税の標準額）
+       - `perCapitaLevy` のみ照合行ではなく `PER_CAPITA_LEVY` として年税額の合計照合に使う（実額入力で5,000円概算を上書き）
+       - 入力済み（`act > 0`）の項目だけ照合行を表示
 
 **Card 2: ふるさと納税シミュレーター**
 
