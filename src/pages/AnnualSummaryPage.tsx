@@ -77,6 +77,26 @@ export default function AnnualSummaryPage() {
     localStorage.setItem('payslip_tracker_resident_tax_actual', JSON.stringify(next))
   }
 
+  // 決定通知書の月別納付額（6月分と7月〜翌5月分の共通額）。年税額を自動合計するための入力補助
+  const [residentTaxMonthly, setResidentTaxMonthly] = useState<Record<number, { june: number; other: number }>>(() => {
+    try {
+      const s = localStorage.getItem('payslip_tracker_resident_tax_monthly')
+      if (s) return JSON.parse(s)
+    } catch { /* ignore */ }
+    return {}
+  })
+
+  function updateResidentTaxMonthly(year: number, field: 'june' | 'other', value: number) {
+    const cur = residentTaxMonthly[year] ?? { june: 0, other: 0 }
+    const entry = { ...cur, [field]: value }
+    const next = { ...residentTaxMonthly, [year]: entry }
+    if (entry.june === 0 && entry.other === 0) delete next[year]
+    setResidentTaxMonthly(next)
+    localStorage.setItem('payslip_tracker_resident_tax_monthly', JSON.stringify(next))
+    // 年税額 = 6月分 + 7月〜翌5月分×11 を合計して答え合わせ用に保存
+    updateResidentTaxActual(year, entry.june + entry.other * 11)
+  }
+
   const effectiveSimYear = selectedSimYear !== 0 && years.includes(selectedSimYear)
     ? selectedSimYear
     : (years.length > 0 ? Math.max(...years) : new Date().getFullYear())
@@ -503,6 +523,7 @@ export default function AnnualSummaryPage() {
                   {(() => {
                     const PER_CAPITA_LEVY = 5_000 // 均等割4,000円 + 森林環境税1,000円の概算
                     const actualResidentTax = residentTaxActuals[effectiveSimYear] ?? 0
+                    const monthly = residentTaxMonthly[effectiveSimYear] ?? { june: 0, other: 0 }
                     const hasActual = actualResidentTax > 0
                     // 試算の所得割（ふるさと納税前）+ 均等割・森林環境税 = 通知書の年税額に相当
                     const estimatedTotal = nextYearResidentTaxBefore + PER_CAPITA_LEVY
@@ -522,19 +543,41 @@ export default function AnnualSummaryPage() {
                         {(showResidentTaxActualInput || hasActual) && (
                           <div className="mt-2 bg-gray-50 rounded-lg p-3 space-y-2.5 text-xs">
                             <div>
-                              <label className="text-gray-500 mb-0.5 block">
-                                {effectiveSimYear}年の所得に基づく住民税 決定通知書の年税額（実際・円）
+                              <label className="text-gray-500 mb-1 block">
+                                {effectiveSimYear}年の所得に基づく住民税 決定通知書の月別納付額
                               </label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={actualResidentTax === 0 ? '' : actualResidentTax}
-                                onChange={(e) => updateResidentTaxActual(effectiveSimYear, Math.max(0, Number(e.target.value) || 0))}
-                                placeholder="例: 240000"
-                                className="w-full text-sm border border-brand-300 rounded-lg px-2.5 py-1.5 tabular-nums focus:outline-none focus:ring-1 focus:ring-brand-400"
-                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <span className="text-[10px] text-gray-400 mb-0.5 block">6月分（円）</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={monthly.june === 0 ? '' : monthly.june}
+                                    onChange={(e) => updateResidentTaxMonthly(effectiveSimYear, 'june', Math.max(0, Number(e.target.value) || 0))}
+                                    placeholder="例: 8100"
+                                    className="w-full text-sm border border-brand-300 rounded-lg px-2.5 py-1.5 tabular-nums focus:outline-none focus:ring-1 focus:ring-brand-400"
+                                  />
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-gray-400 mb-0.5 block">7月〜翌5月分（円）</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={monthly.other === 0 ? '' : monthly.other}
+                                    onChange={(e) => updateResidentTaxMonthly(effectiveSimYear, 'other', Math.max(0, Number(e.target.value) || 0))}
+                                    placeholder="例: 7700"
+                                    className="w-full text-sm border border-brand-300 rounded-lg px-2.5 py-1.5 tabular-nums focus:outline-none focus:ring-1 focus:ring-brand-400"
+                                  />
+                                </div>
+                              </div>
+                              {hasActual && (
+                                <div className="flex justify-between mt-1.5 text-gray-500">
+                                  <span>年税額（合計）= 6月分 + 7月〜翌5月分×11</span>
+                                  <span className="tabular-nums font-medium text-gray-700">{fmt(actualResidentTax)}</span>
+                                </div>
+                              )}
                               <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">
-                                ※ 通知書（特別徴収税額の決定通知書）の年税額を入力。住民税は前年所得に課税されるため、{effectiveSimYear}年の所得ぶんの通知書は翌{effectiveSimYear + 1}年6月頃に届きます。
+                                ※ 通知書（特別徴収税額の決定通知書）の「納付額」欄を月別に入力すると年税額を自動合計します。6月分は端数調整で他の月と額が違います。住民税は前年所得に課税されるため、{effectiveSimYear}年の所得ぶんの通知書は翌{effectiveSimYear + 1}年6月頃に届きます。
                               </p>
                             </div>
                             {hasActual && (
