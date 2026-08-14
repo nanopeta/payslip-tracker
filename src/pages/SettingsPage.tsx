@@ -169,9 +169,8 @@ export default function SettingsPage() {
       const otherIncomeTotal = Object.values(inc.otherIncome ?? {}).reduce((s, v) => s + v, 0)
       const incomeRows = (
         [
-          ['基本給', inc.basicSalary],
+          ['基本給', inc.basicSalary + inc.wlbAllowance],
           ['みなし残業', inc.deemedOvertime],
-          ['WLB手当', inc.wlbAllowance],
           ['ライフプラン手当', inc.lifePlanAllowance],
           ['調整給', inc.adjustmentSalary],
           ['通勤手当', inc.commuteAllowance],
