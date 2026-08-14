@@ -28,7 +28,7 @@ export function exportCSV(payslips: Payslip[]) {
       p.summary.netPay,
       p.income.total,
       p.deductions.total,
-      p.income.basicSalary,
+      p.income.basicSalary + p.income.wlbAllowance,
       p.income.deemedOvertime,
       p.deductions.incomeTax,
       p.deductions.residentTax,

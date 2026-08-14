@@ -1009,14 +1009,25 @@ const grossPositiveTotal = deductions.total - creditTotal  // creditTotal は負
 
 | タブ | コンポーネント | グループ化対象 |
 |---|---|---|
-| 支給 | `IncomeDonutChart` | 固定給4項目（基本給・みなし残業・WLB手当・ライフプラン手当） |
+| 支給 | `IncomeDonutChart` | 固定給3項目（基本給・みなし残業・ライフプラン手当） |
 | 控除 | `DeductionDonutChart` | 社会保険料4項目（健康保険・介護保険・厚生年金・雇用保険） |
 | 概要 | `NetPayBreakdownChart` | 社会保険料4項目（健康保険・介護保険・厚生年金・雇用保険） |
 
 ```typescript
-const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'WLB手当', 'ライフプラン手当'])
+const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'ライフプラン手当'])
 const SOCIAL_INSURANCE_LABELS = new Set(['健康保険', '介護保険', '厚生年金', '雇用保険'])
 ```
+
+#### 基本給の表示は WLB手当を含む金額
+
+`income.basicSalary` と `income.wlbAllowance`（ワークライフバランス手当）はデータ上は別フィールドのまま（`PayslipReviewForm.tsx` の手入力欄も分離したまま）だが、**表示用の「基本給」は `basicSalary + wlbAllowance` の合算値**を使う。「WLB手当」は集計・凡例の個別行としては表示しない（固定給計に含まれる分は「基本給」側で表現される）。
+
+適用箇所:
+- `IncomeDonutChart.tsx`: `NAMED_SLICES` から `wlbAllowance` を除去し、`basicSalary` のスライス値を `income.basicSalary + income.wlbAllowance` として計算（`prevValue` も同様）
+- `SettingsPage.tsx`（JSON/Markdown バックアップの支給内訳表）: `['基本給', inc.basicSalary + inc.wlbAllowance]` とし `WLB手当` 行は出さない
+- `exporters.ts`（CSV エクスポート）: `基本給` 列の値を `p.income.basicSalary + p.income.wlbAllowance` とする
+
+`固定給計`（実質時給計算などで使う `basicSalary + deemedOvertime + wlbAllowance + lifePlanAllowance`）は元々 `wlbAllowance` を独立項として加算しているため合計値に変化はなく、変更不要。
 
 凡例レンダリングは IIFE で構築し、`renderItem(item, indent)` ヘルパーで通常項目とグループ内サブ項目を共通化する:
 
