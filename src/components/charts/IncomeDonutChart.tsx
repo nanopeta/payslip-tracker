@@ -6,6 +6,7 @@ import { usePrivacy } from '../../hooks/usePrivacy'
 const NAMED_SLICES: { key: keyof PayslipIncome; label: string; color: string }[] = [
   { key: 'basicSalary',             label: '基本給',           color: '#5b8fa8' },
   { key: 'deemedOvertime',          label: 'みなし残業',       color: '#4a7a93' },
+  { key: 'wlbAllowance',            label: 'ワークライフバランス手当', color: '#7aafc5' },
   { key: 'lifePlanAllowance',       label: 'ライフプラン手当', color: '#a0c8d8' },
   { key: 'adjustmentSalary',        label: '調整給',           color: '#3a6078' },
   { key: 'thankYouAllowance',       label: 'サンキュー手当',   color: '#5fad9b' },
@@ -15,8 +16,7 @@ const NAMED_SLICES: { key: keyof PayslipIncome; label: string; color: string }[]
   { key: 'taxableCommuteAllowance', label: '課税通勤費',       color: '#b0d5e0' },
 ]
 
-// 基本給の値は WLB手当（ワークライフバランス手当）を含んだ金額として表示する
-const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'ライフプラン手当'])
+const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'ワークライフバランス手当', 'ライフプラン手当'])
 
 const EXTRA_COLORS = ['#e8a87c', '#d4a574', '#c89b6e', '#e0b894', '#f0c8a0']
 
@@ -33,11 +33,9 @@ export default function IncomeDonutChart({ income, prevIncome }: Props) {
   const named = NAMED_SLICES
     .map((s) => ({
       name: s.label,
-      value: s.key === 'basicSalary' ? income.basicSalary + income.wlbAllowance : income[s.key] as number,
+      value: income[s.key] as number,
       color: s.color,
-      prevValue: prevIncome
-        ? (s.key === 'basicSalary' ? prevIncome.basicSalary + prevIncome.wlbAllowance : prevIncome[s.key] as number)
-        : undefined,
+      prevValue: prevIncome ? prevIncome[s.key] as number : undefined,
     }))
     .filter((s) => s.value > 0)
 
