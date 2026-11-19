@@ -171,7 +171,7 @@ export default function SettingsPage() {
         [
           ['基本給', inc.basicSalary],
           ['みなし残業', inc.deemedOvertime],
-          ['ワークライフバランス手当', inc.wlbAllowance],
+          ['WLB手当', inc.wlbAllowance],
           ['ライフプラン手当', inc.lifePlanAllowance],
           ['調整給', inc.adjustmentSalary],
           ['通勤手当', inc.commuteAllowance],
