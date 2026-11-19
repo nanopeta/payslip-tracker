@@ -17,7 +17,7 @@ export function exportJSON(state: StorageState) {
 }
 
 export function exportCSV(payslips: Payslip[]) {
-  const headers = ['年', '月', '種別', 'ラベル', '差引支給額', '総支給金額', '控除合計', '基本給', 'ワークライフバランス手当', 'みなし残業', '所得税', '住民税', '厚生年金']
+  const headers = ['年', '月', '種別', 'ラベル', '差引支給額', '総支給金額', '控除合計', '基本給', 'WLB手当', 'みなし残業', '所得税', '住民税', '厚生年金']
   const rows = [...payslips]
     .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
     .map((p) => [

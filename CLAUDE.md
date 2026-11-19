@@ -1009,16 +1009,16 @@ const grossPositiveTotal = deductions.total - creditTotal  // creditTotal は負
 
 | タブ | コンポーネント | グループ化対象 |
 |---|---|---|
-| 支給 | `IncomeDonutChart` | 固定給4項目（基本給・みなし残業・ワークライフバランス手当・ライフプラン手当） |
+| 支給 | `IncomeDonutChart` | 固定給4項目（基本給・みなし残業・WLB手当・ライフプラン手当） |
 | 控除 | `DeductionDonutChart` | 社会保険料4項目（健康保険・介護保険・厚生年金・雇用保険） |
 | 概要 | `NetPayBreakdownChart` | 社会保険料4項目（健康保険・介護保険・厚生年金・雇用保険） |
 
 ```typescript
-const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'ワークライフバランス手当', 'ライフプラン手当'])
+const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'WLB手当', 'ライフプラン手当'])
 const SOCIAL_INSURANCE_LABELS = new Set(['健康保険', '介護保険', '厚生年金', '雇用保険'])
 ```
 
-- ワークライフバランス手当（`wlbAllowance`）は基本給に合算せず、固定給グループ内の独立行として表示する（#165 の合算表示は撤回済み）。JSON/Markdown バックアップの支給内訳表・CSV エクスポート（`ワークライフバランス手当` 列）も基本給と分離
+- ワークライフバランス手当（`wlbAllowance`）は基本給に合算せず、固定給グループ内の独立行として表示する（#165 の合算表示は撤回済み）。表示ラベルは長さ対策で `WLB手当` に統一（凡例・JSON/Markdown バックアップの支給内訳表・CSV エクスポートの `WLB手当` 列。手入力フォームのラベルのみ正式名称）
 
 凡例レンダリングは IIFE で構築し、`renderItem(item, indent)` ヘルパーで通常項目とグループ内サブ項目を共通化する:
 
