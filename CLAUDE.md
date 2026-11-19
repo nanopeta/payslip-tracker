@@ -1009,12 +1009,12 @@ const grossPositiveTotal = deductions.total - creditTotal  // creditTotal は負
 
 | タブ | コンポーネント | グループ化対象 |
 |---|---|---|
-| 支給 | `IncomeDonutChart` | 固定給4項目（基本給・みなし残業・WLB手当・ライフプラン手当） |
+| 支給 | `IncomeDonutChart` | 固定給4項目（基本給・WLB手当・ライフプラン手当・みなし残業 の順で表示） |
 | 控除 | `DeductionDonutChart` | 社会保険料4項目（健康保険・介護保険・厚生年金・雇用保険） |
 | 概要 | `NetPayBreakdownChart` | 社会保険料4項目（健康保険・介護保険・厚生年金・雇用保険） |
 
 ```typescript
-const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'WLB手当', 'ライフプラン手当'])
+const FIXED_SALARY_LABELS = new Set(['基本給', 'WLB手当', 'ライフプラン手当', 'みなし残業'])
 const SOCIAL_INSURANCE_LABELS = new Set(['健康保険', '介護保険', '厚生年金', '雇用保険'])
 ```
 
