@@ -5,9 +5,9 @@ import { usePrivacy } from '../../hooks/usePrivacy'
 
 const NAMED_SLICES: { key: keyof PayslipIncome; label: string; color: string }[] = [
   { key: 'basicSalary',             label: '基本給',           color: '#5b8fa8' },
-  { key: 'deemedOvertime',          label: 'みなし残業',       color: '#4a7a93' },
   { key: 'wlbAllowance',            label: 'WLB手当',          color: '#7aafc5' },
   { key: 'lifePlanAllowance',       label: 'ライフプラン手当', color: '#a0c8d8' },
+  { key: 'deemedOvertime',          label: 'みなし残業',       color: '#4a7a93' },
   { key: 'adjustmentSalary',        label: '調整給',           color: '#3a6078' },
   { key: 'thankYouAllowance',       label: 'サンキュー手当',   color: '#5fad9b' },
   { key: 'zoomAllowance',           label: 'ZOOM手当',         color: '#7ecab8' },
@@ -16,7 +16,7 @@ const NAMED_SLICES: { key: keyof PayslipIncome; label: string; color: string }[]
   { key: 'taxableCommuteAllowance', label: '課税通勤費',       color: '#b0d5e0' },
 ]
 
-const FIXED_SALARY_LABELS = new Set(['基本給', 'みなし残業', 'WLB手当', 'ライフプラン手当'])
+const FIXED_SALARY_LABELS = new Set(['基本給', 'WLB手当', 'ライフプラン手当', 'みなし残業'])
 
 const EXTRA_COLORS = ['#e8a87c', '#d4a574', '#c89b6e', '#e0b894', '#f0c8a0']
 

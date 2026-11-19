@@ -170,9 +170,9 @@ export default function SettingsPage() {
       const incomeRows = (
         [
           ['基本給', inc.basicSalary],
-          ['みなし残業', inc.deemedOvertime],
           ['WLB手当', inc.wlbAllowance],
           ['ライフプラン手当', inc.lifePlanAllowance],
+          ['みなし残業', inc.deemedOvertime],
           ['調整給', inc.adjustmentSalary],
           ['通勤手当', inc.commuteAllowance],
           ['その他手当', otherIncomeTotal],
